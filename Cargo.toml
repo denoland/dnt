@@ -10,5 +10,3 @@ deno_ast = { version = "0.2.0", features = ["bundler", "codegen", "dep_graph", "
 deno_graph = "0.5.0"
 clap = "2.33.3"
 futures = "0.3.17"
-# todo: add compat and module feature to deno_ast
-swc_ecmascript = { version = "0.63.1", features = ["compat", "module"] }

@@ -3,21 +3,32 @@
 use std::path::PathBuf;
 
 use deno_ast::ModuleSpecifier;
+use deno_ast::swc::common::DUMMY_SP;
+use deno_ast::swc::visit::VisitWith;
+use deno_ast::swc::ast::Invalid;
+use deno_graph::CapturingSourceParser;
 use deno_graph::create_graph;
 use futures::executor::block_on;
-use transpile::ModuleTarget;
+use text_changes::apply_text_changes;
+use visitors::ModuleSpecifierVisitor;
 
 mod args;
 mod loader;
-mod parser;
-mod transpile;
-mod transforms;
+mod text_changes;
+mod visitors;
 
 // Todos
 // 1. Support Deno.json to get compiler options.
-// 2. Support bundling to single file leaving dependencies unbundled.
-// 3. Handle mapping from remote specifiers to bare specifiers and transforming them in the file.
-// 4. Handle dynamic imports (at least ones that are statically analyzable and maybe warn on others)
+// 2. Handle mapping from remote specifiers to bare specifiers and transforming them in the file.
+// 3. Handle dynamic imports (at least ones that are statically analyzable and maybe warn on others)
+
+// Notes from Kitson:
+//
+// - We would need to rewrite triple slash references
+// - We might need to deal with the types in the tsconfig.json
+// - How do we cleanly supply a deno.ns lib so type checking works?
+// - How do we handle remote URLs, data URLs and blob dynamic imports?
+// - We should go from ./foo.ts to ./foo.js by default, with a flag to go from ./foo.ts to ./foo, assume people are supporting a browser or ESM Node.js
 
 fn main() {
   let args = args::parse_cli_args();
@@ -27,7 +38,7 @@ fn main() {
 
 async fn run_graph(args: &args::CliArgs) {
   let mut loader = loader::SourceLoader::new();
-  let source_parser = parser::SourceParser::new();
+  let source_parser = CapturingSourceParser::new();
   let graph = create_graph(
     ModuleSpecifier::from_file_path(&args.entry_point).unwrap(),
     &mut loader,
@@ -49,26 +60,23 @@ async fn run_graph(args: &args::CliArgs) {
   // identify the base directory
   let base_dir = get_base_dir(&local_specifiers);
 
-  std::fs::create_dir_all(&args.out_dir).unwrap();
-
   for local_specifier in local_specifiers.iter() {
     let parsed_source = source_parser.get_parsed_source(local_specifier).unwrap();
     let file_path = ModuleSpecifier::parse(parsed_source.specifier()).unwrap().to_file_path().unwrap();
     let relative_file_path = file_path.strip_prefix(&base_dir).unwrap();
 
-    let mut output_file_path = args.out_dir.join(relative_file_path);
-    output_file_path.set_extension(if args.cjs { "js" } else { "mjs" });
+    let output_file_path = args.out_dir.join(relative_file_path);
 
-    let result = transpile::transpile(&parsed_source, &source_parser, &transpile::EmitOptions {
-      module_target: match args.cjs {
-        true => ModuleTarget::CommonJs,
-        false => ModuleTarget::Esm,
-      },
-      ..Default::default()
-    }).unwrap();
+    let mut module_specifier_visitor = ModuleSpecifierVisitor::new(args.keep_extensions);
+    parsed_source.module().visit_with(&Invalid { span: DUMMY_SP }, &mut module_specifier_visitor);
+    let text_changes = module_specifier_visitor.take_text_changes();
+    let result = apply_text_changes(
+      parsed_source.source().text().to_string(),
+      text_changes
+    );
 
     std::fs::create_dir_all(output_file_path.parent().unwrap()).unwrap();
-    std::fs::write(output_file_path, result.0).unwrap();
+    std::fs::write(output_file_path, result).unwrap();
   }
 }
 

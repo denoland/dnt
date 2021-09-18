@@ -5,7 +5,7 @@ use std::path::PathBuf;
 pub struct CliArgs {
   pub entry_point: PathBuf,
   pub out_dir: PathBuf,
-  pub cjs: bool,
+  pub keep_extensions: bool,
 }
 
 pub fn parse_cli_args() -> CliArgs {
@@ -30,9 +30,9 @@ pub fn parse_cli_args() -> CliArgs {
     )
     .arg(
       // todo: better arg
-      Arg::with_name("cjs")
-        .long("cjs")
-        .help("Output cjs instead of mjs files")
+      Arg::with_name("keep-extensions")
+        .long("keep-extensions")
+        .help("Uses js extensions in the output.")
     )
     .get_matches();
 
@@ -42,10 +42,9 @@ pub fn parse_cli_args() -> CliArgs {
       .unwrap();
   let out_dir =
     PathBuf::from(matches.value_of("out").unwrap_or("dist"));
-  let cjs = matches.is_present("cjs");
   CliArgs {
     entry_point,
     out_dir,
-    cjs,
+    keep_extensions: matches.is_present("keep-extensions"),
   }
 }
