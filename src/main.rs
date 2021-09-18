@@ -17,19 +17,6 @@ mod loader;
 mod text_changes;
 mod visitors;
 
-// Todos
-// 1. Support Deno.json to get compiler options.
-// 2. Handle mapping from remote specifiers to bare specifiers and transforming them in the file.
-// 3. Handle dynamic imports (at least ones that are statically analyzable and maybe warn on others)
-
-// Notes from Kitson:
-//
-// - We would need to rewrite triple slash references
-// - We might need to deal with the types in the tsconfig.json
-// - How do we cleanly supply a deno.ns lib so type checking works?
-// - How do we handle remote URLs, data URLs and blob dynamic imports?
-// - We should go from ./foo.ts to ./foo.js by default, with a flag to go from ./foo.ts to ./foo, assume people are supporting a browser or ESM Node.js
-
 fn main() {
   let args = args::parse_cli_args();
   let future = run_graph(&args);
