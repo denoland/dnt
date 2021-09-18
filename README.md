@@ -5,7 +5,7 @@ Prototype for a Deno to Node output CLI tool. This will output TSC compatible co
 Example:
 
 ```bash
-# clone a Deno repo with no remote dependencies (because this does not support dependencies yet)
+# clone a Deno repo with no remote dependencies (because this tool does not support them yet)
 git clone https://github.com/dsherret/code-block-writer.git
 
 # clone this repo
