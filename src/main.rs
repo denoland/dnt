@@ -17,7 +17,7 @@ mod transforms;
 // 1. Support Deno.json to get compiler options.
 // 2. Support bundling to single file leaving dependencies unbundled.
 // 3. Handle mapping from remote specifiers to bare specifiers and transforming them in the file.
-// 4. CommonJS support
+// 4. Handle dynamic imports (at least ones that are statically analyzable and maybe warn on others)
 
 fn main() {
   let args = args::parse_cli_args();
