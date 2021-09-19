@@ -1,6 +1,8 @@
 # d2n
 
-Prototype for a Deno to Node output CLI tool. This will output TSC compatible code from a Deno codebase that could then be sent to a bundler (or through tsc) for npm distribution.
+Prototype for a Deno to Node/canonical TypeScript CLI tool.
+
+This will output tsc compatible code from a Deno codebase that could then be sent to a bundler (or compiled by tsc) for npm distribution.
 
 Example:
 
@@ -10,16 +12,18 @@ git clone https://github.com/dsherret/code-block-writer.git
 
 # clone this repo
 git clone https://github.com/dsherret/d2n.git
-cd d2n
 
+# run tool and output to ./code-block-writer/npm
+cd d2n
 cargo run -- ../code-block-writer/mod.ts --out ../code-block-writer/npm
 
+# go to output directory, run tsc, and publish
 cd ../code-block-writer/npm
 tsc mod.ts --target ES2015 --module commonjs --declaration
-# npm publish
+npm publish
 ```
 
-Then in *dist/mod.ts* the file will contain:
+The file in *code-block-writer/npm/mod.ts* would contain module specifiers without extensions (in the main codebase they had `.ts` extensions):
 
 ```ts
 import { CommentChar } from "./comment_char";
