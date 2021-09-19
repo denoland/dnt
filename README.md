@@ -15,7 +15,7 @@ cd d2n
 cargo run -- ../code-block-writer/mod.ts --out ../code-block-writer/npm
 
 cd ../code-block-writer/npm
-tsc mod.ts -target ES2015 -module commonjs
+tsc mod.ts --target ES2015 --module commonjs --declaration
 # npm publish
 ```
 
