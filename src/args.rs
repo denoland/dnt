@@ -32,7 +32,7 @@ pub fn parse_cli_args() -> CliArgs {
       // todo: better arg
       Arg::with_name("keep-extensions")
         .long("keep-extensions")
-        .help("Uses js extensions in the output.")
+        .help("Uses js extensions in the output."),
     )
     .get_matches();
 
@@ -40,8 +40,7 @@ pub fn parse_cli_args() -> CliArgs {
     PathBuf::from(matches.value_of("entry-point").unwrap_or("mod.ts"))
       .canonicalize()
       .unwrap();
-  let out_dir =
-    PathBuf::from(matches.value_of("out").unwrap_or("dist"));
+  let out_dir = PathBuf::from(matches.value_of("out").unwrap_or("dist"));
   CliArgs {
     entry_point,
     out_dir,

@@ -7,7 +7,10 @@ pub struct TextChange {
   pub new_text: String,
 }
 
-pub fn apply_text_changes(mut source: String, mut changes: Vec<TextChange>) -> String {
+pub fn apply_text_changes(
+  mut source: String,
+  mut changes: Vec<TextChange>,
+) -> String {
   changes.sort_by(|a, b| match a.span.lo.0.cmp(&b.span.lo.0) {
     // reverse order
     Ordering::Greater => Ordering::Less,
