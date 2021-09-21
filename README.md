@@ -7,7 +7,7 @@ This will output tsc compatible code from a Deno codebase that could then be sen
 Example:
 
 ```bash
-# clone a Deno repo with no remote dependencies (because this tool does not support them yet)
+# clone a Deno-first repo
 git clone https://github.com/dsherret/code-block-writer.git
 
 # clone this repo
@@ -50,9 +50,9 @@ Notes from Kitson:
 - We would need to rewrite triple slash references
 - We might need to deal with the types in the tsconfig.json
 - How do we cleanly supply a deno.ns lib so type checking works?
-  - David: We will search for any Deno specific APIs and replace them with a node shim.
+  - David: We will search for any Deno specific APIs and replace them with a node shim. To start, we can just import everything as long as there's not any conflicts.
 - How do we handle remote URLs, data URLs and blob dynamic imports?
-  - David: We can implement remote URL -> bare specifier mapping. Ideally this will be automatic, but in some cases the user will need to specify a bare specifier to use.
+  - David: Just changed it to download everything for now, but in the future we can implement remote URL -> bare specifier mapping. Ideally this will be automatic, but in some cases the user will need to specify a bare specifier to use.
   - David: We could probably output data URLs to a file.
   - David: Blob dynamic imports... I'm not sure. Dynamic imports will be a problem if they're not statically analyzable, but we can warn the user about that when it happens.
 - We should go from ./foo.ts to ./foo.js by default, with a flag to go from ./foo.ts to ./foo, assume people are supporting a browser or ESM Node.js
