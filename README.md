@@ -4,7 +4,7 @@ Prototype for a Deno to Node/canonical TypeScript build pipeline step.
 
 This will output tsc compatible code from a Deno codebase that could then be sent to a bundler (or compiled by tsc) for npm distribution.
 
-Example:
+## CLI Example
 
 ```bash
 # clone a Deno-first repo
@@ -37,9 +37,31 @@ import { CommentChar } from "./comment_char.js";
 import { escapeForWithinString, getStringFromStrOrFunc } from "./utils/string_utils.js";
 ```
 
+## API Example
+
+```rust
+use std::path::PathBuf;
+
+use d2n::DefaultLoader;
+use d2n::run;
+use d2n::RunOptions;
+
+let output_files = run(RunOptions {
+  entry_point: PathBuf::from("./mod.ts"),
+  keep_extensions: false,
+  loader: Box::new(DefaultLoader::new()),
+}).await?;
+
+for output_file in output_files {
+  // use these properties on output_file
+  output_file.file_path;
+  output_file.file_text;
+}
+```
+
 ## Future Goals
 
-1. Programmatic API available via Rust and Wasm (this would be used by bundlers to avoid writing the intermediary files to the disk).
+1. Programmatic API available via Wasm
 1. Support Deno.json to get compiler options.
 1. Handle mapping from remote specifiers to bare specifiers and transforming them in the file.
 1. Handle dynamic imports (at least ones that are statically analyzable and maybe warn on others)

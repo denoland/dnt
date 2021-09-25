@@ -26,7 +26,6 @@ struct Context<'a> {
   use_js_extension: bool,
   mappings: &'a Mappings,
   output_file_path: &'a PathBuf,
-  program: &'a Program<'a>,
   text_changes: Vec<TextChange>,
 }
 
@@ -39,10 +38,10 @@ pub fn get_module_specifier_text_changes<'a>(
     use_js_extension: params.use_js_extension,
     mappings: params.mappings,
     output_file_path: params.mappings.get_file_path(params.specifier),
-    program: params.program,
     text_changes: Vec::new(),
   };
 
+  // todo: look at imports in ts namespaces? I forget if they support importing from another module and if that works in Deno
   for child in params.program.children() {
     match child {
       Node::ImportDecl(import_decl) => {
