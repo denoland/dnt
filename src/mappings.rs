@@ -1,4 +1,4 @@
-// Copyright 2018-2021 the Deno authors. All rights reserved. MIT license.
+// Copyright 2021 the Deno authors. All rights reserved. MIT license.
 
 use std::collections::HashMap;
 use std::path::PathBuf;
@@ -24,7 +24,10 @@ impl Mappings {
       mappings.insert(specifier.clone(), relative_file_path.to_path_buf());
     }
 
-    let mut root_remote_specifiers: Vec<(ModuleSpecifier, Vec<ModuleSpecifier>)> = Vec::new();
+    let mut root_remote_specifiers: Vec<(
+      ModuleSpecifier,
+      Vec<ModuleSpecifier>,
+    )> = Vec::new();
     for remote_specifier in remote_specifiers.iter() {
       let mut found = false;
       for (root_specifier, specifiers) in root_remote_specifiers.iter_mut() {
@@ -48,11 +51,14 @@ impl Mappings {
         }
       }
       if !found {
-        root_remote_specifiers.push((remote_specifier.clone(), vec![remote_specifier.clone()]));
+        root_remote_specifiers
+          .push((remote_specifier.clone(), vec![remote_specifier.clone()]));
       }
     }
 
-    for (i, (root, specifiers)) in root_remote_specifiers.into_iter().enumerate() {
+    for (i, (root, specifiers)) in
+      root_remote_specifiers.into_iter().enumerate()
+    {
       let base_dir = PathBuf::from(format!("./deps/{}/", i.to_string()));
       for specifier in specifiers {
         let media_type = module_graph.get(&specifier).unwrap().media_type;
@@ -65,9 +71,7 @@ impl Mappings {
       }
     }
 
-    Mappings {
-      inner: mappings
-    }
+    Mappings { inner: mappings }
   }
 
   pub fn get_file_path(&self, specifier: &ModuleSpecifier) -> &PathBuf {

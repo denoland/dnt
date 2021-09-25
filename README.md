@@ -1,6 +1,6 @@
 # d2n
 
-Prototype for a Deno to Node/canonical TypeScript CLI tool.
+Prototype for a Deno to Node/canonical TypeScript build pipeline step.
 
 This will output tsc compatible code from a Deno codebase that could then be sent to a bundler (or compiled by tsc) for npm distribution.
 
@@ -49,8 +49,6 @@ Notes from Kitson:
 
 - We would need to rewrite triple slash references
 - We might need to deal with the types in the tsconfig.json
-- How do we cleanly supply a deno.ns lib so type checking works?
-  - David: We will search for any Deno specific APIs and replace them with a node shim. To start, we can just import everything as long as there's not any conflicts.
 - How do we handle remote URLs, data URLs and blob dynamic imports?
   - David: Just changed it to download everything for now, but in the future we can implement remote URL -> bare specifier mapping. Ideally this will be automatic, but in some cases the user will need to specify a bare specifier to use.
   - David: We could probably output data URLs to a file.

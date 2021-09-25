@@ -6,8 +6,8 @@ edition = "2018"
 [dependencies]
 anyhow = "1.0.44"
 base64 = "0.13.0"
-deno_ast = { version = "0.2.0", features = ["bundler", "codegen", "dep_graph", "module_specifier", "proposal", "react", "sourcemap", "transforms", "typescript", "view", "visit"] }
-deno_graph = "0.5.0"
+deno_ast = { version = "0.2.0", features = ["bundler", "codegen", "dep_graph", "module_specifier", "proposal", "react", "sourcemap", "transforms", "typescript", "view", "visit", "utils"], path = "../deno_ast" }
+deno_graph = { version = "0.5.0", path = "../deno_graph" }
 clap = "2.33.3"
 futures = "0.3.17"
 pathdiff = "0.2.0"
