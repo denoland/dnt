@@ -42,14 +42,13 @@ import { escapeForWithinString, getStringFromStrOrFunc } from "./utils/string_ut
 ```rust
 use std::path::PathBuf;
 
-use d2n::DefaultLoader;
-use d2n::run;
-use d2n::RunOptions;
+use d2n::transform;
+use d2n::TransformOptions;
 
-let output_files = run(RunOptions {
+let output_files = transform(TransformOptions {
   entry_point: PathBuf::from("./mod.ts"),
   keep_extensions: false,
-  loader: Box::new(DefaultLoader::new()),
+  loader: None, // use the default loader
 }).await?;
 
 for output_file in output_files {

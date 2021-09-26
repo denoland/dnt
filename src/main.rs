@@ -1,18 +1,17 @@
 // Copyright 2021 the Deno authors. All rights reserved. MIT license.
 
-use d2n::run;
-use d2n::DefaultLoader;
-use d2n::RunOptions;
+use d2n::transform;
+use d2n::TransformOptions;
 
 mod args;
 
 #[tokio::main]
 async fn main() -> anyhow::Result<()> {
   let args = args::parse_cli_args();
-  let output_files = run(RunOptions {
-    loader: Box::new(DefaultLoader::new()),
+  let output_files = transform(TransformOptions {
     entry_point: args.entry_point,
     keep_extensions: args.keep_extensions,
+    loader: None,
   })
   .await?;
 

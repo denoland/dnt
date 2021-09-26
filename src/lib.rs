@@ -12,7 +12,7 @@ use visitors::get_module_specifier_text_changes;
 use visitors::GetDenoGlobalTextChangesParams;
 use visitors::GetModuleSpecifierTextChangesParams;
 
-pub use loader::DefaultLoader;
+use loader::DefaultLoader;
 pub use loader::Loader;
 
 mod loader;
@@ -27,14 +27,18 @@ pub struct OutputFile {
   pub file_text: String,
 }
 
-pub struct RunOptions {
+pub struct TransformOptions {
   pub entry_point: PathBuf,
   pub keep_extensions: bool,
-  pub loader: Box<dyn Loader>,
+  pub loader: Option<Box<dyn Loader>>,
 }
 
-pub async fn run(options: RunOptions) -> Result<Vec<OutputFile>> {
-  let mut loader = loader::SourceLoader::new(options.loader);
+pub async fn transform(options: TransformOptions) -> Result<Vec<OutputFile>> {
+  let mut loader = loader::SourceLoader::new(
+    options
+      .loader
+      .unwrap_or_else(|| Box::new(DefaultLoader::new())),
+  );
   let source_parser = parser::CapturingSourceParser::new();
   let module_graph = create_graph(
     ModuleSpecifier::from_file_path(&options.entry_point).unwrap(),
