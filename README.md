@@ -1,24 +1,24 @@
 # d2n
 
-Prototype for a Deno to Node/canonical TypeScript build pipeline step.
+Prototype for a Deno to Node/canonical TypeScript transform.
 
 This will output tsc compatible code from a Deno codebase that could then be sent to a bundler (or compiled by tsc) for npm distribution.
 
 ## CLI Example
 
 ```bash
+# install
+cargo install d2n
+
 # clone a Deno-first repo
 git clone https://github.com/dsherret/code-block-writer.git
-
-# clone this repo
-git clone https://github.com/dsherret/d2n.git
+cd code-block-writer
 
 # run tool and output to ./code-block-writer/npm
-cd d2n
-cargo run -- ../code-block-writer/mod.ts --out ../code-block-writer/npm
+d2n mod.ts --out ./npm
 
 # go to output directory, run tsc, and publish
-cd ../code-block-writer/npm
+cd npm
 tsc mod.ts --target ES2015 --module commonjs --declaration
 npm publish
 ```

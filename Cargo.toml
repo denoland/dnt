@@ -1,7 +1,11 @@
 [package]
 name = "d2n"
 version = "0.1.0"
+authors = ["the Deno authors"]
 edition = "2018"
+license = "MIT"
+repository = "https://github.com/dsherret/d2n"
+description = "Deno to Node/canonical TypeScript transform."
 
 [dependencies]
 anyhow = "1.0.44"
