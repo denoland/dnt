@@ -66,7 +66,7 @@ fn visit_children(node: &Node, import_name: &str, context: &mut Context) {
       context.text_changes.push(TextChange {
         span: ident.span(),
         new_text: format!(
-          "{{\n  // @ts-ignore: ok\n  Deno: {}.Deno,\n  ...globalThis,\n}}",
+          "{{ Deno: {}.Deno, ...globalThis }}",
           import_name
         ),
       });
