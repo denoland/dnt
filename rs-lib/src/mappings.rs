@@ -6,6 +6,8 @@ use std::path::PathBuf;
 use deno_ast::ModuleSpecifier;
 use deno_graph::ModuleGraph;
 
+use crate::utils::url_to_file_path;
+
 pub struct Mappings {
   inner: HashMap<ModuleSpecifier, PathBuf>,
 }
@@ -19,7 +21,7 @@ impl Mappings {
     let mut mappings = HashMap::new();
     let base_dir = get_base_dir(local_specifiers);
     for specifier in local_specifiers.iter() {
-      let file_path = specifier.to_file_path().unwrap();
+      let file_path = url_to_file_path(specifier).unwrap();
       let relative_file_path = file_path.strip_prefix(&base_dir).unwrap();
       mappings.insert(specifier.clone(), relative_file_path.to_path_buf());
     }
@@ -59,7 +61,7 @@ impl Mappings {
     for (i, (root, specifiers)) in
       root_remote_specifiers.into_iter().enumerate()
     {
-      let base_dir = PathBuf::from(format!("./deps/{}/", i.to_string()));
+      let base_dir = PathBuf::from(format!("deps/{}/", i.to_string()));
       for specifier in specifiers {
         let media_type = module_graph.get(&specifier).unwrap().media_type;
         let relative = root.make_relative(&specifier).unwrap();
@@ -82,15 +84,14 @@ impl Mappings {
 fn get_base_dir(specifiers: &[ModuleSpecifier]) -> PathBuf {
   // todo: should maybe error on windows when the files
   // span different drives...
-  let mut base_dir = specifiers[0]
-    .to_file_path()
+  let mut base_dir = url_to_file_path(&specifiers[0])
     .unwrap()
     .to_path_buf()
     .parent()
     .unwrap()
     .to_path_buf();
   for specifier in specifiers {
-    let file_path = specifier.to_file_path().unwrap();
+    let file_path = url_to_file_path(specifier).unwrap();
     let parent_dir = file_path.parent().unwrap();
     if base_dir.starts_with(parent_dir) {
       base_dir = parent_dir.to_path_buf();

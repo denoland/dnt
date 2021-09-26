@@ -3,8 +3,8 @@
 use std::path::PathBuf;
 
 use anyhow::Result;
-use deno_ast::ModuleSpecifier;
 use deno_graph::create_graph;
+
 use mappings::Mappings;
 use text_changes::apply_text_changes;
 use visitors::get_deno_global_text_changes;
@@ -12,8 +12,9 @@ use visitors::get_module_specifier_text_changes;
 use visitors::GetDenoGlobalTextChangesParams;
 use visitors::GetModuleSpecifierTextChangesParams;
 
-use loader::DefaultLoader;
 pub use loader::Loader;
+pub use loader::LoadResponse;
+pub use deno_ast::ModuleSpecifier;
 
 mod loader;
 mod mappings;
@@ -22,13 +23,15 @@ mod text_changes;
 mod utils;
 mod visitors;
 
+#[cfg_attr(feature = "serialization", derive(serde::Serialize))]
+#[cfg_attr(feature = "serialization", serde(rename_all = "camelCase"))]
 pub struct OutputFile {
   pub file_path: PathBuf,
   pub file_text: String,
 }
 
 pub struct TransformOptions {
-  pub entry_point: PathBuf,
+  pub entry_point: ModuleSpecifier,
   pub keep_extensions: bool,
   pub loader: Option<Box<dyn Loader>>,
 }
@@ -37,11 +40,16 @@ pub async fn transform(options: TransformOptions) -> Result<Vec<OutputFile>> {
   let mut loader = loader::SourceLoader::new(
     options
       .loader
-      .unwrap_or_else(|| Box::new(DefaultLoader::new())),
+      .unwrap_or_else(|| {
+        #[cfg(feature = "rust")]
+        return Box::new(loader::DefaultLoader::new());
+        #[cfg(not(feature = "rust"))]
+        panic!("You must provide a loader or use the 'rust' feature.")
+      }),
   );
   let source_parser = parser::CapturingSourceParser::new();
   let module_graph = create_graph(
-    ModuleSpecifier::from_file_path(&options.entry_point).unwrap(),
+    options.entry_point.clone(),
     &mut loader,
     None,
     None,

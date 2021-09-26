@@ -2,6 +2,7 @@
 
 use d2n::transform;
 use d2n::TransformOptions;
+use deno_ast::ModuleSpecifier;
 
 mod args;
 
@@ -9,7 +10,7 @@ mod args;
 async fn main() -> anyhow::Result<()> {
   let args = args::parse_cli_args();
   let output_files = transform(TransformOptions {
-    entry_point: args.entry_point,
+    entry_point: ModuleSpecifier::from_file_path(args.entry_point).unwrap(),
     keep_extensions: args.keep_extensions,
     loader: None,
   })

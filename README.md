@@ -42,11 +42,12 @@ import { escapeForWithinString, getStringFromStrOrFunc } from "./utils/string_ut
 ```rust
 use std::path::PathBuf;
 
+use d2n::ModuleSpecifier;
 use d2n::transform;
 use d2n::TransformOptions;
 
 let output_files = transform(TransformOptions {
-  entry_point: PathBuf::from("./mod.ts"),
+  entry_point: ModuleSpecifier::from_file_path(PathBuf::from("./mod.ts")).unwrap(),
   keep_extensions: false,
   loader: None, // use the default loader
 }).await?;
@@ -60,7 +61,6 @@ for output_file in output_files {
 
 ## Future Goals
 
-1. Programmatic API available via Wasm
 1. Support Deno.json to get compiler options.
 1. Handle mapping from remote specifiers to bare specifiers and transforming them in the file.
 1. Handle dynamic imports (at least ones that are statically analyzable and maybe warn on others)
