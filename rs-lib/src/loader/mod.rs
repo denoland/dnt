@@ -1,7 +1,6 @@
 // Copyright 2021 the Deno authors. All rights reserved. MIT license.
 
 use std::collections::HashMap;
-use std::collections::HashSet;
 use std::path::PathBuf;
 use std::pin::Pin;
 use std::sync::Arc;
@@ -12,6 +11,12 @@ use futures::future;
 use futures::Future;
 
 use crate::utils::url_to_file_path;
+
+#[cfg(feature = "tokio-loader")]
+mod default_loader;
+
+#[cfg(feature = "tokio-loader")]
+pub use default_loader::*;
 
 pub struct LoadResponse {
   pub maybe_headers: Option<HashMap<String, String>>,
@@ -29,62 +34,29 @@ pub trait Loader {
   ) -> Pin<Box<dyn Future<Output = Result<LoadResponse>> + 'static>>;
 }
 
-#[cfg(feature = "rust")]
-pub struct DefaultLoader {}
-
-#[cfg(feature = "rust")]
-impl DefaultLoader {
-  pub fn new() -> Self {
-    Self {}
-  }
-}
-
-#[cfg(feature = "rust")]
-impl Loader for DefaultLoader {
-  fn read_file(
-    &self,
-    file_path: PathBuf,
-  ) -> Pin<Box<dyn Future<Output = std::io::Result<String>> + 'static>> {
-    Box::pin(tokio::fs::read_to_string(file_path))
-  }
-
-  fn make_request(
-    &self,
-    specifier: ModuleSpecifier,
-  ) -> Pin<Box<dyn Future<Output = Result<LoadResponse>> + 'static>> {
-    Box::pin(async move {
-      let response = reqwest::get(specifier.clone()).await?;
-      let text = response.text().await?;
-
-      Ok(LoadResponse {
-        content: text,
-        maybe_headers: None,
-      })
-    })
-  }
+pub struct LoaderSpecifiers {
+  pub local: Vec<ModuleSpecifier>,
+  pub remote: Vec<ModuleSpecifier>,
 }
 
 pub struct SourceLoader {
   loader: Arc<Box<dyn Loader>>,
-  local_specifiers: HashSet<ModuleSpecifier>,
-  remote_specifiers: HashSet<ModuleSpecifier>,
+  specifiers: LoaderSpecifiers,
 }
 
 impl SourceLoader {
   pub fn new(loader: Box<dyn Loader>) -> Self {
     Self {
       loader: Arc::new(loader),
-      local_specifiers: HashSet::new(),
-      remote_specifiers: HashSet::new(),
+      specifiers: LoaderSpecifiers {
+        local: Vec::new(),
+        remote: Vec::new(),
+      },
     }
   }
 
-  pub fn local_specifiers(&self) -> Vec<ModuleSpecifier> {
-    to_sorted(&self.local_specifiers)
-  }
-
-  pub fn remote_specifiers(&self) -> Vec<ModuleSpecifier> {
-    to_sorted(&self.remote_specifiers)
+  pub fn into_specifiers(self) -> LoaderSpecifiers {
+    self.specifiers
   }
 }
 
@@ -97,21 +69,26 @@ impl deno_graph::source::Loader for SourceLoader {
   ) -> deno_graph::source::LoadFuture {
     if specifier.scheme() == "https" || specifier.scheme() == "http" {
       println!("Downloading {}...", specifier);
-      self.remote_specifiers.insert(specifier.clone());
+      self.specifiers.remote.push(specifier.clone());
 
       let loader = self.loader.clone();
       let specifier = specifier.clone();
       return Box::pin(async move {
         let resp = loader.make_request(specifier.clone()).await;
-        (specifier.clone(), resp.map(|r| Some(deno_graph::source::LoadResponse {
-          specifier,
-          content: Arc::new(r.content),
-          maybe_headers: r.maybe_headers,
-        })))
+        (
+          specifier.clone(),
+          resp.map(|r| {
+            Some(deno_graph::source::LoadResponse {
+              specifier,
+              content: Arc::new(r.content),
+              maybe_headers: r.maybe_headers,
+            })
+          }),
+        )
       });
     } else if specifier.scheme() == "file" {
       println!("Loading {}...", specifier);
-      self.local_specifiers.insert(specifier.clone());
+      self.specifiers.local.push(specifier.clone());
 
       let file_path = url_to_file_path(specifier).unwrap();
       let loader = self.loader.clone();
@@ -137,10 +114,4 @@ impl deno_graph::source::Loader for SourceLoader {
       )))
     }
   }
-}
-
-fn to_sorted(values: &HashSet<ModuleSpecifier>) -> Vec<ModuleSpecifier> {
-  let mut values = values.iter().map(ToOwned::to_owned).collect::<Vec<_>>();
-  values.sort();
-  values
 }

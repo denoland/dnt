@@ -5,8 +5,9 @@ const root = path.dirname(path.fromFileUrl(import.meta.url));
 await init(Deno.readFile(path.join(root, "./pkg/d2n_wasm_bg.wasm")));
 
 export interface TransformOptions {
-  entryPoint: string,
-  keepExtensions: boolean,
+  entryPoint: string;
+  keepExtensions: boolean;
+  shimPackageName?: string;
 }
 
 export interface OutputFile {

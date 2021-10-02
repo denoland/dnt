@@ -1,3 +1,5 @@
+// Copyright 2021 the Deno authors. All rights reserved. MIT license.
+
 use std::cmp::Ordering;
 
 use deno_ast::swc::common::Span;

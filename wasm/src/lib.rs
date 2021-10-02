@@ -1,3 +1,5 @@
+// Copyright 2021 the Deno authors. All rights reserved. MIT license.
+
 mod utils;
 
 use std::future::Future;
@@ -69,6 +71,7 @@ impl d2n::Loader for JsLoader {
 pub struct TransformOptions {
   pub entry_point: String,
   pub keep_extensions: bool,
+  pub shim_package_name: Option<String>,
 }
 
 #[wasm_bindgen]
@@ -80,6 +83,7 @@ pub async fn transform(options: JsValue) -> Result<JsValue, JsValue> {
   let result = d2n::transform(d2n::TransformOptions {
     entry_point: d2n::ModuleSpecifier::parse(&options.entry_point).unwrap(),
     keep_extensions: options.keep_extensions,
+    shim_package_name: options.shim_package_name,
     loader: Some(Box::new(JsLoader {})),
   })
   .await

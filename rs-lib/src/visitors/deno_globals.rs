@@ -1,3 +1,5 @@
+// Copyright 2021 the Deno authors. All rights reserved. MIT license.
+
 use std::collections::HashSet;
 
 use deno_ast::swc::common::SyntaxContext;
@@ -9,6 +11,7 @@ use crate::text_changes::TextChange;
 pub struct GetDenoGlobalTextChangesParams<'a> {
   pub program: &'a Program<'a>,
   pub top_level_context: SyntaxContext,
+  pub shim_package_name: &'a str,
 }
 
 struct Context<'a> {
@@ -44,8 +47,8 @@ pub fn get_deno_global_text_changes<'a>(
     context.text_changes.push(TextChange {
       span: Span::new(BytePos(0), BytePos(0), Default::default()),
       new_text: format!(
-        "import * as {} from \"deno-shim-library-name\";\n",
-        deno_name
+        "import * as {} from \"{}\";\n",
+        deno_name, params.shim_package_name,
       ),
     });
   }
@@ -65,10 +68,7 @@ fn visit_children(node: &Node, import_name: &str, context: &mut Context) {
     if is_top_level_context && ident_text == "globalThis" {
       context.text_changes.push(TextChange {
         span: ident.span(),
-        new_text: format!(
-          "{{ Deno: {}.Deno, ...globalThis }}",
-          import_name
-        ),
+        new_text: format!("({{ Deno: {}.Deno, ...globalThis }})", import_name),
       });
       context.import_shim = true;
     }

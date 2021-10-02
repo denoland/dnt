@@ -19,4 +19,12 @@ for (const outputFile of outputFiles) {
   project.createSourceFile(outputFile.filePath, outputFile.fileText);
 }
 
-project.createProgram().emit();
+const program = project.createProgram();
+
+// const diagnostics = ts.getPreEmitDiagnostics(program);
+// if (diagnostics.length > 0) {
+//   console.error(diagnostics);
+//   Deno.exit(1);
+// }
+
+program.emit();

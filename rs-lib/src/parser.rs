@@ -1,7 +1,10 @@
+// Copyright 2021 the Deno authors. All rights reserved. MIT license.
+
 use std::cell::RefCell;
 use std::collections::HashMap;
 use std::sync::Arc;
 
+use anyhow::Result;
 use deno_ast::parse_module;
 use deno_ast::Diagnostic;
 use deno_ast::MediaType;
@@ -26,8 +29,18 @@ impl CapturingSourceParser {
   pub fn get_parsed_source(
     &self,
     specifier: &ModuleSpecifier,
-  ) -> Option<ParsedSource> {
-    self.modules.borrow().get(specifier).map(|m| m.to_owned())
+  ) -> Result<ParsedSource> {
+    self
+      .modules
+      .borrow()
+      .get(specifier)
+      .map(|m| m.to_owned())
+      .ok_or_else(|| {
+        anyhow::anyhow!(
+          "Programming error. Did not find source: {}",
+          specifier.to_string()
+        )
+      })
   }
 }
 
