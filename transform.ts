@@ -34,10 +34,10 @@ async function getWasmLoadPromise() {
   switch (moduleUrl.protocol) {
     case "file:":
       const root = path.dirname(path.fromFileUrl(import.meta.url));
-      return Deno.readFile(path.join(root, "./pkg/dnt_wasm_bg.wasm"));
+      return Deno.readFile(path.join(root, "./lib/pkg/dnt_wasm_bg.wasm"));
     case "https:":
     case "http:":
-      const wasmUrl = new URL("./pkg/dnt_wasm_bg.wasm", import.meta.url);
+      const wasmUrl = new URL("./lib/pkg/dnt_wasm_bg.wasm", import.meta.url);
       const wasmResponse = await fetch(wasmUrl);
       if (
         wasmResponse.headers.get("content-type")?.toLowerCase().startsWith(
