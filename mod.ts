@@ -1,8 +1,8 @@
 // Copyright 2018-2021 the Deno authors. All rights reserved. MIT license.
 
-import { path, createProjectSync, ts } from "./_mod.deps.ts";
+import { path, createProjectSync, ts } from "./lib/_mod.deps.ts";
+import { outputDiagnostics } from "./lib/_compiler.ts";
 import { transform } from "./transform.ts";
-import { outputDiagnostics } from "./_compiler.ts";
 
 export * from "./transform.ts";
 

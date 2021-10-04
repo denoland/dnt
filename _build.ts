@@ -5,7 +5,7 @@ await buildWasm();
 
 async function buildWasm() {
   const cmd = Deno.run({
-    cmd: ["wasm-pack", "build", "--out-dir", "../deno/pkg", "--target", "web"],
+    cmd: ["wasm-pack", "build", "--out-dir", "../lib/pkg", "--target", "web"],
     cwd: path.join(rootDir, "wasm"),
     stderr: "inherit",
     stdout: "inherit",
@@ -19,7 +19,7 @@ async function buildWasm() {
     cmd.close();
   }
 
-  Deno.remove(path.join(rootDir, "./deno/pkg/.gitignore"));
-  Deno.remove(path.join(rootDir, "./deno/pkg/dnt_wasm_bg.wasm.d.ts"));
-  Deno.remove(path.join(rootDir, "./deno/pkg/package.json"));
+  Deno.remove(path.join(rootDir, "./lib/pkg/.gitignore"));
+  Deno.remove(path.join(rootDir, "./lib/pkg/dnt_wasm_bg.wasm.d.ts"));
+  Deno.remove(path.join(rootDir, "./lib/pkg/package.json"));
 }

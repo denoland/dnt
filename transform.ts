@@ -1,7 +1,7 @@
 // Copyright 2018-2021 the Deno authors. All rights reserved. MIT license.
 
-import { path } from "./_transform.deps.ts";
-import init, * as wasmFuncs from "./pkg/dnt_wasm.js";
+import { path } from "./lib/_transform.deps.ts";
+import init, * as wasmFuncs from "./lib/pkg/dnt_wasm.js";
 
 await init(getWasmLoadPromise());
 
