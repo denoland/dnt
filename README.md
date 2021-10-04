@@ -22,7 +22,7 @@ cd npm
 npm publish
 ```
 
-## Wasm API Example
+## JS API Example
 
 To emit the Deno-first sources to code that can be consumed in Node.js, use the
 `emit` function:
