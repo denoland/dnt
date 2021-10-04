@@ -1,5 +1,7 @@
 # dnt - Deno to Node Transform
 
+[![deno doc](https://doc.deno.land/badge.svg)](https://doc.deno.land/https/deno.land/x/dnt/mod.ts)
+
 Prototype for a Deno to Node/canonical TypeScript transform.
 
 ## CLI Example
@@ -26,6 +28,7 @@ To emit the Deno-first sources to code that can be consumed in Node.js, use the
 `emit` function:
 
 ```ts
+// docs: https://doc.deno.land/https/deno.land/x/dnt/mod.ts
 import { emit } from "https://deno.land/x/dnt/mod.ts";
 
 await emit({
@@ -42,6 +45,7 @@ For only the Deno to canonical TypeScript transform which can be useful for
 bundlers, use the following:
 
 ```ts
+// docs: https://doc.deno.land/https/deno.land/x/dnt/transform.ts
 import { transform } from "https://deno.land/x/dnt/transform.ts";
 
 const outputFiles = await transform({
