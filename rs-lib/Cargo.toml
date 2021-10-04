@@ -1,10 +1,10 @@
 [package]
-name = "d2n"
+name = "deno_node_transform"
 version = "0.1.0"
 authors = ["the Deno authors"]
 edition = "2018"
 license = "MIT"
-repository = "https://github.com/dsherret/d2n"
+repository = "https://github.com/dsherret/dnt"
 description = "Deno to Node/canonical TypeScript transform."
 
 [features]

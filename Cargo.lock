@@ -191,39 +191,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "d2n"
-version = "0.1.0"
-dependencies = [
- "anyhow",
- "base64 0.13.0",
- "deno_ast",
- "deno_graph",
- "futures",
- "lazy_static",
- "pathdiff",
- "pretty_assertions",
- "regex",
- "reqwest",
- "serde",
- "tokio",
-]
-
-[[package]]
-name = "d2n-wasm"
-version = "0.1.0"
-dependencies = [
- "anyhow",
- "console_error_panic_hook",
- "d2n",
- "serde",
- "wasm-bindgen",
- "wasm-bindgen-futures",
- "wasm-bindgen-test",
- "web-sys",
- "wee_alloc",
-]
-
-[[package]]
 name = "darling"
 version = "0.10.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -311,6 +278,24 @@ dependencies = [
 ]
 
 [[package]]
+name = "deno_node_transform"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "base64 0.13.0",
+ "deno_ast",
+ "deno_graph",
+ "futures",
+ "lazy_static",
+ "pathdiff",
+ "pretty_assertions",
+ "regex",
+ "reqwest",
+ "serde",
+ "tokio",
+]
+
+[[package]]
 name = "diff"
 version = "0.1.12"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -323,6 +308,21 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "d3dd60d1080a57a05ab032377049e0591415d2b31afd7028356dbf3cc6dcb066"
 dependencies = [
  "generic-array",
+]
+
+[[package]]
+name = "dnt-wasm"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "console_error_panic_hook",
+ "deno_node_transform",
+ "serde",
+ "wasm-bindgen",
+ "wasm-bindgen-futures",
+ "wasm-bindgen-test",
+ "web-sys",
+ "wee_alloc",
 ]
 
 [[package]]

@@ -1,4 +1,4 @@
-// Copyright 2021 the Deno authors. All rights reserved. MIT license.
+// Copyright 2018-2021 the Deno authors. All rights reserved. MIT license.
 
 use std::collections::HashMap;
 use std::path::Path;
@@ -8,9 +8,9 @@ use std::pin::Pin;
 use anyhow::Result;
 use futures::Future;
 
-use d2n::ModuleSpecifier;
-use d2n::LoadResponse;
-use d2n::Loader;
+use deno_node_transform::ModuleSpecifier;
+use deno_node_transform::LoadResponse;
+use deno_node_transform::Loader;
 
 #[derive(Clone)]
 pub struct InMemoryLoader {

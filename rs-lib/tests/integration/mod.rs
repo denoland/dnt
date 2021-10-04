@@ -15,7 +15,7 @@ macro_rules! assert_files {
         file.file_path = PathBuf::from(file.file_path.to_string_lossy().to_string().replace("\\", "/"));
       }
       actual.sort_by(|a, b| a.file_path.cmp(&b.file_path));
-      let mut expected = expected.iter().map(|(file_path, file_text)| d2n::OutputFile {
+      let mut expected = expected.iter().map(|(file_path, file_text)| deno_node_transform::OutputFile {
         file_path: PathBuf::from(file_path),
         file_text: file_text.to_string(),
       }).collect::<Vec<_>>();

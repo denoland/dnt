@@ -1,52 +1,64 @@
-# d2n
+# dnt - Deno to Node Transform
 
 Prototype for a Deno to Node/canonical TypeScript transform.
 
-This will output tsc compatible code from a Deno codebase that could then be sent to a bundler (or compiled by tsc) for npm distribution.
-
 ## CLI Example
-
-This example is out of date. In the future this will just be a Deno module.
 
 ```bash
 # install
-cargo install d2n
+deno install --allow-read --allow-write --allow-net -n dnt https://deno.land/x/dnt/cli.ts
 
 # clone a Deno-first repo
 git clone https://github.com/dsherret/code-block-writer.git
 cd code-block-writer
 
-# run tool and output to ./code-block-writer/npm
-d2n mod.ts --out ./npm
+# run tool and output to ./code-block-writer/npm/dist (uses tsc CLI flags)
+dnt mod.ts --target ES6 --outDir ./npm/dist --declaration
 
 # go to output directory, run tsc, and publish
 cd npm
-tsc mod.ts --target ES2015 --module commonjs --declaration
 npm publish
 ```
 
-The file in *code-block-writer/npm/mod.ts* would contain module specifiers without extensions (in the main codebase they had `.ts` extensions):
+## Wasm API Example
+
+To emit the Deno-first sources to code that can be consumed in Node.js, use the `emit` function:
 
 ```ts
-import { CommentChar } from "./comment_char";
-import { escapeForWithinString, getStringFromStrOrFunc } from "./utils/string_utils";
+import { emit } from "https://deno.land/x/dnt/mod.ts";
+
+await emit({
+  compilerOptions: {
+    outDir: "./dist",
+  },
+  entryPoint: "./mod.ts",
+  shimPackageName: "deno-shim-package-name",
+  typeCheck: false,
+});
 ```
 
-If you run with `cargo run -- ../code-block-writer/mod.ts --out ../code-block-writer/npm --keep-extensions` it will then contain:
+For only the Deno to canonical TypeScript transform which can be useful for bundlers, use the following:
 
 ```ts
-import { CommentChar } from "./comment_char.js";
-import { escapeForWithinString, getStringFromStrOrFunc } from "./utils/string_utils.js";
+import { transform } from "https://deno.land/x/dnt/transform.ts";
+
+const outputFiles = await transform({
+  entryPoint: "./mod.ts",
+  shimPackageName: "deno-shim-package-name",
+  keepExtensions: false, // transforms to not have extensions
+});
 ```
 
-## API Example
+## Rust API Example
+
+When using TypeScript, the Rust API only transforms from Deno to canonical TypeScript. You will need to use the TypeScript compiler to do the rest.
 
 ```rust
 use std::path::PathBuf;
 
-use d2n::ModuleSpecifier;
-use d2n::transform;
-use d2n::TransformOptions;
+use deno_node_transform::ModuleSpecifier;
+use deno_node_transform::transform;
+use deno_node_transform::TransformOptions;
 
 let output_files = transform(TransformOptions {
   entry_point: ModuleSpecifier::from_file_path(PathBuf::from("./mod.ts")).unwrap(),
@@ -60,22 +72,3 @@ for output_file in output_files {
   output_file.file_text;
 }
 ```
-
-## Future Goals
-
-1. Support Deno.json to get compiler options.
-1. Handle mapping from remote specifiers to bare specifiers and transforming them in the file.
-1. Handle dynamic imports (at least ones that are statically analyzable and maybe warn on others)
-1. Support creating or modifying a package.json and using that for publish.
-1. Remove `@deno-types` and type reference directive comments. Currently leaves them as-is, but better to remove them in case the npm package gets re-consumed in Deno.
-
-Notes from Kitson:
-
-- We would need to rewrite triple slash references
-- We might need to deal with the types in the tsconfig.json
-- How do we handle remote URLs, data URLs and blob dynamic imports?
-  - David: Just changed it to download everything for now, but in the future we can implement remote URL -> bare specifier mapping. Ideally this will be automatic, but in some cases the user will need to specify a bare specifier to use.
-  - David: We could probably output data URLs to a file.
-  - David: Blob dynamic imports... I'm not sure. Dynamic imports will be a problem if they're not statically analyzable, but we can warn the user about that when it happens.
-- We should go from ./foo.ts to ./foo.js by default, with a flag to go from ./foo.ts to ./foo, assume people are supporting a browser or ESM Node.js
-  - David: I'll change this to be the default later.

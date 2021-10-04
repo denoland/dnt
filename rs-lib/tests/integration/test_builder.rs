@@ -1,8 +1,8 @@
 use anyhow::Result;
-use d2n::OutputFile;
-use d2n::transform;
-use d2n::TransformOptions;
-use d2n::ModuleSpecifier;
+use deno_node_transform::OutputFile;
+use deno_node_transform::transform;
+use deno_node_transform::TransformOptions;
+use deno_node_transform::ModuleSpecifier;
 
 use super::InMemoryLoader;
 

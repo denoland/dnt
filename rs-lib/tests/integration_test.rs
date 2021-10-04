@@ -240,10 +240,7 @@ async fn transform_typescript_types_in_headers() {
   ]);
 }
 
-// todo:
-// * tests for multiple deno-types for the same module pointing at different .d.ts files (error)
-// * Handle deno-types when it references a `.ts` file (maybe transform the .ts file to .js?)
-
+#[ignore]
 #[tokio::test]
 async fn transform_typescript_types_in_deno_types() {
   let result = TestBuilder::new()

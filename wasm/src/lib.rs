@@ -1,4 +1,4 @@
-// Copyright 2021 the Deno authors. All rights reserved. MIT license.
+// Copyright 2018-2021 the Deno authors. All rights reserved. MIT license.
 
 mod utils;
 
@@ -26,7 +26,7 @@ extern "C" {
 
 struct JsLoader {}
 
-impl d2n::Loader for JsLoader {
+impl dnt::Loader for JsLoader {
   fn read_file(
     &self,
     file_path: PathBuf,
@@ -40,9 +40,9 @@ impl d2n::Loader for JsLoader {
 
   fn make_request(
     &self,
-    url: d2n::ModuleSpecifier,
+    url: dnt::ModuleSpecifier,
   ) -> std::pin::Pin<
-    Box<dyn Future<Output = Result<d2n::LoadResponse>> + 'static>,
+    Box<dyn Future<Output = Result<dnt::LoadResponse>> + 'static>,
   > {
     Box::pin(async move {
       // todo: handle error
@@ -58,7 +58,7 @@ impl d2n::Loader for JsLoader {
       assert!(resp_value.is_instance_of::<Response>());
       let resp: Response = resp_value.dyn_into().unwrap();
       let text = JsFuture::from(resp.text().unwrap()).await.unwrap();
-      Ok(d2n::LoadResponse {
+      Ok(dnt::LoadResponse {
         content: text.as_string().unwrap(),
         maybe_headers: None,
       })
@@ -80,8 +80,8 @@ pub async fn transform(options: JsValue) -> Result<JsValue, JsValue> {
 
   let options: TransformOptions = options.into_serde().unwrap();
 
-  let result = d2n::transform(d2n::TransformOptions {
-    entry_point: d2n::ModuleSpecifier::parse(&options.entry_point).unwrap(),
+  let result = dnt::transform(dnt::TransformOptions {
+    entry_point: dnt::ModuleSpecifier::parse(&options.entry_point).unwrap(),
     keep_extensions: options.keep_extensions,
     shim_package_name: options.shim_package_name,
     loader: Some(Box::new(JsLoader {})),
