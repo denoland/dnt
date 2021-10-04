@@ -29,7 +29,7 @@ export function transform(options: TransformOptions): Promise<OutputFile[]> {
   return wasmFuncs.transform(newOptions);
 }
 
-function getWasmLoadPromise() {
+async function getWasmLoadPromise() {
   const moduleUrl = new URL(import.meta.url);
   switch (moduleUrl.protocol) {
     case "file:":
@@ -37,7 +37,17 @@ function getWasmLoadPromise() {
       return Deno.readFile(path.join(root, "./pkg/dnt_wasm_bg.wasm"));
     case "https:":
     case "http:":
-      return new URL("./pkg/dnt_wasm_bg.wasm", import.meta.url);
+      const wasmUrl = new URL("./pkg/dnt_wasm_bg.wasm", import.meta.url);
+      const wasmResponse = await fetch(wasmUrl);
+      if (
+        wasmResponse.headers.get("content-type")?.toLowerCase().startsWith(
+          "application/wasm",
+        )
+      ) {
+        return wasmResponse;
+      } else {
+        return wasmResponse.arrayBuffer();
+      }
     default:
       throw new Error(`Not implemented protocol: ${moduleUrl.protocol}`);
   }
