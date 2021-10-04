@@ -5,6 +5,8 @@ import { outputDiagnostics } from "./lib/_compiler.ts";
 import { transform } from "./transform.ts";
 
 export * from "./transform.ts";
+// necessary for use with compiler options
+export { ts };
 
 export interface EmitOptions {
   compilerOptions: ts.CompilerOptions;
