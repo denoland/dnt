@@ -16,6 +16,9 @@ export interface OutputFile {
   fileText: string;
 }
 
+/** Analyzes the provided entry point to get all the dependended on modules and
+ * outputs canonical TypeScript code in memory. The output of this function
+ * can then be sent to the TypeScript compiler or a bundler for further processing. */
 export function transform(options: TransformOptions): Promise<OutputFile[]> {
   const newOptions = {
     ...options,

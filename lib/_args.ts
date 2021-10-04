@@ -10,10 +10,7 @@ export interface ParsedArgs {
   typeCheck: boolean;
 }
 
-export function parseArgs(
-  cliArgs: string[],
-  reportDiagnostics: (diagnostics: ts.Diagnostic[]) => void,
-): ParsedArgs {
+export function parseArgs(cliArgs: string[]): ParsedArgs | ts.Diagnostic[] {
   const parsedArgs = parse(cliArgs);
   const entryPoint = takeEntryPoint();
   const typeCheck = takeTypeCheck();
@@ -21,7 +18,7 @@ export function parseArgs(
   const tsArgs = ts.parseCommandLine(getRemainingArgs());
 
   if (tsArgs.errors.length > 0) {
-    reportDiagnostics(tsArgs.errors);
+    return tsArgs.errors;
   }
 
   return {

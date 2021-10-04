@@ -31,7 +31,7 @@ To emit the Deno-first sources to code that can be consumed in Node.js, use the
 // docs: https://doc.deno.land/https/deno.land/x/dnt/mod.ts
 import { emit } from "https://deno.land/x/dnt/mod.ts";
 
-await emit({
+const emitResult = await emit({
   compilerOptions: {
     outDir: "./dist",
   },

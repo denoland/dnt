@@ -2,6 +2,7 @@
 - tests for CLI
 - tests for multiple deno-types for the same module pointing at different .d.ts files (error)
 - Handle deno-types when it references a `.ts` file (maybe transform the .ts file to .js?)
+- Maybe the ability to skip using the TypeScript compiler (useful for people with only JS projects)
 
 ## Future Goals
 

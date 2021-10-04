@@ -4,14 +4,20 @@ import { parseArgs } from "./lib/_args.ts";
 import { outputDiagnostics } from "./lib/_compiler.ts";
 import { emit } from "./mod.ts";
 
-const args = parseArgs(Deno.args, (diagnostics) => {
-  outputDiagnostics(diagnostics);
+const args = parseArgs(Deno.args);
+if (args instanceof Array) {
+  outputDiagnostics(args);
   Deno.exit(1);
-});
+}
 
-await emit({
+const emitResult = await emit({
   compilerOptions: args.compilerOptions,
   entryPoint: args.entryPoint,
   shimPackageName: args.shimPackageName,
   typeCheck: args.typeCheck,
 });
+
+if (!emitResult.success) {
+  outputDiagnostics(emitResult.diagnostics);
+  Deno.exit(1);
+}

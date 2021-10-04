@@ -1,10 +1,10 @@
 // Copyright 2018-2021 the Deno authors. All rights reserved. MIT license.
 
 import { createProjectSync, path, ts } from "./lib/_mod.deps.ts";
-import { outputDiagnostics } from "./lib/_compiler.ts";
 import { transform } from "./transform.ts";
 
 export * from "./transform.ts";
+
 // necessary for use with compiler options
 export { ts };
 
@@ -14,10 +14,15 @@ export interface EmitOptions {
   entryPoint: string | URL;
   shimPackageName?: string;
   writeFile?: (filePath: string, text: string) => void;
-  outputDiagnostics?: (diagnostics: readonly ts.Diagnostic[]) => void;
 }
 
-export async function emit(options: EmitOptions) {
+export interface EmitResult {
+  success: boolean;
+  diagnostics: ts.Diagnostic[];
+}
+
+/** Emits the specified Deno module to JavaScript code using the TypeScript compiler. */
+export async function emit(options: EmitOptions): Promise<EmitResult> {
   if (!options.compilerOptions.outDir) {
     throw new Error("Please specify an outDir compiler option.");
   }
@@ -41,8 +46,10 @@ export async function emit(options: EmitOptions) {
   if (options.typeCheck) {
     const diagnostics = ts.getPreEmitDiagnostics(program);
     if (diagnostics.length > 0) {
-      (options.outputDiagnostics ?? outputDiagnostics)(diagnostics);
-      Deno.exit(1);
+      return {
+        success: false,
+        diagnostics: [...diagnostics],
+      };
     }
   }
 
@@ -67,9 +74,16 @@ export async function emit(options: EmitOptions) {
   );
 
   if (emitResult.diagnostics.length > 0) {
-    outputDiagnostics(emitResult.diagnostics);
-    Deno.exit(1);
+    return {
+      success: false,
+      diagnostics: [...emitResult.diagnostics],
+    };
   }
+
+  return {
+    success: true,
+    diagnostics: [],
+  };
 
   function shouldKeepExtensions() {
     return options.compilerOptions.module === ts.ModuleKind.ES2015 ||
