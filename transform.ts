@@ -23,7 +23,8 @@ export function transform(options: TransformOptions): Promise<OutputFile[]> {
   if (newOptions.entryPoint instanceof URL) {
     newOptions.entryPoint = newOptions.entryPoint.toString();
   } else {
-    newOptions.entryPoint = path.toFileUrl(path.resolve(newOptions.entryPoint)).toString();
+    newOptions.entryPoint = path.toFileUrl(path.resolve(newOptions.entryPoint))
+      .toString();
   }
   return wasmFuncs.transform(newOptions);
 }
@@ -33,11 +34,11 @@ function getWasmLoadPromise() {
   switch (moduleUrl.protocol) {
     case "file:":
       const root = path.dirname(path.fromFileUrl(import.meta.url));
-      return Deno.readFile(path.join(root, "./pkg/dnt_wasm_bg.wasm"))
+      return Deno.readFile(path.join(root, "./pkg/dnt_wasm_bg.wasm"));
     case "https:":
     case "http:":
-      return new URL("./pkg/dnt_wasm_bg.wasm", import.meta.url)
+      return new URL("./pkg/dnt_wasm_bg.wasm", import.meta.url);
     default:
-      throw new Error(`Not implemented protocol: ${moduleUrl.protocol}`)
+      throw new Error(`Not implemented protocol: ${moduleUrl.protocol}`);
   }
 }

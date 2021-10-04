@@ -17,7 +17,10 @@ pub fn url_to_file_path(module_specifier: &ModuleSpecifier) -> Result<PathBuf> {
   // module_specifier.to_file_path() does not work in a cross platform way
   // and it does not work in Wasm
   assert!(module_specifier.scheme() == "file");
-  let path_segments = module_specifier.path_segments().unwrap().collect::<Vec<_>>();
+  let path_segments = module_specifier
+    .path_segments()
+    .unwrap()
+    .collect::<Vec<_>>();
   let mut final_text = String::new();
   for segment in path_segments.iter() {
     if !final_text.is_empty() {

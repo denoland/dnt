@@ -1,8 +1,8 @@
 use anyhow::Result;
-use deno_node_transform::OutputFile;
 use deno_node_transform::transform;
-use deno_node_transform::TransformOptions;
 use deno_node_transform::ModuleSpecifier;
+use deno_node_transform::OutputFile;
+use deno_node_transform::TransformOptions;
 
 use super::InMemoryLoader;
 
@@ -24,7 +24,10 @@ impl TestBuilder {
     }
   }
 
-  pub fn with_loader(&mut self, mut action: impl FnMut(&mut InMemoryLoader)) -> &mut Self {
+  pub fn with_loader(
+    &mut self,
+    mut action: impl FnMut(&mut InMemoryLoader),
+  ) -> &mut Self {
     action(&mut self.loader);
     self
   }
@@ -49,7 +52,8 @@ impl TestBuilder {
       entry_point: ModuleSpecifier::parse(&self.entry_point).unwrap(),
       keep_extensions: self.keep_extensions,
       shim_package_name: self.shim_package_name.as_ref().map(ToOwned::to_owned),
-      loader: Some(Box::new(self.loader.clone()))
-    }).await
+      loader: Some(Box::new(self.loader.clone())),
+    })
+    .await
   }
 }

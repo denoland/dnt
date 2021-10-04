@@ -7,7 +7,7 @@ export interface ParsedArgs {
   compilerOptions: ts.CompilerOptions;
   entryPoint: string;
   shimPackageName: string | undefined;
-  typeCheck: boolean,
+  typeCheck: boolean;
 }
 
 export function parseArgs(
@@ -33,8 +33,12 @@ export function parseArgs(
 
   function takeEntryPoint() {
     const firstArgument = parsedArgs._.splice(0, 1)[0] as string;
-    if (typeof firstArgument !== "string" || firstArgument.trim().length === 0) {
-      throw new Error("Please specify an entry point as the first argument (ex. `mod.ts`).");
+    if (
+      typeof firstArgument !== "string" || firstArgument.trim().length === 0
+    ) {
+      throw new Error(
+        "Please specify an entry point as the first argument (ex. `mod.ts`).",
+      );
     }
     return firstArgument;
   }

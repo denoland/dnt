@@ -22,7 +22,8 @@ npm publish
 
 ## Wasm API Example
 
-To emit the Deno-first sources to code that can be consumed in Node.js, use the `emit` function:
+To emit the Deno-first sources to code that can be consumed in Node.js, use the
+`emit` function:
 
 ```ts
 import { emit } from "https://deno.land/x/dnt/mod.ts";
@@ -37,7 +38,8 @@ await emit({
 });
 ```
 
-For only the Deno to canonical TypeScript transform which can be useful for bundlers, use the following:
+For only the Deno to canonical TypeScript transform which can be useful for
+bundlers, use the following:
 
 ```ts
 import { transform } from "https://deno.land/x/dnt/transform.ts";
@@ -51,7 +53,8 @@ const outputFiles = await transform({
 
 ## Rust API Example
 
-When using TypeScript, the Rust API only transforms from Deno to canonical TypeScript. You will need to use the TypeScript compiler to do the rest.
+When using TypeScript, the Rust API only transforms from Deno to canonical
+TypeScript. You will need to use the TypeScript compiler to do the rest.
 
 ```rust
 use std::path::PathBuf;

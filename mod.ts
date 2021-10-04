@@ -1,6 +1,6 @@
 // Copyright 2018-2021 the Deno authors. All rights reserved. MIT license.
 
-import { path, createProjectSync, ts } from "./lib/_mod.deps.ts";
+import { createProjectSync, path, ts } from "./lib/_mod.deps.ts";
 import { outputDiagnostics } from "./lib/_compiler.ts";
 import { transform } from "./transform.ts";
 
@@ -54,12 +54,15 @@ export async function emit(options: EmitOptions) {
       }
       Deno.writeTextFileSync(filePath, fileText);
     });
-  const emitResult = program.emit(undefined, (filePath, data, writeByteOrderMark) => {
-    if (writeByteOrderMark) {
-      data = "\uFEFF" + data;
-    }
-    writeFile(filePath, data);
-  });
+  const emitResult = program.emit(
+    undefined,
+    (filePath, data, writeByteOrderMark) => {
+      if (writeByteOrderMark) {
+        data = "\uFEFF" + data;
+      }
+      writeFile(filePath, data);
+    },
+  );
 
   if (emitResult.diagnostics.length > 0) {
     outputDiagnostics(emitResult.diagnostics);

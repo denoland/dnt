@@ -5,9 +5,9 @@ use std::collections::HashSet;
 use std::path::PathBuf;
 
 use anyhow::Result;
+use deno_graph::create_graph;
 use deno_graph::ModuleGraph;
 use deno_graph::Resolved;
-use deno_graph::create_graph;
 #[macro_use]
 extern crate lazy_static;
 
@@ -73,7 +73,8 @@ pub async fn transform(options: TransformOptions) -> Result<Vec<OutputFile>> {
 
   // todo: parallelize
   let mut result = Vec::new();
-  for specifier in specifiers.local
+  for specifier in specifiers
+    .local
     .iter()
     .chain(specifiers.remote.iter())
     .chain(specifiers.types.iter().map(|(_, from)| from))
@@ -115,7 +116,10 @@ pub async fn transform(options: TransformOptions) -> Result<Vec<OutputFile>> {
   Ok(result)
 }
 
-fn get_specifiers_from_loader(loader: SourceLoader, module_graph: &ModuleGraph) -> Result<Specifiers> {
+fn get_specifiers_from_loader(
+  loader: SourceLoader,
+  module_graph: &ModuleGraph,
+) -> Result<Specifiers> {
   let specifiers = loader.into_specifiers();
   let mut types = BTreeMap::new();
 
@@ -125,24 +129,42 @@ fn get_specifiers_from_loader(loader: SourceLoader, module_graph: &ModuleGraph) 
   let type_specifiers = types.values().collect::<HashSet<_>>();
 
   return Ok(Specifiers {
-    local: specifiers.local.into_iter().filter(|l| !type_specifiers.contains(&l)).collect(),
-    remote: specifiers.remote.into_iter().filter(|l| !type_specifiers.contains(&l)).collect(),
+    local: specifiers
+      .local
+      .into_iter()
+      .filter(|l| !type_specifiers.contains(&l))
+      .collect(),
+    remote: specifiers
+      .remote
+      .into_iter()
+      .filter(|l| !type_specifiers.contains(&l))
+      .collect(),
     types,
   });
 
-  fn handle_specifiers(specifiers: &[ModuleSpecifier], module_graph: &ModuleGraph, types: &mut BTreeMap<ModuleSpecifier, ModuleSpecifier>) -> Result<()> {
+  fn handle_specifiers(
+    specifiers: &[ModuleSpecifier],
+    module_graph: &ModuleGraph,
+    types: &mut BTreeMap<ModuleSpecifier, ModuleSpecifier>,
+  ) -> Result<()> {
     for specifier in specifiers {
       let module = module_graph.try_get(specifier).map_err(|err| {
         anyhow::anyhow!("{} ({})", err.to_string(), specifier)
       })?;
-      let module = module.unwrap_or_else(|| panic!("Could not find module for {}", specifier));
+      let module = module
+        .unwrap_or_else(|| panic!("Could not find module for {}", specifier));
 
       match &module.maybe_types_dependency {
-        Some((text, Resolved::Err(err, _))) => anyhow::bail!("Error resolving types for {} with reference {}. {}", specifier, text, err.to_string()),
+        Some((text, Resolved::Err(err, _))) => anyhow::bail!(
+          "Error resolving types for {} with reference {}. {}",
+          specifier,
+          text,
+          err.to_string()
+        ),
         Some((_, Resolved::Specifier(type_specifier, _))) => {
           types.insert(specifier.clone(), type_specifier.clone());
-        },
-        _ => {},
+        }
+        _ => {}
       }
     }
 

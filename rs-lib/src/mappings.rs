@@ -46,14 +46,14 @@ impl Mappings {
     )> = Vec::new();
     for remote_specifier in specifiers.remote.iter() {
       let media_type = module_graph
-          .get(&remote_specifier)
-          .ok_or_else(|| {
-            anyhow::anyhow!(
-              "Programming error. Could not find module for: {}",
-              remote_specifier.to_string()
-            )
-          })?
-          .media_type;
+        .get(&remote_specifier)
+        .ok_or_else(|| {
+          anyhow::anyhow!(
+            "Programming error. Could not find module for: {}",
+            remote_specifier.to_string()
+          )
+        })?
+        .media_type;
       let mut found = false;
       for (root_specifier, specifiers) in root_remote_specifiers.iter_mut() {
         if let Some(relative_url) =
@@ -77,7 +77,9 @@ impl Mappings {
         }
       }
       if !found {
-        let root_specifier = remote_specifier.join("../").unwrap_or_else(|_| remote_specifier.clone());
+        let root_specifier = remote_specifier
+          .join("../")
+          .unwrap_or_else(|_| remote_specifier.clone());
         root_remote_specifiers
           .push((root_specifier, vec![(remote_specifier.clone(), media_type)]));
       }
@@ -91,22 +93,35 @@ impl Mappings {
       for (specifier, media_type) in specifiers {
         let relative = make_url_relative(&root, &specifier)?;
         let mut filepath_no_ext = base_dir.join(relative).with_extension("");
-        let original_file_name = filepath_no_ext.file_name().unwrap().to_string_lossy().to_string();
+        let original_file_name = filepath_no_ext
+          .file_name()
+          .unwrap()
+          .to_string_lossy()
+          .to_string();
         let mut count = 2;
         while !mapped_filepaths_no_ext.insert(filepath_no_ext.clone()) {
-          filepath_no_ext.set_file_name(format!("{}_{}", original_file_name, count));
+          filepath_no_ext
+            .set_file_name(format!("{}_{}", original_file_name, count));
           count += 1;
         }
-        let file_path = filepath_no_ext.with_extension(&media_type.as_ts_extension()[1..]);
+        let file_path =
+          filepath_no_ext.with_extension(&media_type.as_ts_extension()[1..]);
         mappings.insert(specifier, file_path);
       }
     }
 
     for (from, to) in specifiers.types.iter() {
-      let file_path = mappings.get(&from).unwrap_or_else(|| panic!("Already had from {} in map when mapping to {}.", from, to));
+      let file_path = mappings.get(&from).unwrap_or_else(|| {
+        panic!("Already had from {} in map when mapping to {}.", from, to)
+      });
       let new_file_path = file_path.with_extension("d.ts");
       if let Some(past_path) = mappings.insert(to.clone(), new_file_path) {
-        panic!("Already had path {} in map when mapping from {} to {}", past_path.display(), from, to);
+        panic!(
+          "Already had path {} in map when mapping from {} to {}",
+          past_path.display(),
+          from,
+          to
+        );
       }
     }
 
@@ -114,13 +129,12 @@ impl Mappings {
   }
 
   pub fn get_file_path(&self, specifier: &ModuleSpecifier) -> &PathBuf {
-    self.inner.get(specifier)
-      .unwrap_or_else(|| {
-        panic!(
-          "Programming error. Could not find file path for specifier: {}",
-          specifier.to_string()
-        )
-      })
+    self.inner.get(specifier).unwrap_or_else(|| {
+      panic!(
+        "Programming error. Could not find file path for specifier: {}",
+        specifier.to_string()
+      )
+    })
   }
 }
 

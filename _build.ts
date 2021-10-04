@@ -9,7 +9,7 @@ async function buildWasm() {
     cwd: path.join(rootDir, "wasm"),
     stderr: "inherit",
     stdout: "inherit",
-  })
+  });
   try {
     const status = await cmd.status();
     if (!status.success) {

@@ -4,7 +4,7 @@ import { parseArgs } from "./lib/_args.ts";
 import { outputDiagnostics } from "./lib/_compiler.ts";
 import { emit } from "./mod.ts";
 
-const args = parseArgs(Deno.args, diagnostics => {
+const args = parseArgs(Deno.args, (diagnostics) => {
   outputDiagnostics(diagnostics);
   Deno.exit(1);
 });
