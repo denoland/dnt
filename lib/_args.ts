@@ -6,7 +6,7 @@ import { ts } from "./_mod.deps.ts";
 export interface ParsedArgs {
   compilerOptions: ts.CompilerOptions;
   entryPoint: string;
-  shimPackageName: string | undefined;
+  shimPackage: string | undefined;
   typeCheck: boolean;
 }
 
@@ -25,7 +25,7 @@ export function parseArgs(
 
   const entryPoint = takeEntryPoint();
   const typeCheck = takeTypeCheck();
-  const shimPackageName = takeShimPackageName();
+  const shimPackage = takeShimPackage();
   const tsArgs = ts.parseCommandLine(getRemainingArgs());
 
   if (tsArgs.errors.length > 0) {
@@ -35,7 +35,7 @@ export function parseArgs(
   return {
     compilerOptions: tsArgs.options,
     entryPoint,
-    shimPackageName,
+    shimPackage,
     typeCheck,
   };
 
@@ -45,7 +45,7 @@ export function parseArgs(
       typeof firstArgument !== "string" || firstArgument.trim().length === 0
     ) {
       throw new Error(
-        "Please specify an entry point as the first argument (ex. `mod.ts`).",
+        "Please specify an entry point (ex. `mod.ts`).",
       );
     }
     return firstArgument;
@@ -57,10 +57,10 @@ export function parseArgs(
     return typeCheck;
   }
 
-  function takeShimPackageName() {
-    const shimPackageName = cliArgs.shimPackageName;
-    delete cliArgs.shimPackageName;
-    return shimPackageName;
+  function takeShimPackage() {
+    const shimPackage = cliArgs.shimPackage;
+    delete cliArgs.shimPackage;
+    return shimPackage;
   }
 
   function getRemainingArgs() {
@@ -83,9 +83,9 @@ export function outputUsage() {
   console.log(`Usage: dnt <entrypoint> [options]
 
 Options:
-  -h, --help                  Shows the help message.
-  --shimPackageName <name>    Specifies the shim package name for 'Deno' namespace.
-  --typeCheck                 Performs type checking.
+  -h, --help              Shows the help message.
+  --shimPackage <name>    Specifies the shim package name for 'Deno' namespace.
+  --typeCheck             Performs type checking.
 
 Compiler options:
 
@@ -95,9 +95,9 @@ Compiler options:
 
   For example, a small selection:
 
-  --target <target>           Specifies the transpile target eg. ES6, ESNext, etc
-  --outDir <dir>              The output directory (required)
-  --declaration               Outputs the declaration files.
+  --target <target>       Specifies the transpile target eg. ES6, ESNext, etc
+  --outDir <dir>          The output directory (required)
+  --declaration           Outputs the declaration files.
 
 Examples:
   # Outputs to ./npm/dist

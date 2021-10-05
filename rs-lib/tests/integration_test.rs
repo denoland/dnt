@@ -286,6 +286,24 @@ async fn transform_remote_file_not_exists() {
 }
 
 #[tokio::test]
+async fn transform_remote_file_error() {
+  let err_message = TestBuilder::new()
+    .with_loader(|loader| {
+      loader.add_remote_file_with_error(
+        "http://localhost/mod.ts",
+        "Some error loading.",
+      );
+    })
+    .entry_point("http://localhost/mod.ts")
+    .transform()
+    .await
+    .err()
+    .unwrap();
+
+  assert_eq!(err_message.to_string(), "An error was returned from the loader: Some error loading. (http://localhost/mod.ts)");
+}
+
+#[tokio::test]
 async fn transform_parse_error() {
   let err_message = TestBuilder::new()
     .with_loader(|loader| {

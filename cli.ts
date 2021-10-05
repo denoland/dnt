@@ -17,7 +17,7 @@ if (args === "help") {
 const emitResult = await emit({
   compilerOptions: args.compilerOptions,
   entryPoint: args.entryPoint,
-  shimPackageName: args.shimPackageName,
+  shimPackageName: args.shimPackage,
   typeCheck: args.typeCheck,
 });
 
