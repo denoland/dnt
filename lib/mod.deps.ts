@@ -1,6 +1,6 @@
 // Copyright 2018-2021 the Deno authors. All rights reserved. MIT license.
 
-export * from "./_transform.deps.ts";
+export * from "./transform.deps.ts";
 export {
   createProjectSync,
   ts,

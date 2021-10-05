@@ -1,7 +1,7 @@
 // Copyright 2018-2021 the Deno authors. All rights reserved. MIT license.
 
-import { outputUsage, parseArgs } from "./lib/_args.ts";
-import { outputDiagnostics } from "./lib/_compiler.ts";
+import { outputUsage, parseArgs } from "./lib/args.ts";
+import { outputDiagnostics } from "./lib/compiler.ts";
 import { emit } from "./mod.ts";
 
 const args = parseArgs(Deno.args);

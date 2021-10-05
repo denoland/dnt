@@ -1,4 +1,4 @@
-import { path, ts } from "./_mod.deps.ts";
+import { path, ts } from "./mod.deps.ts";
 
 export function outputDiagnostics(diagnostics: readonly ts.Diagnostic[]) {
   console.error(ts.formatDiagnosticsWithColorAndContext(diagnostics, {

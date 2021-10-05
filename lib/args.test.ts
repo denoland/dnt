@@ -1,8 +1,8 @@
 // Copyright 2018-2021 the Deno authors. All rights reserved. MIT license.
 
 import { assertEquals, assertThrows } from "https://deno.land/std@0.109.0/testing/asserts.ts";
-import { parseArgs } from "./_args.ts";
-import { ts } from "./_mod.deps.ts";
+import { parseArgs } from "./args.ts";
+import { ts } from "./mod.deps.ts";
 
 Deno.test("help for no args", () => {
   assertEquals(parseArgs([]), "help");

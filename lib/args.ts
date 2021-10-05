@@ -1,7 +1,7 @@
 // Copyright 2018-2021 the Deno authors. All rights reserved. MIT license.
 
 import { parse } from "https://deno.land/std@0.109.0/flags/mod.ts";
-import { ts } from "./_mod.deps.ts";
+import { ts } from "./mod.deps.ts";
 
 export interface ParsedArgs {
   compilerOptions: ts.CompilerOptions;
