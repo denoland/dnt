@@ -1,6 +1,6 @@
 // Copyright 2018-2021 the Deno authors. All rights reserved. MIT license.
 
-import { parse } from "https://deno.land/std@0.109.0/flags/mod.ts";
+import { Args } from "https://deno.land/std@0.109.0/flags/mod.ts";
 import { ts } from "./_mod.deps.ts";
 
 export interface ParsedArgs {
@@ -10,8 +10,7 @@ export interface ParsedArgs {
   typeCheck: boolean;
 }
 
-export function parseArgs(cliArgs: string[]): ParsedArgs | ts.Diagnostic[] {
-  const parsedArgs = parse(cliArgs);
+export function parseArgs(cliArgs: Args): ParsedArgs | ts.Diagnostic[] {
   const entryPoint = takeEntryPoint();
   const typeCheck = takeTypeCheck();
   const shimPackageName = takeShimPackageName();
@@ -29,7 +28,7 @@ export function parseArgs(cliArgs: string[]): ParsedArgs | ts.Diagnostic[] {
   };
 
   function takeEntryPoint() {
-    const firstArgument = parsedArgs._.splice(0, 1)[0] as string;
+    const firstArgument = cliArgs._.splice(0, 1)[0] as string;
     if (
       typeof firstArgument !== "string" || firstArgument.trim().length === 0
     ) {
@@ -41,21 +40,21 @@ export function parseArgs(cliArgs: string[]): ParsedArgs | ts.Diagnostic[] {
   }
 
   function takeTypeCheck() {
-    const typeCheck = parsedArgs.hasOwnProperty("typeCheck");
-    delete parsedArgs.typeCheck;
+    const typeCheck = cliArgs.hasOwnProperty("typeCheck");
+    delete cliArgs.typeCheck;
     return typeCheck;
   }
 
   function takeShimPackageName() {
-    const shimPackageName = parsedArgs.shimPackageName;
-    delete parsedArgs.shimPackageName;
+    const shimPackageName = cliArgs.shimPackageName;
+    delete cliArgs.shimPackageName;
     return shimPackageName;
   }
 
   function getRemainingArgs() {
     const args = [];
-    args.push(...parsedArgs._);
-    for (const [key, value] of Object.entries(parsedArgs)) {
+    args.push(...cliArgs._);
+    for (const [key, value] of Object.entries(cliArgs)) {
       if (key === "_") {
         continue;
       }
