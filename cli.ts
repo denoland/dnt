@@ -38,10 +38,12 @@ function usage() {
   console.log(`Usage: dnt <entrypoint> [options]
 
 Options:
-  -h, --help              Show the help message.
-  --target <target>       Specifies the transpile target eg. ES6, ESNext, etc
-  --outDir <dir>          The output directory.
-  --declaration           Outputs the declaration files.
+  -h, --help                  Shows the help message.
+  --target <target>           Specifies the transpile target eg. ES6, ESNext, etc
+  --outDir <dir>              The output directory.
+  --declaration               Outputs the declaration files.
+  --shimPackageName <name>    Specifies the shim package name for 'Deno' namespace.
+  --typeCheck                 Performs type checking.
 
 Examples:
   # Outputs to ./npm/dist
