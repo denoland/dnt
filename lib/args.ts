@@ -1,18 +1,21 @@
 // Copyright 2018-2021 the Deno authors. All rights reserved. MIT license.
 
 import { parse } from "https://deno.land/std@0.109.0/flags/mod.ts";
+import { DiagnosticsError } from "./compiler.ts";
 import { ts } from "./mod.deps.ts";
 
 export interface ParsedArgs {
   compilerOptions: ts.CompilerOptions;
-  entryPoint: string;
+  entryPoint: string | undefined;
   shimPackage: string | undefined;
-  typeCheck: boolean;
+  typeCheck: boolean | undefined;
+  packageVersion: string | undefined;
+  config: string | undefined;
 }
 
 export function parseArgs(
   args: string[],
-): ParsedArgs | ts.Diagnostic[] | "help" {
+): ParsedArgs | "help" {
   const cliArgs = parse(args, {
     alias: {
       h: "help",
@@ -24,12 +27,14 @@ export function parseArgs(
   }
 
   const entryPoint = takeEntryPoint();
-  const typeCheck = takeTypeCheck();
-  const shimPackage = takeShimPackage();
+  const typeCheck = takeBooleanProperty("typeCheck");
+  const shimPackage = takeStringProperty("shimPackage");
+  const packageVersion = takeStringProperty("packageVersion");
+  const config = takeStringProperty("config");
   const tsArgs = ts.parseCommandLine(getRemainingArgs());
 
   if (tsArgs.errors.length > 0) {
-    return tsArgs.errors;
+    throw new DiagnosticsError(tsArgs.errors);
   }
 
   return {
@@ -37,30 +42,32 @@ export function parseArgs(
     entryPoint,
     shimPackage,
     typeCheck,
+    packageVersion,
+    config,
   };
 
   function takeEntryPoint() {
-    const firstArgument = cliArgs._.splice(0, 1)[0] as string;
-    if (
-      typeof firstArgument !== "string" || firstArgument.trim().length === 0
-    ) {
-      throw new Error(
-        "Please specify an entry point (ex. `mod.ts`).",
-      );
-    }
+    const firstArgument = cliArgs._.splice(0, 1)[0] as string | undefined;
     return firstArgument;
   }
 
-  function takeTypeCheck() {
-    const typeCheck = cliArgs.hasOwnProperty("typeCheck");
+  function takeBooleanProperty(name: string) {
+    const hasProperty = cliArgs.hasOwnProperty(name);
+    const value = cliArgs[name];
     delete cliArgs.typeCheck;
-    return typeCheck;
+    if (value === false) {
+      return false;
+    }
+    return hasProperty;
   }
 
-  function takeShimPackage() {
-    const shimPackage = cliArgs.shimPackage;
-    delete cliArgs.shimPackage;
-    return shimPackage;
+  function takeStringProperty(name: string) {
+    const value = cliArgs[name];
+    delete cliArgs[name];
+    if (value != null && typeof value !== "string") {
+      throw new Error(`Expected string value for ${name}.`);
+    }
+    return value;
   }
 
   function getRemainingArgs() {

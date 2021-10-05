@@ -2,6 +2,7 @@
 
 import { assertEquals, assertThrows } from "https://deno.land/std@0.109.0/testing/asserts.ts";
 import { parseArgs } from "./args.ts";
+import { DiagnosticsError } from "./compiler.ts";
 import { ts } from "./mod.deps.ts";
 
 Deno.test("help for no args", () => {
@@ -13,8 +14,8 @@ Deno.test("help for -h and --help", () => {
   assertEquals(parseArgs(["--help"]), "help");
 });
 
-Deno.test("error for no entry point", () => {
-  assertThrows(() => parseArgs(["--outDir", "test"]), Error, "Please specify an entry point (ex. `mod.ts`)");
+Deno.test("error for non-string string arg", () => {
+  assertThrows(() => parseArgs(["mod.ts", "--shimPackage"]), Error, "Expected string value for shimPackage.");
 });
 
 Deno.test("get minimal amount of args", () => {
@@ -22,15 +23,30 @@ Deno.test("get minimal amount of args", () => {
     entryPoint: "mod.ts",
     typeCheck: false,
     shimPackage: undefined,
+    packageVersion: undefined,
+    config: undefined,
+    compilerOptions: {},
+  });
+});
+
+Deno.test("get for just config", () => {
+  assertEquals(parseArgs(["--config", "dnt.json"]), {
+    entryPoint: undefined,
+    typeCheck: false,
+    shimPackage: undefined,
+    packageVersion: undefined,
+    config: "dnt.json",
     compilerOptions: {},
   });
 });
 
 Deno.test("get all args and compiler options", () => {
-  assertEquals(parseArgs(["mod.ts", "--typeCheck", "--shimPackage", "shim-package", "--outDir", "dist"]), {
+  assertEquals(parseArgs(["mod.ts", "--typeCheck", "--shimPackage", "shim-package", "--packageVersion", "1.0.0", "--outDir", "dist"]), {
     entryPoint: "mod.ts",
     typeCheck: true,
     shimPackage: "shim-package",
+    packageVersion: "1.0.0",
+    config: undefined,
     compilerOptions: {
       outDir: "dist"
     },
@@ -38,14 +54,24 @@ Deno.test("get all args and compiler options", () => {
 });
 
 Deno.test("diagnostic from ts compiler for unknown argument", () => {
-  const diagnostics = parseArgs(["mod.ts", "--testing", "test"]) as ts.Diagnostic[];
+  let diagnostics!: readonly ts.Diagnostic[];
+  try {
+    parseArgs(["mod.ts", "--testing", "test"]);
+  } catch (err) {
+    diagnostics = (err as DiagnosticsError).diagnostics;
+  }
   assertEquals(diagnostics.length, 1);
   // not the best, but it gets the point across (message from ts compiler)
   assertEquals(diagnostics[0].messageText, "Unknown compiler option '--testing'.");
 });
 
 Deno.test("diagnostic from ts compiler for invalid argument", () => {
-  const diagnostics = parseArgs(["mod.ts", "--target", "test"]) as ts.Diagnostic[];
+  let diagnostics!: readonly ts.Diagnostic[];
+  try {
+    parseArgs(["mod.ts", "--target", "test"]);
+  } catch (err) {
+    diagnostics = (err as DiagnosticsError).diagnostics;
+  }
   assertEquals(diagnostics.length, 1);
   assertEquals(
     diagnostics[0].messageText,

@@ -1,27 +1,43 @@
 // Copyright 2018-2021 the Deno authors. All rights reserved. MIT license.
 
-import { outputUsage, parseArgs } from "./lib/args.ts";
-import { outputDiagnostics } from "./lib/compiler.ts";
+import { outputUsage, parseArgs, ParsedArgs } from "./lib/args.ts";
+import { path } from "./lib/mod.deps.ts";
+import { DiagnosticsError, outputDiagnostics } from "./lib/compiler.ts";
+import { resolveArgs } from "./lib/resolve_args.ts";
 import { emit } from "./mod.ts";
 
-const args = parseArgs(Deno.args);
+try {
+  const cliArgs = parseArgs(Deno.args);
 
-if (args === "help") {
-  outputUsage();
-  Deno.exit(0);
-} else if (args instanceof Array) {
-  outputDiagnostics(args);
-  Deno.exit(1);
-}
+  if (cliArgs === "help") {
+    outputUsage();
+    Deno.exit(0);
+  }
 
-const emitResult = await emit({
-  compilerOptions: args.compilerOptions,
-  entryPoint: args.entryPoint,
-  shimPackageName: args.shimPackage,
-  typeCheck: args.typeCheck,
-});
+  const resolvedArgs = resolveArgs(cliArgs);
 
-if (!emitResult.success) {
-  outputDiagnostics(emitResult.diagnostics);
-  Deno.exit(1);
+  const emitResult = await emit({
+    compilerOptions: resolvedArgs.compilerOptions,
+    entryPoint: resolvedArgs.entryPoint,
+    shimPackageName: resolvedArgs.shimPackage,
+    typeCheck: resolvedArgs.typeCheck,
+  });
+
+  if (resolvedArgs.package) {
+    Deno.writeTextFileSync(
+      path.join(resolvedArgs.compilerOptions.outDir!, "package.json"),
+      JSON.stringify(resolvedArgs.package, undefined, 2),
+    );
+  }
+
+  if (!emitResult.success) {
+    outputDiagnostics(emitResult.diagnostics);
+    Deno.exit(1);
+  }
+} catch (err) {
+  if (err instanceof DiagnosticsError) {
+    outputDiagnostics(err.diagnostics);
+    Deno.exit(1);
+  }
+  throw err;
 }

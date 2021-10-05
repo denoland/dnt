@@ -7,3 +7,9 @@ export function outputDiagnostics(diagnostics: readonly ts.Diagnostic[]) {
     getNewLine: () => "\n",
   }));
 }
+
+export class DiagnosticsError extends Error {
+  constructor(public readonly diagnostics: readonly ts.Diagnostic[]) {
+    super(diagnostics[0]?.messageText?.toString() ?? "Unknown error.");
+  }
+}
