@@ -4,6 +4,8 @@
 
 Prototype for a Deno to Node/canonical TypeScript transform.
 
+Note: This is not completely working yet. Please don't use it as it will probably drastically change.
+
 ## CLI Example
 
 ```bash
