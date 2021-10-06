@@ -95,6 +95,7 @@ function emitFiles(options: {
       outDir: options.outDir,
       allowJs: true,
       stripInternal: true,
+      declaration: true,
       esModuleInterop: options.isCjs,
       module: options.isCjs ? ts.ModuleKind.CommonJS : ts.ModuleKind.ES2015,
       target: ts.ScriptTarget.ES2015,
