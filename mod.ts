@@ -1,18 +1,17 @@
 // Copyright 2018-2021 the Deno authors. All rights reserved. MIT license.
 
 import { createProjectSync, path, ts } from "./lib/mod.deps.ts";
-import { transform } from "./transform.ts";
+import { PackageJsonObject } from "./lib/types.ts";
+import { OutputFile, transform } from "./transform.ts";
 
 export * from "./transform.ts";
 
-// necessary for use with compiler options
-export { ts };
-
 export interface EmitOptions {
-  compilerOptions: ts.CompilerOptions;
+  outDir: string;
   typeCheck?: boolean;
   entryPoint: string | URL;
   shimPackageName?: string;
+  package: PackageJsonObject;
   writeFile?: (filePath: string, text: string) => void;
 }
 
@@ -23,21 +22,87 @@ export interface EmitResult {
 
 /** Emits the specified Deno module to JavaScript code using the TypeScript compiler. */
 export async function emit(options: EmitOptions): Promise<EmitResult> {
-  if (!options.compilerOptions.outDir) {
-    throw new Error("Please specify an outDir compiler option.");
-  }
-
-  const outputFiles = await transform({
+  const transformOutput = await transform({
     entryPoint: options.entryPoint,
     shimPackageName: options.shimPackageName,
-    keepExtensions: shouldKeepExtensions(),
   });
+  const createdDirectories = new Set<string>();
+  const writeFile = options.writeFile ??
+    ((filePath: string, fileText: string) => {
+      const dir = path.dirname(filePath);
+      if (!createdDirectories.has(dir)) {
+        Deno.mkdirSync(dir, { recursive: true });
+        createdDirectories.add(dir);
+      }
+      Deno.writeTextFileSync(filePath, fileText);
+    });
+  // todo: use two workers for this
+  const cjsResult = emitFiles({
+    outDir: path.join(options.outDir, "cjs"),
+    isCjs: true,
+    outputFiles: transformOutput.cjsFiles,
+    typeCheck: options.typeCheck ?? false,
+    writeFile,
+  });
+  if (!cjsResult.success) {
+    return cjsResult;
+  }
+  const mjsResult = emitFiles({
+    outDir: path.join(options.outDir, "mjs"),
+    isCjs: false,
+    outputFiles: transformOutput.mjsFiles,
+    typeCheck: false, // don't type check twice
+    writeFile,
+  });
+  if (!mjsResult.success) {
+    return mjsResult;
+  }
+
+  const entryPointPath = transformOutput.entryPointFilePath.replace(/\.ts$/i, ".js");
+  const packageJsonObj = {
+    ...options.package,
+    main: options.package.main ?? `cjs/${entryPointPath}`,
+    module: options.package.module ?? `mjs/${entryPointPath}`,
+    exports: {
+      ...(options.package.exports ?? {}),
+      ".": {
+        "import": `./mjs/${entryPointPath}`,
+        "require": `./cjs/${entryPointPath}`,
+        ...(options.package.exports?.["."] ?? {}),
+      }
+    }
+  };
+  writeFile(
+    path.join(options.outDir, "package.json"),
+    JSON.stringify(packageJsonObj, undefined, 2),
+  );
+
+  return {
+    success: true,
+    diagnostics: [],
+  };
+}
+
+function emitFiles(options: {
+  outDir: string;
+  outputFiles: OutputFile[];
+  isCjs: boolean;
+  typeCheck: boolean;
+  writeFile: ((filePath: string, text: string) => void);
+}) {
   const project = createProjectSync({
-    compilerOptions: options.compilerOptions,
+    compilerOptions: {
+      outDir: options.outDir,
+      allowJs: true,
+      stripInternal: true,
+      esModuleInterop: options.isCjs,
+      module: options.isCjs ? ts.ModuleKind.CommonJS : ts.ModuleKind.ES2015,
+      target: ts.ScriptTarget.ES2015,
+    },
     useInMemoryFileSystem: true,
   });
 
-  for (const outputFile of outputFiles) {
+  for (const outputFile of options.outputFiles) {
     project.createSourceFile(outputFile.filePath, outputFile.fileText);
   }
 
@@ -53,41 +118,23 @@ export async function emit(options: EmitOptions): Promise<EmitResult> {
     }
   }
 
-  const createdDirectories = new Set<string>();
-  const writeFile = options.writeFile ??
-    ((filePath: string, fileText: string) => {
-      const dir = path.dirname(filePath);
-      if (!createdDirectories.has(dir)) {
-        Deno.mkdirSync(dir, { recursive: true });
-        createdDirectories.add(dir);
-      }
-      Deno.writeTextFileSync(filePath, fileText);
-    });
   const emitResult = program.emit(
     undefined,
     (filePath, data, writeByteOrderMark) => {
       if (writeByteOrderMark) {
         data = "\uFEFF" + data;
       }
-      writeFile(filePath, data);
+      options.writeFile(filePath, data);
     },
   );
 
-  if (emitResult.diagnostics.length > 0) {
-    return {
-      success: false,
-      diagnostics: [...emitResult.diagnostics],
-    };
-  }
+  options.writeFile(
+    path.join(options.outDir, "package.json"),
+    `{\n  "type": "${options.isCjs ? "commonjs" : "module"}"\n}\n`,
+  );
 
   return {
-    success: true,
-    diagnostics: [],
+    success: emitResult.diagnostics.length === 0,
+    diagnostics: [...emitResult.diagnostics],
   };
-
-  function shouldKeepExtensions() {
-    return options.compilerOptions.module === ts.ModuleKind.ES2015 ||
-      options.compilerOptions.module === ts.ModuleKind.ES2020 ||
-      options.compilerOptions.module === ts.ModuleKind.ESNext;
-  }
 }

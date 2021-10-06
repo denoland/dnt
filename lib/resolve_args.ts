@@ -1,25 +1,24 @@
 import { ts } from "./mod.deps.ts"
 import { ParsedArgs } from "./args.ts";
 import { DiagnosticsError } from "./compiler.ts";
+import { PackageJsonObject } from "./types.ts";
 
 export interface ResolvedArgs {
-  compilerOptions: ts.CompilerOptions;
-  package: object | undefined;
   entryPoint: string;
-  typeCheck: boolean;
   shimPackage: string | undefined;
-  packageVersion: string | undefined;
+  typeCheck: boolean;
+  package: PackageJsonObject;
+  outDir: string;
 }
 
 export function resolveArgs(cliArgs: ParsedArgs): ResolvedArgs {
   const config = getConfig();
   return {
-    compilerOptions: config?.compilerOptions ?? cliArgs.compilerOptions,
-    package: getPackage(),
     entryPoint: getEntryPoint(),
-    typeCheck: config?.typeCheck ?? cliArgs.typeCheck ?? false,
-    shimPackage: config?.shimPackage ?? cliArgs.shimPackage,
-    packageVersion: cliArgs.packageVersion,
+    package: getPackage(),
+    typeCheck: cliArgs.typeCheck ?? config?.typeCheck ?? false,
+    shimPackage: cliArgs.shimPackage ?? config?.shimPackage,
+    outDir: getOutDir(),
   };
 
   function getConfig() {
@@ -28,7 +27,7 @@ export function resolveArgs(cliArgs: ParsedArgs): ResolvedArgs {
     }
     const filePath = cliArgs.config;
     const fileText = Deno.readTextFileSync(filePath);
-    return parseConfig(filePath, fileText, cliArgs.compilerOptions);
+    return parseConfig(filePath, fileText);
   }
 
   function getEntryPoint() {
@@ -37,23 +36,39 @@ export function resolveArgs(cliArgs: ParsedArgs): ResolvedArgs {
     } else if (config?.entryPoint) {
       return config.entryPoint;
     } else {
-      throw new Error(`Please provide an entry point (ex. mod.ts).`)
+      throw new Error(`Please provide an entry point (ex. mod.ts)`)
+    }
+  }
+
+  function getOutDir() {
+    if (cliArgs.outDir) {
+      return cliArgs.outDir;
+    } else if (config?.outDir) {
+      return config.outDir;
+    } else {
+      throw new Error(`Please provide an outDir directory (ex. dist)`)
     }
   }
 
   function getPackage() {
-    const packageObj = config?.package;
-    if (!packageObj) {
-      return undefined;
+    const packageObj = (config?.package ?? {}) as PackageJsonObject;
+    if (cliArgs.packageName) {
+      packageObj.name = cliArgs.packageName;
     }
     if (cliArgs.packageVersion) {
-      (packageObj as any).version = cliArgs.packageVersion;
+      packageObj.version = cliArgs.packageVersion;
+    }
+    if (!packageObj.name) {
+      throw new Error("You must specify a package name either by providing a `packageName` CLI argument or specifying one in the config file's package object.");
+    }
+    if (!packageObj.version) {
+      throw new Error("You must specify a package version either by providing a `packageVersion` CLI argument or specifying one in the config file's package object.");
     }
     return packageObj;
   }
 }
 
-function parseConfig(filePath: string, fileText: string, existingCompilerOptions: ts.CompilerOptions | undefined) {
+function parseConfig(filePath: string, fileText: string) {
   // use this function from the compiler API in order to parse JSONC
   const configFile = ts.parseJsonText(filePath, fileText);
   const parseDiagnostics: ts.Diagnostic[] = (configFile as any).parseDiagnostics ?? [];
@@ -72,7 +87,7 @@ function parseConfig(filePath: string, fileText: string, existingCompilerOptions
     typeCheck: getValueProperty("typeCheck", "boolean") as boolean | undefined,
     package: getValueProperty("package", "object") as object | undefined,
     shimPackage: getValueProperty("shimPackage", "string") as string | undefined,
-    compilerOptions: getCompilerOptions(rootExpression),
+    outDir: getValueProperty("outDir", "string") as string | undefined
   };
 
   function getValueProperty(name: string, kind: "string" | "boolean" | "object") {
@@ -84,44 +99,5 @@ function parseConfig(filePath: string, fileText: string, existingCompilerOptions
       throw new Error(`Expected ${kind} property for ${name}.`);
     }
     return property;
-  }
-
-  function getCompilerOptions(rootObject: ts.ObjectLiteralExpression) {
-    const configOptionsProperty = getPropertyByName(rootObject, "compilerOptions");
-    if (!configOptionsProperty) {
-      return existingCompilerOptions;
-    }
-
-    const configOptionsResult = ts.parseConfigFileTextToJson(filePath, configOptionsProperty.initializer.getText(configFile))
-    if (configOptionsResult.error) {
-      throw new DiagnosticsError([configOptionsResult.error]);
-    }
-    const configResult = ts.parseJsonConfigFileContent(configOptionsResult.config, {
-      fileExists(_path) {
-        return false;
-      },
-      readFile(_path) {
-        return undefined;
-      },
-      readDirectory() {
-        return [];
-      },
-      useCaseSensitiveFileNames: true,
-    }, Deno.cwd(), existingCompilerOptions, filePath);
-    const errors = configResult.errors.filter(e => e.code !== 18003);
-    if (errors.length > 0) {
-      throw new DiagnosticsError(errors);
-    }
-    console.log(configResult.options);
-    return configResult.options;
-  }
-
-  function getPropertyByName(rootObject: ts.ObjectLiteralExpression, name: string) {
-    return rootObject.properties.find(p => {
-      if (!p.name || p.name.kind !== ts.SyntaxKind.StringLiteral) {
-        return false;
-      }
-      return p.name.text === name;
-    }) as ts.PropertyAssignment;
   }
 }

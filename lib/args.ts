@@ -1,16 +1,15 @@
 // Copyright 2018-2021 the Deno authors. All rights reserved. MIT license.
 
 import { parse } from "https://deno.land/std@0.109.0/flags/mod.ts";
-import { DiagnosticsError } from "./compiler.ts";
-import { ts } from "./mod.deps.ts";
 
 export interface ParsedArgs {
-  compilerOptions: ts.CompilerOptions;
   entryPoint: string | undefined;
   shimPackage: string | undefined;
   typeCheck: boolean | undefined;
+  packageName: string | undefined;
   packageVersion: string | undefined;
   config: string | undefined;
+  outDir: string | undefined;
 }
 
 export function parseArgs(
@@ -29,21 +28,24 @@ export function parseArgs(
   const entryPoint = takeEntryPoint();
   const typeCheck = takeBooleanProperty("typeCheck");
   const shimPackage = takeStringProperty("shimPackage");
+  const outDir = takeStringProperty("outDir");
   const packageVersion = takeStringProperty("packageVersion");
+  const packageName = takeStringProperty("packageName");
   const config = takeStringProperty("config");
-  const tsArgs = ts.parseCommandLine(getRemainingArgs());
 
-  if (tsArgs.errors.length > 0) {
-    throw new DiagnosticsError(tsArgs.errors);
+  const remainingArgs = getRemainingArgs();
+  if (remainingArgs.length > 0) {
+    throw new Error(`Unknown arguments: ${remainingArgs.join(" ")}`);
   }
 
   return {
-    compilerOptions: tsArgs.options,
     entryPoint,
     shimPackage,
     typeCheck,
+    packageName,
     packageVersion,
     config,
+    outDir,
   };
 
   function takeEntryPoint() {
@@ -54,7 +56,7 @@ export function parseArgs(
   function takeBooleanProperty(name: string) {
     const hasProperty = cliArgs.hasOwnProperty(name);
     const value = cliArgs[name];
-    delete cliArgs.typeCheck;
+    delete cliArgs[name];
     if (value === false) {
       return false;
     }
@@ -90,24 +92,16 @@ export function outputUsage() {
   console.log(`Usage: dnt <entrypoint> [options]
 
 Options:
-  -h, --help              Shows the help message.
-  --shimPackage <name>    Specifies the shim package name for 'Deno' namespace.
-  --typeCheck             Performs type checking.
-
-Compiler options:
-
-  dnt supports the same compiler options that tsc supports.
-
-    https://www.typescriptlang.org/docs/handbook/compiler-options.html
-
-  For example, a small selection:
-
-  --target <target>       Specifies the transpile target eg. ES6, ESNext, etc
-  --outDir <dir>          The output directory (required)
-  --declaration           Outputs the declaration files.
+  -h, --help                  Shows the help message.
+  --shimPackage <name>        Specifies the shim package name for 'Deno' namespace.
+  --typeCheck                 Performs type checking.
+  --outDir <dir>              Directory to output the files to.
+  --packageName <name>        Name of the package.
+  --packageVersion <version>  Version to use for the package.json
+  --config <path>             Path to the config file to use for export.
 
 Examples:
   # Outputs to ./npm/dist
-  dnt mod.ts --target ES6 --outDir ./npm/dist --declaration --module commonjs
+  dnt mod.ts --outDir ./npm/dist --config dnt.config
 `);
 }

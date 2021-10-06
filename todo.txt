@@ -3,6 +3,7 @@
 - tests for multiple deno-types for the same module pointing at different .d.ts files (error)
 - Handle deno-types when it references a `.ts` file (maybe transform the .ts file to .js?)
 - Maybe the ability to skip using the TypeScript compiler (useful for people with only JS projects)
+- When working on transforms, warn when a version in package.json or transforms doesn't match remote specifier
 
 ## Future Goals
 
@@ -20,5 +21,3 @@ Notes from Kitson:
   - David: Just changed it to download everything for now, but in the future we can implement remote URL -> bare specifier mapping. Ideally this will be automatic, but in some cases the user will need to specify a bare specifier to use.
   - David: We could probably output data URLs to a file.
   - David: Blob dynamic imports... I'm not sure. Dynamic imports will be a problem if they're not statically analyzable, but we can warn the user about that when it happens.
-- We should go from ./foo.ts to ./foo.js by default, with a flag to go from ./foo.ts to ./foo, assume people are supporting a browser or ESM Node.js
-  - David: I'll change this to be the default later.

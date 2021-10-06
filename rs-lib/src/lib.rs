@@ -39,14 +39,22 @@ pub struct OutputFile {
   pub file_text: String,
 }
 
+#[cfg_attr(feature = "serialization", derive(serde::Serialize))]
+#[cfg_attr(feature = "serialization", serde(rename_all = "camelCase"))]
+#[derive(Debug, PartialEq)]
+pub struct TransformOutput {
+  pub entry_point_file_path: String,
+  pub cjs_files: Vec<OutputFile>,
+  pub mjs_files: Vec<OutputFile>,
+}
+
 pub struct TransformOptions {
   pub entry_point: ModuleSpecifier,
-  pub keep_extensions: bool,
   pub shim_package_name: Option<String>,
   pub loader: Option<Box<dyn Loader>>,
 }
 
-pub async fn transform(options: TransformOptions) -> Result<Vec<OutputFile>> {
+pub async fn transform(options: TransformOptions) -> Result<TransformOutput> {
   let shim_package_name = options
     .shim_package_name
     .unwrap_or_else(|| "shim-package-name".to_string());
@@ -72,7 +80,8 @@ pub async fn transform(options: TransformOptions) -> Result<Vec<OutputFile>> {
   let mappings = Mappings::new(&module_graph, &specifiers)?;
 
   // todo: parallelize
-  let mut result = Vec::new();
+  let mut cjs_files = Vec::new();
+  let mut mjs_files = Vec::new();
   for specifier in specifiers
     .local
     .iter()
@@ -81,39 +90,60 @@ pub async fn transform(options: TransformOptions) -> Result<Vec<OutputFile>> {
   {
     let parsed_source = source_parser.get_parsed_source(specifier)?;
 
-    let keep_extensions = options.keep_extensions;
-    let text_changes = parsed_source.with_view(|program| {
-      let mut text_changes = get_module_specifier_text_changes(
-        &GetModuleSpecifierTextChangesParams {
-          specifier,
-          module_graph: &module_graph,
-          mappings: &mappings,
-          use_js_extension: keep_extensions,
-          program: &program,
-        },
-      );
-      text_changes.extend(get_deno_global_text_changes(
+    let (cjs_changes, mjs_changes) = parsed_source.with_view(|program| {
+      let common_changes = get_deno_global_text_changes(
         &GetDenoGlobalTextChangesParams {
           program: &program,
           top_level_context: parsed_source.top_level_context(),
           shim_package_name: shim_package_name.as_str(),
         },
-      ));
-      text_changes
+      );
+      let mut cjs_changes = get_module_specifier_text_changes(
+        &GetModuleSpecifierTextChangesParams {
+          specifier,
+          module_graph: &module_graph,
+          mappings: &mappings,
+          use_js_extension: false,
+          program: &program,
+        },
+      );
+      cjs_changes.extend(common_changes.clone());
+      let mut mjs_changes = get_module_specifier_text_changes(
+        &GetModuleSpecifierTextChangesParams {
+          specifier,
+          module_graph: &module_graph,
+          mappings: &mappings,
+          use_js_extension: true,
+          program: &program,
+        },
+      );
+      mjs_changes.extend(common_changes);
+
+      (cjs_changes, mjs_changes)
     });
 
-    let final_file_text = apply_text_changes(
-      parsed_source.source().text().to_string(),
-      text_changes,
-    );
-
-    result.push(OutputFile {
-      file_path: mappings.get_file_path(specifier).to_owned(),
-      file_text: final_file_text,
+    let file_path = mappings.get_file_path(specifier).to_owned();
+    cjs_files.push(OutputFile {
+      file_path: file_path.clone(),
+      file_text: apply_text_changes(
+        parsed_source.source().text().to_string(),
+        cjs_changes,
+      ),
+    });
+    mjs_files.push(OutputFile {
+      file_path,
+      file_text: apply_text_changes(
+        parsed_source.source().text().to_string(),
+        mjs_changes,
+      ),
     });
   }
 
-  Ok(result)
+  Ok(TransformOutput {
+    entry_point_file_path: mappings.get_file_path(&options.entry_point).to_string_lossy().to_string(),
+    cjs_files,
+    mjs_files,
+  })
 }
 
 fn get_specifiers_from_loader(

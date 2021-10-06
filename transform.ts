@@ -7,8 +7,13 @@ await init(getWasmLoadPromise());
 
 export interface TransformOptions {
   entryPoint: string | URL;
-  keepExtensions: boolean;
   shimPackageName?: string;
+}
+
+export interface TransformOutput {
+  entryPointFilePath: string;
+  cjsFiles: OutputFile[];
+  mjsFiles: OutputFile[];
 }
 
 export interface OutputFile {
@@ -19,7 +24,7 @@ export interface OutputFile {
 /** Analyzes the provided entry point to get all the dependended on modules and
  * outputs canonical TypeScript code in memory. The output of this function
  * can then be sent to the TypeScript compiler or a bundler for further processing. */
-export function transform(options: TransformOptions): Promise<OutputFile[]> {
+export function transform(options: TransformOptions): Promise<TransformOutput> {
   const newOptions = {
     ...options,
   };

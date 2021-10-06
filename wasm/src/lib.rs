@@ -70,7 +70,6 @@ impl dnt::Loader for JsLoader {
 #[serde(rename_all = "camelCase")]
 pub struct TransformOptions {
   pub entry_point: String,
-  pub keep_extensions: bool,
   pub shim_package_name: Option<String>,
 }
 
@@ -82,7 +81,6 @@ pub async fn transform(options: JsValue) -> Result<JsValue, JsValue> {
 
   let result = dnt::transform(dnt::TransformOptions {
     entry_point: dnt::ModuleSpecifier::parse(&options.entry_point).unwrap(),
-    keep_extensions: options.keep_extensions,
     shim_package_name: options.shim_package_name,
     loader: Some(Box::new(JsLoader {})),
   })

@@ -1,14 +1,13 @@
 use anyhow::Result;
+use deno_node_transform::TransformOutput;
 use deno_node_transform::transform;
 use deno_node_transform::ModuleSpecifier;
-use deno_node_transform::OutputFile;
 use deno_node_transform::TransformOptions;
 
 use super::InMemoryLoader;
 
 pub struct TestBuilder {
   loader: InMemoryLoader,
-  keep_extensions: bool,
   entry_point: String,
   shim_package_name: Option<String>,
 }
@@ -18,7 +17,6 @@ impl TestBuilder {
     let loader = InMemoryLoader::new();
     Self {
       loader,
-      keep_extensions: false,
       entry_point: "file:///mod.ts".to_string(),
       shim_package_name: None,
     }
@@ -32,11 +30,6 @@ impl TestBuilder {
     self
   }
 
-  pub fn keep_extensions(&mut self) -> &mut Self {
-    self.keep_extensions = true;
-    self
-  }
-
   pub fn entry_point(&mut self, value: impl AsRef<str>) -> &mut Self {
     self.entry_point = value.as_ref().to_string();
     self
@@ -47,10 +40,9 @@ impl TestBuilder {
     self
   }
 
-  pub async fn transform(&self) -> Result<Vec<OutputFile>> {
+  pub async fn transform(&self) -> Result<TransformOutput> {
     transform(TransformOptions {
       entry_point: ModuleSpecifier::parse(&self.entry_point).unwrap(),
-      keep_extensions: self.keep_extensions,
       shim_package_name: self.shim_package_name.as_ref().map(ToOwned::to_owned),
       loader: Some(Box::new(self.loader.clone())),
     })
