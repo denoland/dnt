@@ -4,6 +4,7 @@
 - Handle deno-types when it references a `.ts` file (maybe transform the .ts file to .js?)
 - Maybe the ability to skip using the TypeScript compiler (useful for people with only JS projects)
 - When working on transforms, warn when a version in package.json or transforms doesn't match remote specifier
+- Support multiple entrypoints with a default entrypoint used in package.json (the first one)
 
 ## Future Goals
 

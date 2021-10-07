@@ -4,22 +4,40 @@
 
 Prototype for a Deno to Node/canonical TypeScript transform.
 
-Note: This is not completely working yet. Please don't use it as it will probably drastically change.
+Note: This is not completely working yet. Please don't use it as it will
+probably drastically change.
 
 ## CLI Example
 
+Create a configuration file in the deno-first repository:
+
+```json
+// ex. dnt.json
+{
+  "entryPoint": "mod.ts",
+  "typeCheck": true,
+  "outDir": "./npm",
+  "package": {
+    "name": "my-package",
+    "description": "My package.",
+    "author": "My Name",
+    "license": "MIT",
+    "repository": {
+      "type": "git",
+      "url": "git+https://github.com/dsherret/my-package.git"
+    },
+    "bugs": {
+      "url": "https://github.com/dsherret/my-package/issues"
+    }
+  }
+}
+```
+
 ```bash
-# install
-deno install --allow-read --allow-write --allow-net -n dnt https://deno.land/x/dnt/cli.ts
+# run tool. This will output an npm package with cjs and mjs distributions bundling remote dependencies
+deno run --allow-read=./ --allow-write=./npm --allow-net --no-check https://deno.land/x/dnt/cli.ts --config ./dnt.json --packageVersion 0.1.0
 
-# clone a Deno-first repo
-git clone https://github.com/dsherret/code-block-writer.git
-cd code-block-writer
-
-# run tool and output to ./code-block-writer/npm/dist (uses tsc CLI flags)
-dnt mod.ts --target ES6 --outDir ./npm/dist --declaration
-
-# go to output directory, run tsc, and publish
+# go to output directory and publish
 cd npm
 npm publish
 ```
@@ -34,12 +52,20 @@ To emit the Deno-first sources to code that can be consumed in Node.js, use the
 import { emit } from "https://deno.land/x/dnt/mod.ts";
 
 const emitResult = await emit({
-  compilerOptions: {
-    outDir: "./dist",
-  },
   entryPoint: "./mod.ts",
-  shimPackageName: "deno-shim-package-name",
+  outDir: "./dist",
   typeCheck: false,
+  shimPackage: {
+    name: "deno.ns",
+    version: "0.4.0",
+  },
+  package: {
+    // package.json properties
+    name: "my-package",
+    version: "0.1.0",
+    description: "My package.",
+    license: "MIT",
+  },
 });
 ```
 
@@ -50,11 +76,12 @@ bundlers, use the following:
 // docs: https://doc.deno.land/https/deno.land/x/dnt/transform.ts
 import { transform } from "https://deno.land/x/dnt/transform.ts";
 
-const outputFiles = await transform({
+const outputResult = await transform({
   entryPoint: "./mod.ts",
-  shimPackageName: "deno-shim-package-name",
-  keepExtensions: false, // transforms to not have extensions
+  shimPackageName: "deno.ns",
 });
+
+// inspect outputResult.cjsFiles and outputResult.mjsFiles here
 ```
 
 ## Rust API Example
@@ -69,13 +96,13 @@ use deno_node_transform::ModuleSpecifier;
 use deno_node_transform::transform;
 use deno_node_transform::TransformOptions;
 
-let output_files = transform(TransformOptions {
+let output_result = transform(TransformOptions {
   entry_point: ModuleSpecifier::from_file_path(PathBuf::from("./mod.ts")).unwrap(),
-  keep_extensions: false,
+  shim_package_name: "deno.ns".to_string(),
   loader: None, // use the default loader
 }).await?;
 
-for output_file in output_files {
+for output_file in output_result.cjs_files {
   // use these properties on output_file
   output_file.file_path;
   output_file.file_text;

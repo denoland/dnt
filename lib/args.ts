@@ -4,7 +4,10 @@ import { parse } from "https://deno.land/std@0.109.0/flags/mod.ts";
 
 export interface ParsedArgs {
   entryPoint: string | undefined;
-  shimPackage: string | undefined;
+  shimPackage: {
+    name: string;
+    version: string;
+  } | undefined;
   typeCheck: boolean | undefined;
   packageName: string | undefined;
   packageVersion: string | undefined;
@@ -25,32 +28,43 @@ export function parseArgs(
     return "help";
   }
 
-  const entryPoint = takeEntryPoint();
-  const typeCheck = takeBooleanProperty("typeCheck");
-  const shimPackage = takeStringProperty("shimPackage");
-  const outDir = takeStringProperty("outDir");
-  const packageVersion = takeStringProperty("packageVersion");
-  const packageName = takeStringProperty("packageName");
-  const config = takeStringProperty("config");
+  const result: ParsedArgs = {
+    entryPoint: takeEntryPoint(),
+    shimPackage: takeShimPackage(),
+    typeCheck: takeBooleanProperty("typeCheck"),
+    packageName: takeStringProperty("packageName"),
+    packageVersion: takeStringProperty("packageVersion"),
+    config: takeStringProperty("config"),
+    outDir: takeStringProperty("outDir"),
+  };
 
   const remainingArgs = getRemainingArgs();
   if (remainingArgs.length > 0) {
     throw new Error(`Unknown arguments: ${remainingArgs.join(" ")}`);
   }
 
-  return {
-    entryPoint,
-    shimPackage,
-    typeCheck,
-    packageName,
-    packageVersion,
-    config,
-    outDir,
-  };
+  return result;
 
   function takeEntryPoint() {
     const firstArgument = cliArgs._.splice(0, 1)[0] as string | undefined;
     return firstArgument;
+  }
+
+  function takeShimPackage() {
+    const shimPackageName = takeStringProperty("shimPackageName");
+    const shimPackageVersion = takeStringProperty("shimPackageVersion");
+    if (typeof shimPackageName !== typeof shimPackageVersion) {
+      throw new Error(
+        "Both a shimPackageName and shimPackageVersion must be provided at the same time or not provided.",
+      );
+    }
+    if (!shimPackageName || !shimPackageVersion) {
+      return undefined;
+    }
+    return {
+      name: shimPackageName,
+      version: shimPackageVersion,
+    };
   }
 
   function takeBooleanProperty(name: string) {

@@ -1,8 +1,8 @@
 use anyhow::Result;
-use deno_node_transform::TransformOutput;
 use deno_node_transform::transform;
 use deno_node_transform::ModuleSpecifier;
 use deno_node_transform::TransformOptions;
+use deno_node_transform::TransformOutput;
 
 use super::InMemoryLoader;
 
@@ -43,7 +43,11 @@ impl TestBuilder {
   pub async fn transform(&self) -> Result<TransformOutput> {
     transform(TransformOptions {
       entry_point: ModuleSpecifier::parse(&self.entry_point).unwrap(),
-      shim_package_name: self.shim_package_name.as_ref().map(ToOwned::to_owned),
+      shim_package_name: self
+        .shim_package_name
+        .as_ref()
+        .map(ToOwned::to_owned)
+        .unwrap_or("deno.ns".to_string()),
       loader: Some(Box::new(self.loader.clone())),
     })
     .await

@@ -10,7 +10,10 @@ export interface EmitOptions {
   outDir: string;
   typeCheck?: boolean;
   entryPoint: string | URL;
-  shimPackageName?: string;
+  shimPackage?: {
+    name: string;
+    version: string;
+  };
   package: PackageJsonObject;
   writeFile?: (filePath: string, text: string) => void;
 }
@@ -22,9 +25,13 @@ export interface EmitResult {
 
 /** Emits the specified Deno module to JavaScript code using the TypeScript compiler. */
 export async function emit(options: EmitOptions): Promise<EmitResult> {
+  const shimPackage = options.shimPackage ?? {
+    name: "deno.ns",
+    version: "0.4.3",
+  };
   const transformOutput = await transform({
     entryPoint: options.entryPoint,
-    shimPackageName: options.shimPackageName,
+    shimPackageName: shimPackage.name,
   });
   const createdDirectories = new Set<string>();
   const writeFile = options.writeFile ??
@@ -58,9 +65,19 @@ export async function emit(options: EmitOptions): Promise<EmitResult> {
     return mjsResult;
   }
 
-  const entryPointPath = transformOutput.entryPointFilePath.replace(/\.ts$/i, ".js");
+  const entryPointPath = transformOutput
+    .entryPointFilePath
+    .replace(/\.ts$/i, ".js");
   const packageJsonObj = {
     ...options.package,
+    dependencies: {
+      ...(transformOutput.shimUsed
+        ? {
+          [shimPackage.name]: shimPackage.version,
+        }
+        : {}),
+      ...(options.package.dependencies ?? {}),
+    },
     main: options.package.main ?? `cjs/${entryPointPath}`,
     module: options.package.module ?? `mjs/${entryPointPath}`,
     exports: {
@@ -69,8 +86,8 @@ export async function emit(options: EmitOptions): Promise<EmitResult> {
         "import": `./mjs/${entryPointPath}`,
         "require": `./cjs/${entryPointPath}`,
         ...(options.package.exports?.["."] ?? {}),
-      }
-    }
+      },
+    },
   };
   writeFile(
     path.join(options.outDir, "package.json"),

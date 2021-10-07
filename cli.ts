@@ -17,7 +17,7 @@ try {
 
   const emitResult = await emit({
     entryPoint: resolvedArgs.entryPoint,
-    shimPackageName: resolvedArgs.shimPackage,
+    shimPackage: resolvedArgs.shimPackage,
     typeCheck: resolvedArgs.typeCheck,
     outDir: resolvedArgs.outDir,
     package: resolvedArgs.package,

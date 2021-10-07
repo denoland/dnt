@@ -44,20 +44,19 @@ pub struct OutputFile {
 #[derive(Debug, PartialEq)]
 pub struct TransformOutput {
   pub entry_point_file_path: String,
+  pub shim_used: bool,
   pub cjs_files: Vec<OutputFile>,
   pub mjs_files: Vec<OutputFile>,
 }
 
 pub struct TransformOptions {
   pub entry_point: ModuleSpecifier,
-  pub shim_package_name: Option<String>,
+  pub shim_package_name: String,
   pub loader: Option<Box<dyn Loader>>,
 }
 
 pub async fn transform(options: TransformOptions) -> Result<TransformOutput> {
-  let shim_package_name = options
-    .shim_package_name
-    .unwrap_or_else(|| "shim-package-name".to_string());
+  let shim_package_name = options.shim_package_name;
   let mut loader =
     loader::SourceLoader::new(options.loader.unwrap_or_else(|| {
       #[cfg(feature = "tokio-loader")]
@@ -82,6 +81,7 @@ pub async fn transform(options: TransformOptions) -> Result<TransformOutput> {
   // todo: parallelize
   let mut cjs_files = Vec::new();
   let mut mjs_files = Vec::new();
+  let mut shim_used = false;
   for specifier in specifiers
     .local
     .iter()
@@ -91,13 +91,15 @@ pub async fn transform(options: TransformOptions) -> Result<TransformOutput> {
     let parsed_source = source_parser.get_parsed_source(specifier)?;
 
     let (cjs_changes, mjs_changes) = parsed_source.with_view(|program| {
-      let common_changes = get_deno_global_text_changes(
-        &GetDenoGlobalTextChangesParams {
+      let deno_global_changes =
+        get_deno_global_text_changes(&GetDenoGlobalTextChangesParams {
           program: &program,
           top_level_context: parsed_source.top_level_context(),
           shim_package_name: shim_package_name.as_str(),
-        },
-      );
+        });
+      if !deno_global_changes.is_empty() {
+        shim_used = true;
+      }
       let mut cjs_changes = get_module_specifier_text_changes(
         &GetModuleSpecifierTextChangesParams {
           specifier,
@@ -107,7 +109,7 @@ pub async fn transform(options: TransformOptions) -> Result<TransformOutput> {
           program: &program,
         },
       );
-      cjs_changes.extend(common_changes.clone());
+      cjs_changes.extend(deno_global_changes.clone());
       let mut mjs_changes = get_module_specifier_text_changes(
         &GetModuleSpecifierTextChangesParams {
           specifier,
@@ -117,7 +119,7 @@ pub async fn transform(options: TransformOptions) -> Result<TransformOutput> {
           program: &program,
         },
       );
-      mjs_changes.extend(common_changes);
+      mjs_changes.extend(deno_global_changes);
 
       (cjs_changes, mjs_changes)
     });
@@ -140,7 +142,11 @@ pub async fn transform(options: TransformOptions) -> Result<TransformOutput> {
   }
 
   Ok(TransformOutput {
-    entry_point_file_path: mappings.get_file_path(&options.entry_point).to_string_lossy().to_string(),
+    entry_point_file_path: mappings
+      .get_file_path(&options.entry_point)
+      .to_string_lossy()
+      .to_string(),
+    shim_used,
     cjs_files,
     mjs_files,
   })

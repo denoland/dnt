@@ -7,11 +7,13 @@ await init(getWasmLoadPromise());
 
 export interface TransformOptions {
   entryPoint: string | URL;
-  shimPackageName?: string;
+  shimPackageName: string;
 }
 
 export interface TransformOutput {
   entryPointFilePath: string;
+  /** If the shim is used in any of the output files. */
+  shimUsed: boolean;
   cjsFiles: OutputFile[];
   mjsFiles: OutputFile[];
 }

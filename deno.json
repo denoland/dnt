@@ -1,0 +1,7 @@
+{
+  "fmt": {
+    "files": {
+      "exclude": ["target/", "wasm/target/", "lib/pkg/"]
+    }
+  }
+}

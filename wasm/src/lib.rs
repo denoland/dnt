@@ -70,7 +70,7 @@ impl dnt::Loader for JsLoader {
 #[serde(rename_all = "camelCase")]
 pub struct TransformOptions {
   pub entry_point: String,
-  pub shim_package_name: Option<String>,
+  pub shim_package_name: String,
 }
 
 #[wasm_bindgen]

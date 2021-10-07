@@ -35,7 +35,7 @@ async fn transform_deno_shim() {
     &[(
       "mod.ts",
       concat!(
-        r#"import * as denoShim from "shim-package-name";"#,
+        r#"import * as denoShim from "deno.ns";"#,
         "\ndenoShim.Deno.readTextFile();"
       )
     )]
