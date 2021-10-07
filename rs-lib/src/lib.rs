@@ -26,6 +26,8 @@ pub use deno_ast::ModuleSpecifier;
 pub use loader::LoadResponse;
 pub use loader::Loader;
 
+use crate::loader::MappedSpecifierEntry;
+
 mod loader;
 mod mappings;
 mod parser;
@@ -45,8 +47,8 @@ pub struct OutputFile {
 #[cfg_attr(feature = "serialization", serde(rename_all = "camelCase"))]
 #[derive(Debug, PartialEq)]
 pub struct Dependency {
-  name: String,
-  version: String,
+  pub name: String,
+  pub version: String,
 }
 
 #[cfg_attr(feature = "serialization", derive(serde::Serialize))]
@@ -218,7 +220,7 @@ fn get_specifiers_from_loader(
       .collect(),
     types,
     found_ignored: specifiers.found_ignored,
-    mapped: specifiers.mapped,
+    mapped: get_mapped(specifiers.mapped)?,
   });
 
   fn handle_specifiers(
@@ -248,6 +250,28 @@ fn get_specifiers_from_loader(
     }
 
     Ok(())
+  }
+
+  fn get_mapped(mapped_specifiers: Vec<MappedSpecifierEntry>) -> Result<Vec<MappedSpecifierEntry>> {
+    let mut specifier_for_name: HashMap<String, MappedSpecifierEntry> = HashMap::new();
+    let mut result = Vec::new();
+    for mapped_specifier in mapped_specifiers {
+      if let Some(specifier) = specifier_for_name.get(&mapped_specifier.to_specifier) {
+        if specifier.version != mapped_specifier.version {
+          anyhow::bail!("Specifier {} with version {} did not match specifier {} with version {}.",
+            specifier.from_specifier,
+            specifier.version.as_ref().map(|v| v.as_str()).unwrap_or("<unknown>"),
+            mapped_specifier.from_specifier,
+            mapped_specifier.version.as_ref().map(|v| v.as_str()).unwrap_or("<unknown>"),
+          );
+        }
+      } else {
+        specifier_for_name.insert(mapped_specifier.to_specifier.to_string(), mapped_specifier.clone());
+        result.push(mapped_specifier);
+      }
+    }
+
+    Ok(result)
   }
 }
 

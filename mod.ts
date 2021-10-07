@@ -103,7 +103,7 @@ export async function run(options: RunOptions): Promise<void> {
       ...options.package,
       dependencies: {
         // add dependencies from transform
-        ...Object.fromEntries(transformOutput.dependencies.map(d => [d.name, `^${d.version}`])),
+        ...Object.fromEntries(transformOutput.dependencies.map(d => [d.name, d.version])),
         // add specifier mappings to dependencies
         ...(specifierMappings && Object.fromEntries(
           Object.values(specifierMappings)

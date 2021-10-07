@@ -1,5 +1,6 @@
 use std::path::PathBuf;
 
+use deno_node_transform::Dependency;
 use pretty_assertions::assert_eq;
 
 #[macro_use]
@@ -501,3 +502,66 @@ async fn node_module_mapping() {
     ]
   );
 }
+
+#[tokio::test]
+async fn skypack_module_mapping() {
+  let result = TestBuilder::new()
+    .with_loader(|loader| {
+      loader
+        .add_local_file(
+          "/mod.ts",
+          concat!(
+            "import package1 from 'https://cdn.skypack.dev/preact@^10.5.0';\n",
+            "import package2 from 'https://cdn.skypack.dev/@scope/package-name@1';",
+          ),
+        );
+    })
+    .transform()
+    .await
+    .unwrap();
+
+  assert_files!(
+    result.cjs_files,
+    &[
+      ("mod.ts", concat!(
+        "import package1 from 'preact';\n",
+        "import package2 from '@scope/package-name';",
+      )),
+    ]
+  );
+  assert_eq!(
+    result.dependencies,
+    &[Dependency {
+      name: "@scope/package-name".to_string(),
+      version: "1".to_string(),
+    }, Dependency {
+       name: "preact".to_string(),
+       version: "^10.5.0".to_string(),
+    }]
+  );
+}
+
+#[tokio::test]
+async fn skypack_module_mapping_different_versions() {
+  let error_message = TestBuilder::new()
+    .with_loader(|loader| {
+      loader
+        .add_local_file(
+          "/mod.ts",
+          concat!(
+            "import package1 from 'https://cdn.skypack.dev/preact@^10.5.0';\n",
+            "import package2 from 'https://cdn.skypack.dev/preact@^10.5.2';",
+          ),
+        );
+    })
+    .transform()
+    .await
+    .err()
+    .unwrap();
+
+  assert_eq!(
+    error_message.to_string(),
+    "Specifier https://cdn.skypack.dev/preact@^10.5.0 with version ^10.5.0 did not match specifier https://cdn.skypack.dev/preact@^10.5.2 with version ^10.5.2."
+  );
+}
+

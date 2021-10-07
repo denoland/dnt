@@ -5,6 +5,7 @@ pub trait SpecifierMapper {
   fn map(&self, specifier: &ModuleSpecifier) -> Option<MappedSpecifierEntry>;
 }
 
+#[derive(Clone)]
 pub struct MappedSpecifierEntry {
   pub from_specifier: ModuleSpecifier,
   pub to_specifier: String,
@@ -33,7 +34,28 @@ pub fn get_all_specifier_mappers() -> Vec<Box<dyn SpecifierMapper>> {
     Box::new(NodeSpecifierMapper::new("tty")),
     Box::new(NodeSpecifierMapper::new("url")),
     Box::new(NodeSpecifierMapper::new("util")),
+    Box::new(SkypackMapper {}),
   ]
+}
+
+lazy_static! {
+  // good enough for a first pass
+  static ref SKYPACK_MAPPING_RE: Regex = Regex::new(r"https://cdn.skypack.dev/(@?[^@?]+)@([0-9\.\^~\-A-Za-z]+)").unwrap();
+}
+
+struct SkypackMapper {
+}
+
+impl SpecifierMapper for SkypackMapper {
+    fn map(&self, specifier: &ModuleSpecifier) -> Option<MappedSpecifierEntry> {
+      SKYPACK_MAPPING_RE.captures(specifier.as_str()).map(|captures| {
+        MappedSpecifierEntry {
+          from_specifier: specifier.clone(),
+          to_specifier: captures.get(1).unwrap().as_str().to_string(),
+          version: Some(captures.get(2).unwrap().as_str().to_string()),
+        }
+      })
+    }
 }
 
 struct NodeSpecifierMapper {
