@@ -2,10 +2,12 @@
 
 mod utils;
 
+use std::collections::HashMap;
 use std::future::Future;
 use std::path::PathBuf;
 
 use anyhow::Result;
+use dnt::ModuleSpecifier;
 use serde::Deserialize;
 use utils::set_panic_hook;
 use wasm_bindgen::prelude::*;
@@ -71,6 +73,7 @@ impl dnt::Loader for JsLoader {
 pub struct TransformOptions {
   pub entry_point: String,
   pub shim_package_name: String,
+  pub specifier_mappings: Option<HashMap<ModuleSpecifier, String>>,
 }
 
 #[wasm_bindgen]
@@ -83,6 +86,7 @@ pub async fn transform(options: JsValue) -> Result<JsValue, JsValue> {
     entry_point: dnt::ModuleSpecifier::parse(&options.entry_point).unwrap(),
     shim_package_name: options.shim_package_name,
     loader: Some(Box::new(JsLoader {})),
+    specifier_mappings: options.specifier_mappings,
   })
   .await
   .unwrap();

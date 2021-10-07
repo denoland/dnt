@@ -1,6 +1,7 @@
 // Copyright 2018-2021 the Deno authors. All rights reserved. MIT license.
 
 use std::collections::BTreeMap;
+use std::collections::HashMap;
 use std::collections::HashSet;
 use std::path::PathBuf;
 
@@ -53,17 +54,21 @@ pub struct TransformOptions {
   pub entry_point: ModuleSpecifier,
   pub shim_package_name: String,
   pub loader: Option<Box<dyn Loader>>,
+  pub specifier_mappings: Option<HashMap<ModuleSpecifier, String>>,
 }
 
 pub async fn transform(options: TransformOptions) -> Result<TransformOutput> {
   let shim_package_name = options.shim_package_name;
+  let ignored_specifiers = options.specifier_mappings.as_ref().map(|t| t.keys().map(ToOwned::to_owned).collect());
   let mut loader =
     loader::SourceLoader::new(options.loader.unwrap_or_else(|| {
       #[cfg(feature = "tokio-loader")]
       return Box::new(loader::DefaultLoader::new());
       #[cfg(not(feature = "tokio-loader"))]
       panic!("You must provide a loader or use the 'tokio-loader' feature.")
-    }));
+    }),
+    ignored_specifiers.as_ref(),
+  );
   let source_parser = parser::CapturingSourceParser::new();
   let module_graph = create_graph(
     options.entry_point.clone(),
@@ -76,7 +81,19 @@ pub async fn transform(options: TransformOptions) -> Result<TransformOutput> {
 
   let specifiers = get_specifiers_from_loader(loader, &module_graph)?;
 
+  if let Some(ignored_specifiers) = ignored_specifiers {
+    let mut not_found_specifiers = ignored_specifiers.into_iter().filter(|s| !specifiers.found_ignored.contains(s)).collect::<Vec<_>>();
+    if !not_found_specifiers.is_empty() {
+      not_found_specifiers.sort();
+      anyhow::bail!(
+        "The following specifiers were indicated to be mapped, but were not found:\n{}",
+        not_found_specifiers.into_iter().map(|s| format!("  * {}", s)).collect::<Vec<_>>().join("\n"),
+      );
+    }
+  }
+
   let mappings = Mappings::new(&module_graph, &specifiers)?;
+  let specifier_mappings = options.specifier_mappings;
 
   // todo: parallelize
   let mut cjs_files = Vec::new();
@@ -107,6 +124,7 @@ pub async fn transform(options: TransformOptions) -> Result<TransformOutput> {
           mappings: &mappings,
           use_js_extension: false,
           program: &program,
+          specifier_mappings: specifier_mappings.as_ref(),
         },
       );
       cjs_changes.extend(deno_global_changes.clone());
@@ -117,6 +135,7 @@ pub async fn transform(options: TransformOptions) -> Result<TransformOutput> {
           mappings: &mappings,
           use_js_extension: true,
           program: &program,
+          specifier_mappings: specifier_mappings.as_ref(),
         },
       );
       mjs_changes.extend(deno_global_changes);
@@ -176,6 +195,7 @@ fn get_specifiers_from_loader(
       .filter(|l| !type_specifiers.contains(&l))
       .collect(),
     types,
+    found_ignored: specifiers.found_ignored,
   });
 
   fn handle_specifiers(

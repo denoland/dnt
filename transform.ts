@@ -8,6 +8,10 @@ await init(getWasmLoadPromise());
 export interface TransformOptions {
   entryPoint: string | URL;
   shimPackageName: string;
+  /** The specifier to bare specifier mappings. */
+  specifierMappings?: {
+    [specifier: string]: string
+  };
 }
 
 export interface TransformOutput {

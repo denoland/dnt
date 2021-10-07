@@ -7,35 +7,48 @@ Prototype for a Deno to Node/canonical TypeScript transform.
 Note: This is not completely working yet. Please don't use it as it will
 probably drastically change.
 
-## CLI Example
+## Setup
 
-Create a configuration file in the deno-first repository:
+```ts
+// ex. scripts/create_npm_package.ts
+import { run } from "https://deno.land/x/dnt/mod.ts";
 
-```json
-// ex. dnt.json
-{
-  "entryPoint": "mod.ts",
-  "typeCheck": true,
-  "outDir": "./npm",
-  "package": {
-    "name": "my-package",
-    "description": "My package.",
-    "author": "My Name",
-    "license": "MIT",
-    "repository": {
-      "type": "git",
-      "url": "git+https://github.com/dsherret/my-package.git"
+await run({
+  entryPoint: "./mod.ts",
+  outDir: "./npm",
+  typeCheck: true,
+  package: {
+    // package.json properties
+    name: "my-package",
+    version: Deno.args[0],
+    description: "My package.",
+    license: "MIT",
+    repository: {
+      type: "git",
+      url: "git+https://github.com/dsherret/my-package.git"
     },
-    "bugs": {
-      "url": "https://github.com/dsherret/my-package/issues"
-    }
-  }
-}
+    bugs: {
+      url: "https://github.com/dsherret/my-package/issues"
+    },
+    // optional dev dependencies to use
+    devDependencies: {
+      // if you find it necessary
+      "@types/node": "^16.10.3",
+    },
+  },
+  // optional specifier to npm package mappings
+  mappings: {
+    "https://deno.land/x/code_block_writer@10.1.1/mod.ts": {
+      name: "code-block-writer",
+      version: "^10.1.1",
+    },
+  },
+});
 ```
 
 ```bash
-# run tool. This will output an npm package with cjs and mjs distributions bundling remote dependencies
-deno run --allow-read=./ --allow-write=./npm --allow-net --no-check https://deno.land/x/dnt/cli.ts --config ./dnt.json --packageVersion 0.1.0
+# run script. This will output an npm package with cjs and mjs distributions bundling remote dependencies
+deno run --allow-read=./ --allow-write=./npm --allow-net --allow-run scripts/create_npm_package.ts 0.1.0
 
 # go to output directory and publish
 cd npm
@@ -43,31 +56,6 @@ npm publish
 ```
 
 ## JS API Example
-
-To emit the Deno-first sources to code that can be consumed in Node.js, use the
-`emit` function:
-
-```ts
-// docs: https://doc.deno.land/https/deno.land/x/dnt/mod.ts
-import { emit } from "https://deno.land/x/dnt/mod.ts";
-
-const emitResult = await emit({
-  entryPoint: "./mod.ts",
-  outDir: "./dist",
-  typeCheck: false,
-  shimPackage: {
-    name: "deno.ns",
-    version: "0.4.0",
-  },
-  package: {
-    // package.json properties
-    name: "my-package",
-    version: "0.1.0",
-    description: "My package.",
-    license: "MIT",
-  },
-});
-```
 
 For only the Deno to canonical TypeScript transform which can be useful for
 bundlers, use the following:

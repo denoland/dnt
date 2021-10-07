@@ -1,5 +1,6 @@
 // Copyright 2018-2021 the Deno authors. All rights reserved. MIT license.
 
+use std::collections::HashMap;
 use std::path::PathBuf;
 
 use deno_ast::swc::common::BytePos;
@@ -18,6 +19,7 @@ pub struct GetModuleSpecifierTextChangesParams<'a> {
   pub use_js_extension: bool,
   pub mappings: &'a Mappings,
   pub program: &'a Program<'a>,
+  pub specifier_mappings: Option<&'a HashMap<ModuleSpecifier, String>>,
 }
 
 struct Context<'a> {
@@ -27,6 +29,7 @@ struct Context<'a> {
   mappings: &'a Mappings,
   output_file_path: &'a PathBuf,
   text_changes: Vec<TextChange>,
+  specifier_mappings: Option<&'a HashMap<ModuleSpecifier, String>>,
 }
 
 pub fn get_module_specifier_text_changes<'a>(
@@ -39,6 +42,7 @@ pub fn get_module_specifier_text_changes<'a>(
     mappings: params.mappings,
     output_file_path: params.mappings.get_file_path(params.specifier),
     text_changes: Vec::new(),
+    specifier_mappings: params.specifier_mappings,
   };
 
   // todo: look at imports in ts namespaces? I forget if they support importing from another module and if that works in Deno
@@ -72,23 +76,29 @@ fn visit_module_specifier(str: &Str, context: &mut Context) {
     // todo: error instead of panic
     None => panic!("Could not resolve specifier: {}", value),
   };
-  let specifier_file_path = context.mappings.get_file_path(&specifier);
-  let relative_path =
-    get_relative_path(context.output_file_path, specifier_file_path);
-  let relative_path_str = if context.use_js_extension {
-    relative_path.with_extension("js")
+
+  let new_text = if let Some(bare_specifier) = context.specifier_mappings.map(|m| m.get(&specifier)).flatten() {
+    bare_specifier.to_string()
   } else {
-    relative_path.with_extension("")
-  }
-  .to_string_lossy()
-  .to_string()
-  .replace("\\", "/");
-  let new_text = if relative_path_str.starts_with("../")
-    || relative_path_str.starts_with("./")
-  {
-    relative_path_str
-  } else {
-    format!("./{}", relative_path_str)
+    let specifier_file_path = context.mappings.get_file_path(&specifier);
+    let relative_path =
+      get_relative_path(context.output_file_path, specifier_file_path);
+    let relative_path_str = if context.use_js_extension {
+      relative_path.with_extension("js")
+    } else {
+      relative_path.with_extension("")
+    }
+    .to_string_lossy()
+    .to_string()
+    .replace("\\", "/");
+
+    if relative_path_str.starts_with("../")
+      || relative_path_str.starts_with("./")
+    {
+      relative_path_str
+    } else {
+      format!("./{}", relative_path_str)
+    }
   };
 
   context.text_changes.push(TextChange {

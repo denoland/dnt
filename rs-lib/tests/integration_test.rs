@@ -419,3 +419,57 @@ async fn transform_typescript_type_references() {
     ("deps/0/mod.d.ts", "declare function test(): number;"),
   ]);
 }
+
+#[tokio::test]
+async fn transform_specifier_mappings() {
+  let result = TestBuilder::new()
+    .with_loader(|loader| {
+      loader
+        .add_local_file(
+          "/mod.ts",
+          concat!(
+            "import * as remote from 'http://localhost/mod.ts';\n",
+            "import * as local from '/file.ts';\n"
+          ),
+        )
+        .add_remote_file(
+          "http://localhost/mod.ts",
+          "import * as myOther from './other.ts';",
+        );
+    })
+    .add_specifier_mapping("http://localhost/mod.ts", "remote-module")
+    .add_specifier_mapping("file:///file.ts", "local-module")
+    .transform()
+    .await
+    .unwrap();
+
+  assert_files!(
+    result.cjs_files,
+    &[
+      ("mod.ts", "import * as remote from 'remote-module';\nimport * as local from 'local-module';\n"),
+    ]
+  );
+}
+
+#[tokio::test]
+async fn transform_not_found_mappings() {
+  let error_message = TestBuilder::new()
+    .with_loader(|loader| {
+      loader
+        .add_local_file(
+          "/mod.ts",
+          "test",
+        );
+    })
+    .add_specifier_mapping("http://localhost/mod.ts", "local-module")
+    .add_specifier_mapping("http://localhost/mod2.ts", "local-module2")
+    .transform()
+    .await
+    .err()
+    .unwrap();
+
+  assert_eq!(
+    error_message.to_string(),
+    "The following specifiers were indicated to be mapped, but were not found:\n  * http://localhost/mod.ts\n  * http://localhost/mod2.ts"
+  );
+}

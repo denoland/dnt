@@ -1,3 +1,5 @@
+use std::collections::HashMap;
+
 use anyhow::Result;
 use deno_node_transform::transform;
 use deno_node_transform::ModuleSpecifier;
@@ -10,6 +12,7 @@ pub struct TestBuilder {
   loader: InMemoryLoader,
   entry_point: String,
   shim_package_name: Option<String>,
+  specifier_mappings: Option<HashMap<ModuleSpecifier, String>>,
 }
 
 impl TestBuilder {
@@ -19,6 +22,7 @@ impl TestBuilder {
       loader,
       entry_point: "file:///mod.ts".to_string(),
       shim_package_name: None,
+      specifier_mappings: None,
     }
   }
 
@@ -40,6 +44,17 @@ impl TestBuilder {
     self
   }
 
+  pub fn add_specifier_mapping(&mut self, specifier: impl AsRef<str>, bare_specifier: impl AsRef<str>) -> &mut Self {
+    let mappings = if let Some(mappings) = self.specifier_mappings.as_mut() {
+      mappings
+    } else {
+      self.specifier_mappings = Some(HashMap::new());
+      self.specifier_mappings.as_mut().unwrap()
+    };
+    mappings.insert(ModuleSpecifier::parse(specifier.as_ref()).unwrap(), bare_specifier.as_ref().to_string());
+    self
+  }
+
   pub async fn transform(&self) -> Result<TransformOutput> {
     transform(TransformOptions {
       entry_point: ModuleSpecifier::parse(&self.entry_point).unwrap(),
@@ -49,6 +64,7 @@ impl TestBuilder {
         .map(ToOwned::to_owned)
         .unwrap_or("deno.ns".to_string()),
       loader: Some(Box::new(self.loader.clone())),
+      specifier_mappings: self.specifier_mappings.clone(),
     })
     .await
   }

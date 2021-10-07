@@ -1,6 +1,7 @@
 // Copyright 2018-2021 the Deno authors. All rights reserved. MIT license.
 
 use std::collections::HashMap;
+use std::collections::HashSet;
 use std::path::PathBuf;
 use std::pin::Pin;
 use std::sync::Arc;
@@ -37,21 +38,25 @@ pub trait Loader {
 pub struct LoaderSpecifiers {
   pub local: Vec<ModuleSpecifier>,
   pub remote: Vec<ModuleSpecifier>,
+  pub found_ignored: HashSet<ModuleSpecifier>,
 }
 
-pub struct SourceLoader {
+pub struct SourceLoader<'a> {
   loader: Arc<Box<dyn Loader>>,
   specifiers: LoaderSpecifiers,
+  ignored_specifiers: Option<&'a HashSet<ModuleSpecifier>>,
 }
 
-impl SourceLoader {
-  pub fn new(loader: Box<dyn Loader>) -> Self {
+impl<'a> SourceLoader<'a> {
+  pub fn new(loader: Box<dyn Loader>, ignored_specifiers: Option<&'a HashSet<ModuleSpecifier>>) -> Self {
     Self {
       loader: Arc::new(loader),
       specifiers: LoaderSpecifiers {
         local: Vec::new(),
         remote: Vec::new(),
+        found_ignored: HashSet::new(),
       },
+      ignored_specifiers,
     }
   }
 
@@ -60,13 +65,21 @@ impl SourceLoader {
   }
 }
 
-impl deno_graph::source::Loader for SourceLoader {
+impl<'a> deno_graph::source::Loader for SourceLoader<'a> {
   fn load(
     &mut self,
     specifier: &ModuleSpecifier,
     // todo: handle dynamic
     _is_dynamic: bool,
   ) -> deno_graph::source::LoadFuture {
+    if self.ignored_specifiers.as_ref().map(|s| s.contains(specifier)).unwrap_or(false) {
+      self.specifiers.found_ignored.insert(specifier.clone());
+      return Box::pin(future::ready((
+        specifier.clone(),
+        Ok(None),
+      )));
+    }
+
     if specifier.scheme() == "https" || specifier.scheme() == "http" {
       println!("Downloading {}...", specifier);
       self.specifiers.remote.push(specifier.clone());
