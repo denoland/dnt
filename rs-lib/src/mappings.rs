@@ -11,6 +11,7 @@ use deno_ast::ModuleSpecifier;
 use deno_graph::ModuleGraph;
 use regex::Regex;
 
+use crate::loader::MappedSpecifierEntry;
 use crate::utils::url_to_file_path;
 
 lazy_static! {
@@ -22,6 +23,7 @@ pub struct Specifiers {
   pub remote: Vec<ModuleSpecifier>,
   pub types: BTreeMap<ModuleSpecifier, ModuleSpecifier>,
   pub found_ignored: HashSet<ModuleSpecifier>,
+  pub mapped: Vec<MappedSpecifierEntry>,
 }
 
 pub struct Mappings {

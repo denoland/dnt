@@ -473,3 +473,31 @@ async fn transform_not_found_mappings() {
     "The following specifiers were indicated to be mapped, but were not found:\n  * http://localhost/mod.ts\n  * http://localhost/mod2.ts"
   );
 }
+
+#[tokio::test]
+async fn node_module_mapping() {
+  let result = TestBuilder::new()
+    .with_loader(|loader| {
+      loader
+        .add_local_file(
+          "/mod.ts",
+          concat!(
+            "import * as path from 'https://deno.land/std@0.109.0/node/path.ts';\n",
+            "import * as fs from 'https://deno.land/std/node/fs/promises.ts';",
+          ),
+        );
+    })
+    .transform()
+    .await
+    .unwrap();
+
+  assert_files!(
+    result.cjs_files,
+    &[
+      ("mod.ts", concat!(
+        "import * as path from 'path';\n",
+        "import * as fs from 'fs/promises';",
+      )),
+    ]
+  );
+}

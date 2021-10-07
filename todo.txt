@@ -9,9 +9,7 @@
 ## Future Goals
 
 1. Support Deno.json to get compiler options.
-1. Handle mapping from remote specifiers to bare specifiers and transforming them in the file.
 1. Handle dynamic imports (at least ones that are statically analyzable and maybe warn on others)
-1. Support creating or modifying a package.json and using that for publish.
 1. Remove `@deno-types` and type reference directive comments. Currently leaves them as-is, but better to remove them in case the npm package gets re-consumed in Deno.
 
 Notes from Kitson:

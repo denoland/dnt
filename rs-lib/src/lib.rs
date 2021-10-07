@@ -13,6 +13,7 @@ use deno_graph::Resolved;
 extern crate lazy_static;
 
 use loader::SourceLoader;
+use loader::get_all_specifier_mappers;
 use mappings::Mappings;
 use mappings::Specifiers;
 use text_changes::apply_text_changes;
@@ -43,9 +44,18 @@ pub struct OutputFile {
 #[cfg_attr(feature = "serialization", derive(serde::Serialize))]
 #[cfg_attr(feature = "serialization", serde(rename_all = "camelCase"))]
 #[derive(Debug, PartialEq)]
+pub struct Dependency {
+  name: String,
+  version: String,
+}
+
+#[cfg_attr(feature = "serialization", derive(serde::Serialize))]
+#[cfg_attr(feature = "serialization", serde(rename_all = "camelCase"))]
+#[derive(Debug, PartialEq)]
 pub struct TransformOutput {
   pub entry_point_file_path: String,
   pub shim_used: bool,
+  pub dependencies: Vec<Dependency>,
   pub cjs_files: Vec<OutputFile>,
   pub mjs_files: Vec<OutputFile>,
 }
@@ -67,6 +77,8 @@ pub async fn transform(options: TransformOptions) -> Result<TransformOutput> {
       #[cfg(not(feature = "tokio-loader"))]
       panic!("You must provide a loader or use the 'tokio-loader' feature.")
     }),
+    // todo: support configuring this in the future
+    get_all_specifier_mappers(),
     ignored_specifiers.as_ref(),
   );
   let source_parser = parser::CapturingSourceParser::new();
@@ -93,7 +105,16 @@ pub async fn transform(options: TransformOptions) -> Result<TransformOutput> {
   }
 
   let mappings = Mappings::new(&module_graph, &specifiers)?;
-  let specifier_mappings = options.specifier_mappings;
+  let mut specifier_mappings = options.specifier_mappings;
+  if !specifiers.mapped.is_empty() {
+    if specifier_mappings.is_none() {
+      specifier_mappings = Some(HashMap::new());
+    }
+    let specifier_mappings = specifier_mappings.as_mut().unwrap();
+    for entry in specifiers.mapped.iter() {
+      specifier_mappings.insert(entry.from_specifier.clone(), entry.to_specifier.clone());
+    }
+  }
 
   // todo: parallelize
   let mut cjs_files = Vec::new();
@@ -165,6 +186,7 @@ pub async fn transform(options: TransformOptions) -> Result<TransformOutput> {
       .get_file_path(&options.entry_point)
       .to_string_lossy()
       .to_string(),
+    dependencies: get_dependencies(specifiers),
     shim_used,
     cjs_files,
     mjs_files,
@@ -196,6 +218,7 @@ fn get_specifiers_from_loader(
       .collect(),
     types,
     found_ignored: specifiers.found_ignored,
+    mapped: specifiers.mapped,
   });
 
   fn handle_specifiers(
@@ -226,4 +249,17 @@ fn get_specifiers_from_loader(
 
     Ok(())
   }
+}
+
+fn get_dependencies(specifiers: Specifiers) -> Vec<Dependency> {
+  specifiers.mapped.into_iter().filter_map(|entry| {
+    if let Some(version) = entry.version {
+      Some(Dependency {
+        name: entry.to_specifier,
+        version,
+      })
+    } else {
+      None
+    }
+  }).collect()
 }

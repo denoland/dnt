@@ -15,9 +15,11 @@ use crate::utils::url_to_file_path;
 
 #[cfg(feature = "tokio-loader")]
 mod default_loader;
+mod specifier_mappers;
 
 #[cfg(feature = "tokio-loader")]
 pub use default_loader::*;
+pub use specifier_mappers::*;
 
 pub struct LoadResponse {
   pub maybe_headers: Option<HashMap<String, String>>,
@@ -39,23 +41,31 @@ pub struct LoaderSpecifiers {
   pub local: Vec<ModuleSpecifier>,
   pub remote: Vec<ModuleSpecifier>,
   pub found_ignored: HashSet<ModuleSpecifier>,
+  pub mapped: Vec<MappedSpecifierEntry>,
 }
 
 pub struct SourceLoader<'a> {
   loader: Arc<Box<dyn Loader>>,
   specifiers: LoaderSpecifiers,
+  specifier_mappers: Vec<Box<dyn SpecifierMapper>>,
   ignored_specifiers: Option<&'a HashSet<ModuleSpecifier>>,
 }
 
 impl<'a> SourceLoader<'a> {
-  pub fn new(loader: Box<dyn Loader>, ignored_specifiers: Option<&'a HashSet<ModuleSpecifier>>) -> Self {
+  pub fn new(
+    loader: Box<dyn Loader>,
+    specifier_mappers: Vec<Box<dyn SpecifierMapper>>,
+    ignored_specifiers: Option<&'a HashSet<ModuleSpecifier>>,
+  ) -> Self {
     Self {
       loader: Arc::new(loader),
       specifiers: LoaderSpecifiers {
         local: Vec::new(),
         remote: Vec::new(),
         found_ignored: HashSet::new(),
+        mapped: Vec::new(),
       },
+      specifier_mappers,
       ignored_specifiers,
     }
   }
@@ -78,6 +88,16 @@ impl<'a> deno_graph::source::Loader for SourceLoader<'a> {
         specifier.clone(),
         Ok(None),
       )));
+    }
+
+    for mapper in self.specifier_mappers.iter() {
+      if let Some(entry) = mapper.map(specifier) {
+        self.specifiers.mapped.push(entry);
+        return Box::pin(future::ready((
+          specifier.clone(),
+          Ok(None),
+        )));
+      }
     }
 
     if specifier.scheme() == "https" || specifier.scheme() == "http" {

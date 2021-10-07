@@ -14,10 +14,16 @@ export interface TransformOptions {
   };
 }
 
+export interface Dependency {
+  name: string;
+  version: string;
+}
+
 export interface TransformOutput {
   entryPointFilePath: string;
   /** If the shim is used in any of the output files. */
   shimUsed: boolean;
+  dependencies: Dependency[];
   cjsFiles: OutputFile[];
   mjsFiles: OutputFile[];
 }
