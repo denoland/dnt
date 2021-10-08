@@ -25,10 +25,10 @@ await run({
     license: "MIT",
     repository: {
       type: "git",
-      url: "git+https://github.com/dsherret/my-package.git"
+      url: "git+https://github.com/dsherret/my-package.git",
     },
     bugs: {
-      url: "https://github.com/dsherret/my-package/issues"
+      url: "https://github.com/dsherret/my-package/issues",
     },
     // optional dev dependencies to use
     devDependencies: {

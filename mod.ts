@@ -3,7 +3,7 @@
 import { outputDiagnostics } from "./lib/compiler.ts";
 import { createProjectSync, path, ts } from "./lib/mod.deps.ts";
 import { PackageJsonObject } from "./lib/types.ts";
-import { OutputFile, transform } from "./transform.ts";
+import { transform } from "./transform.ts";
 
 export * from "./transform.ts";
 
@@ -25,8 +25,8 @@ export interface RunOptions {
        * Not specifying a version will exclude it from the package.json file.
        */
       version?: string;
-    }
-  }
+    };
+  };
   package: PackageJsonObject;
   writeFile?: (filePath: string, text: string) => void;
 }
@@ -40,12 +40,15 @@ export async function run(options: RunOptions): Promise<void> {
   const specifierMappings = options.mappings && Object.fromEntries(
     Object.entries(options.mappings).map(([key, value]) => {
       const lowerCaseKey = key.toLowerCase();
-      if (!lowerCaseKey.startsWith("http://") && !lowerCaseKey.startsWith("https://")) {
+      if (
+        !lowerCaseKey.startsWith("http://") &&
+        !lowerCaseKey.startsWith("https://")
+      ) {
         key = path.toFileUrl(lowerCaseKey).toString();
       }
       return [key, value];
     }),
-  )
+  );
   const transformOutput = await transform({
     entryPoint: options.entryPoint,
     shimPackageName: shimPackage.name,
@@ -67,48 +70,107 @@ export async function run(options: RunOptions): Promise<void> {
     });
 
   createPackageJson();
-  // npm install in order to get diagnostics
+  // npm install in order to prepare for checking TS diagnostics
   await npmInstall();
 
-  // todo: either use two workers for this or parse only once
-  // and share asts between the two emits
-  const cjsResult = emitFiles({
-    outDir: options.outDir,
-    isCjs: true,
-    outputFiles: transformOutput.files,
-    typeCheck: options.typeCheck ?? false,
-    writeFile,
+  const mjsOutDir = path.join(options.outDir, "mjs");
+  const cjsOutDir = path.join(options.outDir, "cjs");
+  const typesOutDir = path.join(options.outDir, "types");
+  const project = createProjectSync({
+    compilerOptions: {
+      outDir: typesOutDir,
+      allowJs: true,
+      stripInternal: true,
+      declaration: true,
+      esModuleInterop: false,
+      module: ts.ModuleKind.ES2015,
+      target: ts.ScriptTarget.ES2015,
+    },
   });
-  if (!cjsResult.success) {
-    outputDiagnostics(cjsResult.diagnostics);
-    Deno.exit(1);
+
+  for (const outputFile of transformOutput.files) {
+    project.createSourceFile(
+      path.join(options.outDir, "src", outputFile.filePath),
+      outputFile.fileText,
+    );
   }
 
-  const mjsResult = emitFiles({
-    outDir: options.outDir,
-    isCjs: false,
-    outputFiles: transformOutput.files,
-    typeCheck: false, // don't type check twice
-    writeFile,
+  let program = project.createProgram();
+
+  if (options.typeCheck) {
+    const diagnostics = ts.getPreEmitDiagnostics(program);
+    if (diagnostics.length > 0) {
+      outputDiagnostics(diagnostics);
+      Deno.exit(1);
+    }
+  }
+
+  // emit only the .d.ts files
+  emit({ onlyDtsFiles: true });
+
+  // emit the mjs files
+  project.compilerOptions.set({
+    declaration: false,
+    outDir: mjsOutDir,
   });
-  if (!mjsResult.success) {
-    outputDiagnostics(mjsResult.diagnostics);
-    Deno.exit(1);
+  program = project.createProgram();
+  emit();
+  writeFile(
+    path.join(mjsOutDir, "package.json"),
+    `{\n  "type": "module"}"\n}\n`,
+  );
+
+  // emit the cjs files
+  project.compilerOptions.set({
+    declaration: false,
+    esModuleInterop: true,
+    outDir: cjsOutDir,
+    module: ts.ModuleKind.CommonJS,
+  });
+  program = project.createProgram();
+  emit();
+  writeFile(
+    path.join(cjsOutDir, "package.json"),
+    `{\n  "type": "commonjs"}"\n}\n`,
+  );
+
+  function emit(opts?: { onlyDtsFiles?: boolean }) {
+    const emitResult = program.emit(
+      undefined,
+      (filePath, data, writeByteOrderMark) => {
+        if (writeByteOrderMark) {
+          data = "\uFEFF" + data;
+        }
+        writeFile(filePath, data);
+      },
+      undefined,
+      opts?.onlyDtsFiles,
+    );
+
+    if (emitResult.diagnostics.length > 0) {
+      outputDiagnostics(emitResult.diagnostics);
+      Deno.exit(1);
+    }
   }
 
   function createPackageJson() {
     const entryPointPath = transformOutput
       .entryPointFilePath
       .replace(/\.ts$/i, ".js");
+    const entryPointDtsFilePath = transformOutput
+      .entryPointFilePath
+      .replace(/\.ts$/i, ".d.ts");
     const packageJsonObj = {
       ...options.package,
       dependencies: {
         // add dependencies from transform
-        ...Object.fromEntries(transformOutput.dependencies.map(d => [d.name, d.version])),
+        ...Object.fromEntries(
+          transformOutput.dependencies.map((d) => [d.name, d.version]),
+        ),
         // add specifier mappings to dependencies
         ...(specifierMappings && Object.fromEntries(
           Object.values(specifierMappings)
-            .filter(v => v.version)
+            .filter((v) => v.version)
             .map((value) => [value.name, value.version]),
         )) ?? {},
         // add shim
@@ -120,13 +182,15 @@ export async function run(options: RunOptions): Promise<void> {
         // override with specified dependencies
         ...(options.package.dependencies ?? {}),
       },
-      main: options.package.main ?? `cjs/${entryPointPath}`,
-      module: options.package.module ?? `mjs/${entryPointPath}`,
+      main: options.package.main ?? `./cjs/${entryPointPath}`,
+      module: options.package.module ?? `./mjs/${entryPointPath}`,
+      types: options.package.types ?? `./types/${entryPointDtsFilePath}`,
       exports: {
         ...(options.package.exports ?? {}),
         ".": {
-          "import": `./mjs/${entryPointPath}`,
-          "require": `./cjs/${entryPointPath}`,
+          import: `./mjs/${entryPointPath}`,
+          require: `./cjs/${entryPointPath}`,
+          types: options.package.types ?? `./types/${entryPointDtsFilePath}`,
           ...(options.package.exports?.["."] ?? {}),
         },
       },
@@ -164,61 +228,4 @@ export async function run(options: RunOptions): Promise<void> {
       }
     }
   }
-}
-
-function emitFiles(options: {
-  outDir: string;
-  outputFiles: OutputFile[];
-  isCjs: boolean;
-  typeCheck: boolean;
-  writeFile: ((filePath: string, text: string) => void);
-}) {
-  const moduleOutDir = path.join(options.outDir, options.isCjs ? "cjs" : "mjs");
-  const project = createProjectSync({
-    compilerOptions: {
-      outDir: moduleOutDir,
-      allowJs: true,
-      stripInternal: true,
-      declaration: true,
-      esModuleInterop: options.isCjs,
-      module: options.isCjs ? ts.ModuleKind.CommonJS : ts.ModuleKind.ES2015,
-      target: ts.ScriptTarget.ES2015,
-    },
-  });
-
-  for (const outputFile of options.outputFiles) {
-    project.createSourceFile(path.join(options.outDir, "src", outputFile.filePath), outputFile.fileText);
-  }
-
-  const program = project.createProgram();
-
-  if (options.typeCheck) {
-    const diagnostics = ts.getPreEmitDiagnostics(program);
-    if (diagnostics.length > 0) {
-      return {
-        success: false,
-        diagnostics: [...diagnostics],
-      };
-    }
-  }
-
-  const emitResult = program.emit(
-    undefined,
-    (filePath, data, writeByteOrderMark) => {
-      if (writeByteOrderMark) {
-        data = "\uFEFF" + data;
-      }
-      options.writeFile(filePath, data);
-    },
-  );
-
-  options.writeFile(
-    path.join(moduleOutDir, "package.json"),
-    `{\n  "type": "${options.isCjs ? "commonjs" : "module"}"\n}\n`,
-  );
-
-  return {
-    success: emitResult.diagnostics.length === 0,
-    diagnostics: [...emitResult.diagnostics],
-  };
 }

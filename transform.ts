@@ -10,7 +10,7 @@ export interface TransformOptions {
   shimPackageName: string;
   /** The specifier to bare specifier mappings. */
   specifierMappings?: {
-    [specifier: string]: string
+    [specifier: string]: string;
   };
 }
 
