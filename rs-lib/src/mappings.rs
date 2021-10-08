@@ -94,7 +94,7 @@ impl Mappings {
     {
       let base_dir = PathBuf::from(format!("deps/{}/", i.to_string()));
       for (specifier, media_type) in specifiers {
-        let relative = make_url_relative(&root, &specifier)?;
+        let relative = sanitize_filepath(make_url_relative(&root, &specifier)?);
         let mut filepath_no_ext = base_dir.join(relative).with_extension("");
         let original_file_name = filepath_no_ext
           .file_name()
@@ -145,6 +145,8 @@ fn make_url_relative(
   root: &ModuleSpecifier,
   url: &ModuleSpecifier,
 ) -> Result<String> {
+  let mut url = url.clone();
+  url.set_query(None);
   root.make_relative(&url).ok_or_else(|| {
     anyhow::anyhow!(
       "Error making url ({}) relative to root: {}",
@@ -152,6 +154,19 @@ fn make_url_relative(
       root.to_string()
     )
   })
+}
+
+fn sanitize_filepath(text: String) -> String {
+  let mut chars = Vec::with_capacity(text.len()); // not chars, but good enough
+  for c in text.chars() {
+    // use an allow list of characters that won't have any issues
+    if c.is_alphabetic() || c.is_numeric() || c.is_whitespace() || matches!(c, '_' | '-' | '.' | '/' | '\\') {
+      chars.push(c);
+    } else {
+      chars.push('_');
+    }
+  }
+  chars.into_iter().collect()
 }
 
 fn get_base_dir(specifiers: &[ModuleSpecifier]) -> Result<PathBuf> {

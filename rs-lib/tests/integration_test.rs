@@ -482,7 +482,7 @@ async fn node_module_mapping() {
 }
 
 #[tokio::test]
-async fn skypack_module_mapping() {
+async fn skypack_esm_module_mapping() {
   let result = TestBuilder::new()
     .with_loader(|loader| {
       loader
@@ -490,9 +490,15 @@ async fn skypack_module_mapping() {
           "/mod.ts",
           concat!(
             "import package1 from 'https://cdn.skypack.dev/preact@^10.5.0';\n",
-            "import package2 from 'https://cdn.skypack.dev/@scope/package-name@1';",
+            "import package2 from 'https://cdn.skypack.dev/@scope/package-name@1';\n",
+            "import package3 from 'https://esm.sh/react@17.0.2';\n",
+            // custom esm.sh stuff like this should download the dependency
+            "import package4 from 'https://esm.sh/swr?deps=react@16.14.0';\n",
+            "import package5 from 'https://esm.sh/test@1.2.5?deps=react@16.14.0';\n",
           ),
-        );
+        )
+        .add_remote_file("https://esm.sh/swr?deps=react@16.14.0", "")
+        .add_remote_file("https://esm.sh/test@1.2.5?deps=react@16.14.0", "");
     })
     .transform()
     .await
@@ -504,9 +510,18 @@ async fn skypack_module_mapping() {
       "mod.ts",
       concat!(
         "import package1 from 'preact';\n",
-        "import package2 from '@scope/package-name';",
+        "import package2 from '@scope/package-name';\n",
+        "import package3 from 'react';\n",
+        "import package4 from './deps/0/swr.js';\n",
+        "import package5 from './deps/0/test_1.js';\n"
       )
-    ),]
+    ), (
+      "deps/0/swr.js",
+      "",
+    ), (
+      "deps/0/test_1.js",
+      "",
+    )]
   );
   assert_eq!(
     result.dependencies,
@@ -518,7 +533,11 @@ async fn skypack_module_mapping() {
       Dependency {
         name: "preact".to_string(),
         version: "^10.5.0".to_string(),
-      }
+      },
+      Dependency {
+        name: "react".to_string(),
+        version: "17.0.2".to_string(),
+      },
     ]
   );
 }
