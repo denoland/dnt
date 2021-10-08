@@ -1,17 +1,9 @@
-- add `--version`/`-v` argument
-- tests for CLI
+- tests for `build`
 - tests for multiple deno-types for the same module pointing at different .d.ts files (error)
 - Handle deno-types when it references a `.ts` file (maybe transform the .ts file to .js?)
-- Maybe the ability to skip using the TypeScript compiler (useful for people with only JS projects)
-- When working on transforms, warn when a version in package.json or transforms doesn't match remote specifier
 - Support multiple entrypoints with a default entrypoint used in package.json (the first one)
 - Store wasm file encoded within js module
-
-## Future Goals
-
-1. Support Deno.json to get compiler options.
-1. Handle dynamic imports (at least ones that are statically analyzable and maybe warn on others)
-1. Remove `@deno-types` and type reference directive comments. Currently leaves them as-is, but better to remove them in case the npm package gets re-consumed in Deno.
+- Handle dynamic imports (at least ones that are statically analyzable and maybe warn on others)
 
 Notes from Kitson:
 

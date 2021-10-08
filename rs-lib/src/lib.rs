@@ -17,6 +17,7 @@ use loader::SourceLoader;
 use mappings::Mappings;
 use mappings::Specifiers;
 use text_changes::apply_text_changes;
+use visitors::get_deno_comment_directive_text_changes;
 use visitors::get_deno_global_text_changes;
 use visitors::get_module_specifier_text_changes;
 use visitors::GetDenoGlobalTextChangesParams;
@@ -145,6 +146,7 @@ pub async fn transform(options: TransformOptions) -> Result<TransformOutput> {
       if !text_changes.is_empty() {
         shim_used = true;
       }
+      text_changes.extend(get_deno_comment_directive_text_changes(&program));
       text_changes.extend(get_module_specifier_text_changes(
         &GetModuleSpecifierTextChangesParams {
           specifier,

@@ -397,8 +397,7 @@ async fn transform_typescript_type_references() {
 
   assert_files!(result.files, &[
     ("mod.ts", "export * from './deps/0/mod.js';"),
-    // todo: remove this type reference directive comment
-    ("deps/0/mod.js", "/// <reference types='./declarations.d.ts' />\nfunction test() { return 5; }"),
+    ("deps/0/mod.js", "function test() { return 5; }"),
     ("deps/0/mod.d.ts", "declare function test(): number;"),
   ]);
 }
