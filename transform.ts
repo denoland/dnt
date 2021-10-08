@@ -2,8 +2,9 @@
 
 import { path } from "./lib/transform.deps.ts";
 import init, * as wasmFuncs from "./lib/pkg/dnt_wasm.js";
+import { source } from "./lib/pkg/dnt_wasm_bg.ts";
 
-await init(getWasmLoadPromise());
+await init(source);
 
 export interface TransformOptions {
   entryPoint: string | URL;
@@ -46,28 +47,4 @@ export function transform(options: TransformOptions): Promise<TransformOutput> {
       .toString();
   }
   return wasmFuncs.transform(newOptions);
-}
-
-async function getWasmLoadPromise() {
-  const moduleUrl = new URL(import.meta.url);
-  switch (moduleUrl.protocol) {
-    case "file:":
-      const root = path.dirname(path.fromFileUrl(import.meta.url));
-      return Deno.readFile(path.join(root, "./lib/pkg/dnt_wasm_bg.wasm"));
-    case "https:":
-    case "http:":
-      const wasmUrl = new URL("./lib/pkg/dnt_wasm_bg.wasm", import.meta.url);
-      const wasmResponse = await fetch(wasmUrl);
-      if (
-        wasmResponse.headers.get("content-type")?.toLowerCase().startsWith(
-          "application/wasm",
-        )
-      ) {
-        return wasmResponse;
-      } else {
-        return wasmResponse.arrayBuffer();
-      }
-    default:
-      throw new Error(`Not implemented protocol: ${moduleUrl.protocol}`);
-  }
 }

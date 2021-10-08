@@ -2,8 +2,8 @@
 - tests for multiple deno-types for the same module pointing at different .d.ts files (error)
 - Handle deno-types when it references a `.ts` file (maybe transform the .ts file to .js?)
 - Support multiple entrypoints with a default entrypoint used in package.json (the first one)
-- Store wasm file encoded within js module
 - Handle dynamic imports (at least ones that are statically analyzable and maybe warn on others)
+- Support lockfile
 
 Notes from Kitson:
 
