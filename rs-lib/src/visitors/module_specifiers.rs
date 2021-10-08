@@ -74,13 +74,18 @@ fn visit_module_specifier(str: &Str, context: &mut Context) {
     None => panic!("Could not resolve specifier: {}", value),
   };
 
-  let new_text = if let Some(bare_specifier) = context.specifier_mappings.map(|m| m.get(&specifier)).flatten() {
+  let new_text = if let Some(bare_specifier) = context
+    .specifier_mappings
+    .map(|m| m.get(&specifier))
+    .flatten()
+  {
     bare_specifier.to_string()
   } else {
     let specifier_file_path = context.mappings.get_file_path(&specifier);
     let relative_path =
       get_relative_path(context.output_file_path, specifier_file_path);
-    let relative_path_str = relative_path.with_extension("js")
+    let relative_path_str = relative_path
+      .with_extension("js")
       .to_string_lossy()
       .to_string()
       .replace("\\", "/");

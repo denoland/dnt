@@ -1,5 +1,5 @@
-use regex::Regex;
 use deno_ast::ModuleSpecifier;
+use regex::Regex;
 
 pub trait SpecifierMapper {
   fn map(&self, specifier: &ModuleSpecifier) -> Option<MappedSpecifierEntry>;
@@ -43,19 +43,18 @@ lazy_static! {
   static ref SKYPACK_MAPPING_RE: Regex = Regex::new(r"https://cdn.skypack.dev/(@?[^@?]+)@([0-9\.\^~\-A-Za-z]+)").unwrap();
 }
 
-struct SkypackMapper {
-}
+struct SkypackMapper {}
 
 impl SpecifierMapper for SkypackMapper {
-    fn map(&self, specifier: &ModuleSpecifier) -> Option<MappedSpecifierEntry> {
-      SKYPACK_MAPPING_RE.captures(specifier.as_str()).map(|captures| {
-        MappedSpecifierEntry {
-          from_specifier: specifier.clone(),
-          to_specifier: captures.get(1).unwrap().as_str().to_string(),
-          version: Some(captures.get(2).unwrap().as_str().to_string()),
-        }
+  fn map(&self, specifier: &ModuleSpecifier) -> Option<MappedSpecifierEntry> {
+    SKYPACK_MAPPING_RE
+      .captures(specifier.as_str())
+      .map(|captures| MappedSpecifierEntry {
+        from_specifier: specifier.clone(),
+        to_specifier: captures.get(1).unwrap().as_str().to_string(),
+        version: Some(captures.get(2).unwrap().as_str().to_string()),
       })
-    }
+  }
 }
 
 struct NodeSpecifierMapper {
@@ -66,7 +65,11 @@ struct NodeSpecifierMapper {
 impl NodeSpecifierMapper {
   pub fn new(package: impl AsRef<str>) -> Self {
     Self {
-      url_re: Regex::new(&format!(r"https://deno\.land/std(@[0-9]+\.[0-9]+\.[0-9]+)?/node/{}\.ts", package.as_ref())).unwrap(),
+      url_re: Regex::new(&format!(
+        r"https://deno\.land/std(@[0-9]+\.[0-9]+\.[0-9]+)?/node/{}\.ts",
+        package.as_ref()
+      ))
+      .unwrap(),
       to_specifier: package.as_ref().to_owned(),
     }
   }

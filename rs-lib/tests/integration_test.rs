@@ -208,7 +208,10 @@ async fn transform_remote_files() {
       ("mod.ts", "import * as other from './deps/0/mod.js';"),
       ("deps/0/mod.ts", "import * as myOther from './other.js';"),
       ("deps/0/other.ts", "import * as folder from './folder.js';"),
-      ("deps/0/folder.js", "import * as folder2 from './folder_2.js';"),
+      (
+        "deps/0/folder.js",
+        "import * as folder2 from './folder_2.js';"
+      ),
       (
         "deps/0/folder_2.ts",
         "import * as folder3 from './folder_3.js';"
@@ -435,11 +438,7 @@ async fn transform_specifier_mappings() {
 async fn transform_not_found_mappings() {
   let error_message = TestBuilder::new()
     .with_loader(|loader| {
-      loader
-        .add_local_file(
-          "/mod.ts",
-          "test",
-        );
+      loader.add_local_file("/mod.ts", "test");
     })
     .add_specifier_mapping("http://localhost/mod.ts", "local-module")
     .add_specifier_mapping("http://localhost/mod2.ts", "local-module2")
@@ -473,12 +472,13 @@ async fn node_module_mapping() {
 
   assert_files!(
     result.files,
-    &[
-      ("mod.ts", concat!(
+    &[(
+      "mod.ts",
+      concat!(
         "import * as path from 'path';\n",
         "import * as fs from 'fs/promises';",
-      )),
-    ]
+      )
+    ),]
   );
 }
 
@@ -501,22 +501,26 @@ async fn skypack_module_mapping() {
 
   assert_files!(
     result.files,
-    &[
-      ("mod.ts", concat!(
+    &[(
+      "mod.ts",
+      concat!(
         "import package1 from 'preact';\n",
         "import package2 from '@scope/package-name';",
-      )),
-    ]
+      )
+    ),]
   );
   assert_eq!(
     result.dependencies,
-    &[Dependency {
-      name: "@scope/package-name".to_string(),
-      version: "1".to_string(),
-    }, Dependency {
-       name: "preact".to_string(),
-       version: "^10.5.0".to_string(),
-    }]
+    &[
+      Dependency {
+        name: "@scope/package-name".to_string(),
+        version: "1".to_string(),
+      },
+      Dependency {
+        name: "preact".to_string(),
+        version: "^10.5.0".to_string(),
+      }
+    ]
   );
 }
 
@@ -524,14 +528,13 @@ async fn skypack_module_mapping() {
 async fn skypack_module_mapping_different_versions() {
   let error_message = TestBuilder::new()
     .with_loader(|loader| {
-      loader
-        .add_local_file(
-          "/mod.ts",
-          concat!(
-            "import package1 from 'https://cdn.skypack.dev/preact@^10.5.0';\n",
-            "import package2 from 'https://cdn.skypack.dev/preact@^10.5.2';",
-          ),
-        );
+      loader.add_local_file(
+        "/mod.ts",
+        concat!(
+          "import package1 from 'https://cdn.skypack.dev/preact@^10.5.0';\n",
+          "import package2 from 'https://cdn.skypack.dev/preact@^10.5.2';",
+        ),
+      );
     })
     .transform()
     .await
@@ -543,4 +546,3 @@ async fn skypack_module_mapping_different_versions() {
     "Specifier https://cdn.skypack.dev/preact@^10.5.0 with version ^10.5.0 did not match specifier https://cdn.skypack.dev/preact@^10.5.2 with version ^10.5.2."
   );
 }
-

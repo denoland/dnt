@@ -12,8 +12,8 @@ use deno_graph::Resolved;
 #[macro_use]
 extern crate lazy_static;
 
-use loader::SourceLoader;
 use loader::get_all_specifier_mappers;
+use loader::SourceLoader;
 use mappings::Mappings;
 use mappings::Specifiers;
 use text_changes::apply_text_changes;
@@ -70,9 +70,12 @@ pub struct TransformOptions {
 
 pub async fn transform(options: TransformOptions) -> Result<TransformOutput> {
   let shim_package_name = options.shim_package_name;
-  let ignored_specifiers = options.specifier_mappings.as_ref().map(|t| t.keys().map(ToOwned::to_owned).collect());
-  let mut loader =
-    loader::SourceLoader::new(options.loader.unwrap_or_else(|| {
+  let ignored_specifiers = options
+    .specifier_mappings
+    .as_ref()
+    .map(|t| t.keys().map(ToOwned::to_owned).collect());
+  let mut loader = loader::SourceLoader::new(
+    options.loader.unwrap_or_else(|| {
       #[cfg(feature = "tokio-loader")]
       return Box::new(loader::DefaultLoader::new());
       #[cfg(not(feature = "tokio-loader"))]
@@ -95,7 +98,10 @@ pub async fn transform(options: TransformOptions) -> Result<TransformOutput> {
   let specifiers = get_specifiers_from_loader(loader, &module_graph)?;
 
   if let Some(ignored_specifiers) = ignored_specifiers {
-    let mut not_found_specifiers = ignored_specifiers.into_iter().filter(|s| !specifiers.found_ignored.contains(s)).collect::<Vec<_>>();
+    let mut not_found_specifiers = ignored_specifiers
+      .into_iter()
+      .filter(|s| !specifiers.found_ignored.contains(s))
+      .collect::<Vec<_>>();
     if !not_found_specifiers.is_empty() {
       not_found_specifiers.sort();
       anyhow::bail!(
@@ -113,7 +119,8 @@ pub async fn transform(options: TransformOptions) -> Result<TransformOutput> {
     }
     let specifier_mappings = specifier_mappings.as_mut().unwrap();
     for entry in specifiers.mapped.iter() {
-      specifier_mappings.insert(entry.from_specifier.clone(), entry.to_specifier.clone());
+      specifier_mappings
+        .insert(entry.from_specifier.clone(), entry.to_specifier.clone());
     }
   }
 
@@ -229,11 +236,16 @@ fn get_specifiers_from_loader(
     Ok(())
   }
 
-  fn get_mapped(mapped_specifiers: Vec<MappedSpecifierEntry>) -> Result<Vec<MappedSpecifierEntry>> {
-    let mut specifier_for_name: HashMap<String, MappedSpecifierEntry> = HashMap::new();
+  fn get_mapped(
+    mapped_specifiers: Vec<MappedSpecifierEntry>,
+  ) -> Result<Vec<MappedSpecifierEntry>> {
+    let mut specifier_for_name: HashMap<String, MappedSpecifierEntry> =
+      HashMap::new();
     let mut result = Vec::new();
     for mapped_specifier in mapped_specifiers {
-      if let Some(specifier) = specifier_for_name.get(&mapped_specifier.to_specifier) {
+      if let Some(specifier) =
+        specifier_for_name.get(&mapped_specifier.to_specifier)
+      {
         if specifier.version != mapped_specifier.version {
           anyhow::bail!("Specifier {} with version {} did not match specifier {} with version {}.",
             specifier.from_specifier,
@@ -243,7 +255,10 @@ fn get_specifiers_from_loader(
           );
         }
       } else {
-        specifier_for_name.insert(mapped_specifier.to_specifier.to_string(), mapped_specifier.clone());
+        specifier_for_name.insert(
+          mapped_specifier.to_specifier.to_string(),
+          mapped_specifier.clone(),
+        );
         result.push(mapped_specifier);
       }
     }
@@ -253,14 +268,18 @@ fn get_specifiers_from_loader(
 }
 
 fn get_dependencies(specifiers: Specifiers) -> Vec<Dependency> {
-  specifiers.mapped.into_iter().filter_map(|entry| {
-    if let Some(version) = entry.version {
-      Some(Dependency {
-        name: entry.to_specifier,
-        version,
-      })
-    } else {
-      None
-    }
-  }).collect()
+  specifiers
+    .mapped
+    .into_iter()
+    .filter_map(|entry| {
+      if let Some(version) = entry.version {
+        Some(Dependency {
+          name: entry.to_specifier,
+          version,
+        })
+      } else {
+        None
+      }
+    })
+    .collect()
 }

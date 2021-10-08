@@ -44,14 +44,21 @@ impl TestBuilder {
     self
   }
 
-  pub fn add_specifier_mapping(&mut self, specifier: impl AsRef<str>, bare_specifier: impl AsRef<str>) -> &mut Self {
+  pub fn add_specifier_mapping(
+    &mut self,
+    specifier: impl AsRef<str>,
+    bare_specifier: impl AsRef<str>,
+  ) -> &mut Self {
     let mappings = if let Some(mappings) = self.specifier_mappings.as_mut() {
       mappings
     } else {
       self.specifier_mappings = Some(HashMap::new());
       self.specifier_mappings.as_mut().unwrap()
     };
-    mappings.insert(ModuleSpecifier::parse(specifier.as_ref()).unwrap(), bare_specifier.as_ref().to_string());
+    mappings.insert(
+      ModuleSpecifier::parse(specifier.as_ref()).unwrap(),
+      bare_specifier.as_ref().to_string(),
+    );
     self
   }
 

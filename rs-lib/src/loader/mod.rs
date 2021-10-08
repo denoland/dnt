@@ -82,21 +82,20 @@ impl<'a> deno_graph::source::Loader for SourceLoader<'a> {
     // todo: handle dynamic
     _is_dynamic: bool,
   ) -> deno_graph::source::LoadFuture {
-    if self.ignored_specifiers.as_ref().map(|s| s.contains(specifier)).unwrap_or(false) {
+    if self
+      .ignored_specifiers
+      .as_ref()
+      .map(|s| s.contains(specifier))
+      .unwrap_or(false)
+    {
       self.specifiers.found_ignored.insert(specifier.clone());
-      return Box::pin(future::ready((
-        specifier.clone(),
-        Ok(None),
-      )));
+      return Box::pin(future::ready((specifier.clone(), Ok(None))));
     }
 
     for mapper in self.specifier_mappers.iter() {
       if let Some(entry) = mapper.map(specifier) {
         self.specifiers.mapped.push(entry);
-        return Box::pin(future::ready((
-          specifier.clone(),
-          Ok(None),
-        )));
+        return Box::pin(future::ready((specifier.clone(), Ok(None))));
       }
     }
 
