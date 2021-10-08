@@ -11,9 +11,9 @@ probably drastically change.
 
 ```ts
 // ex. scripts/create_npm_package.ts
-import { run } from "https://deno.land/x/dnt/mod.ts";
+import { build } from "https://deno.land/x/dnt/mod.ts";
 
-await run({
+await build({
   entryPoint: "./mod.ts",
   outDir: "./npm",
   typeCheck: true,
@@ -88,6 +88,7 @@ let output_result = transform(TransformOptions {
   entry_point: ModuleSpecifier::from_file_path(PathBuf::from("./mod.ts")).unwrap(),
   shim_package_name: "deno.ns".to_string(),
   loader: None, // use the default loader
+  specifier_mappings: None,
 }).await?;
 
 for output_file in output_result.files.iter() {

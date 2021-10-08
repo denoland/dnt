@@ -7,7 +7,7 @@ import { transform } from "./transform.ts";
 
 export * from "./transform.ts";
 
-export interface RunOptions {
+export interface BuildOptions {
   outDir: string;
   typeCheck?: boolean;
   entryPoint: string | URL;
@@ -31,8 +31,8 @@ export interface RunOptions {
   writeFile?: (filePath: string, text: string) => void;
 }
 
-/** Emits the specified Deno module to JavaScript code using the TypeScript compiler. */
-export async function run(options: RunOptions): Promise<void> {
+/** Emits the specified Deno module to an npm package using the TypeScript compiler. */
+export async function build(options: BuildOptions): Promise<void> {
   const shimPackage = options.shimPackage ?? {
     name: "deno.ns",
     version: "0.4.3",
