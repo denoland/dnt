@@ -69,7 +69,7 @@ const outputResult = await transform({
   shimPackageName: "deno.ns",
 });
 
-// inspect outputResult.cjsFiles and outputResult.mjsFiles here
+// inspect outputResult.files and outputResult.dependencies here
 ```
 
 ## Rust API Example
@@ -90,7 +90,7 @@ let output_result = transform(TransformOptions {
   loader: None, // use the default loader
 }).await?;
 
-for output_file in output_result.cjs_files {
+for output_file in output_result.files.iter() {
   // use these properties on output_file
   output_file.file_path;
   output_file.file_text;

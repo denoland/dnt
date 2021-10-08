@@ -58,8 +58,7 @@ pub struct TransformOutput {
   pub entry_point_file_path: String,
   pub shim_used: bool,
   pub dependencies: Vec<Dependency>,
-  pub cjs_files: Vec<OutputFile>,
-  pub mjs_files: Vec<OutputFile>,
+  pub files: Vec<OutputFile>,
 }
 
 pub struct TransformOptions {
@@ -119,8 +118,7 @@ pub async fn transform(options: TransformOptions) -> Result<TransformOutput> {
   }
 
   // todo: parallelize
-  let mut cjs_files = Vec::new();
-  let mut mjs_files = Vec::new();
+  let mut files = Vec::new();
   let mut shim_used = false;
   for specifier in specifiers
     .local
@@ -130,55 +128,35 @@ pub async fn transform(options: TransformOptions) -> Result<TransformOutput> {
   {
     let parsed_source = source_parser.get_parsed_source(specifier)?;
 
-    let (cjs_changes, mjs_changes) = parsed_source.with_view(|program| {
-      let deno_global_changes =
+    let text_changes = parsed_source.with_view(|program| {
+      let mut text_changes =
         get_deno_global_text_changes(&GetDenoGlobalTextChangesParams {
           program: &program,
           top_level_context: parsed_source.top_level_context(),
           shim_package_name: shim_package_name.as_str(),
         });
-      if !deno_global_changes.is_empty() {
+      if !text_changes.is_empty() {
         shim_used = true;
       }
-      let mut cjs_changes = get_module_specifier_text_changes(
+      text_changes.extend(get_module_specifier_text_changes(
         &GetModuleSpecifierTextChangesParams {
           specifier,
           module_graph: &module_graph,
           mappings: &mappings,
-          use_js_extension: false,
           program: &program,
           specifier_mappings: specifier_mappings.as_ref(),
         },
-      );
-      cjs_changes.extend(deno_global_changes.clone());
-      let mut mjs_changes = get_module_specifier_text_changes(
-        &GetModuleSpecifierTextChangesParams {
-          specifier,
-          module_graph: &module_graph,
-          mappings: &mappings,
-          use_js_extension: true,
-          program: &program,
-          specifier_mappings: specifier_mappings.as_ref(),
-        },
-      );
-      mjs_changes.extend(deno_global_changes);
+      ));
 
-      (cjs_changes, mjs_changes)
+      text_changes
     });
 
     let file_path = mappings.get_file_path(specifier).to_owned();
-    cjs_files.push(OutputFile {
-      file_path: file_path.clone(),
-      file_text: apply_text_changes(
-        parsed_source.source().text().to_string(),
-        cjs_changes,
-      ),
-    });
-    mjs_files.push(OutputFile {
+    files.push(OutputFile {
       file_path,
       file_text: apply_text_changes(
         parsed_source.source().text().to_string(),
-        mjs_changes,
+        text_changes,
       ),
     });
   }
@@ -190,8 +168,7 @@ pub async fn transform(options: TransformOptions) -> Result<TransformOutput> {
       .to_string(),
     dependencies: get_dependencies(specifiers),
     shim_used,
-    cjs_files,
-    mjs_files,
+    files,
   })
 }
 

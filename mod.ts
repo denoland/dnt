@@ -70,11 +70,12 @@ export async function run(options: RunOptions): Promise<void> {
   // npm install in order to get diagnostics
   await npmInstall();
 
-  // todo: use two workers for this
+  // todo: either use two workers for this or parse only once
+  // and share asts between the two emits
   const cjsResult = emitFiles({
     outDir: options.outDir,
     isCjs: true,
-    outputFiles: transformOutput.cjsFiles,
+    outputFiles: transformOutput.files,
     typeCheck: options.typeCheck ?? false,
     writeFile,
   });
@@ -86,7 +87,7 @@ export async function run(options: RunOptions): Promise<void> {
   const mjsResult = emitFiles({
     outDir: options.outDir,
     isCjs: false,
-    outputFiles: transformOutput.mjsFiles,
+    outputFiles: transformOutput.files,
     typeCheck: false, // don't type check twice
     writeFile,
   });

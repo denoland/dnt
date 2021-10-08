@@ -16,7 +16,6 @@ use crate::utils::get_relative_path;
 pub struct GetModuleSpecifierTextChangesParams<'a> {
   pub specifier: &'a ModuleSpecifier,
   pub module_graph: &'a ModuleGraph,
-  pub use_js_extension: bool,
   pub mappings: &'a Mappings,
   pub program: &'a Program<'a>,
   pub specifier_mappings: Option<&'a HashMap<ModuleSpecifier, String>>,
@@ -25,7 +24,6 @@ pub struct GetModuleSpecifierTextChangesParams<'a> {
 struct Context<'a> {
   specifier: &'a ModuleSpecifier,
   module_graph: &'a ModuleGraph,
-  use_js_extension: bool,
   mappings: &'a Mappings,
   output_file_path: &'a PathBuf,
   text_changes: Vec<TextChange>,
@@ -38,7 +36,6 @@ pub fn get_module_specifier_text_changes<'a>(
   let mut context = Context {
     specifier: params.specifier,
     module_graph: params.module_graph,
-    use_js_extension: params.use_js_extension,
     mappings: params.mappings,
     output_file_path: params.mappings.get_file_path(params.specifier),
     text_changes: Vec::new(),
@@ -83,14 +80,10 @@ fn visit_module_specifier(str: &Str, context: &mut Context) {
     let specifier_file_path = context.mappings.get_file_path(&specifier);
     let relative_path =
       get_relative_path(context.output_file_path, specifier_file_path);
-    let relative_path_str = if context.use_js_extension {
-      relative_path.with_extension("js")
-    } else {
-      relative_path.with_extension("")
-    }
-    .to_string_lossy()
-    .to_string()
-    .replace("\\", "/");
+    let relative_path_str = relative_path.with_extension("js")
+      .to_string_lossy()
+      .to_string()
+      .replace("\\", "/");
 
     if relative_path_str.starts_with("../")
       || relative_path_str.starts_with("./")

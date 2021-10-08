@@ -18,7 +18,7 @@ async fn transform_standalone_file() {
     .await
     .unwrap();
 
-  assert_files!(result.cjs_files, &[("mod.ts", "test;")]);
+  assert_files!(result.files, &[("mod.ts", "test;")]);
 }
 
 #[tokio::test]
@@ -32,7 +32,7 @@ async fn transform_deno_shim() {
     .unwrap();
 
   assert_files!(
-    result.cjs_files,
+    result.files,
     &[(
       "mod.ts",
       concat!(
@@ -58,7 +58,7 @@ async fn transform_deno_shim_with_name_collision() {
     .unwrap();
 
   assert_files!(
-    result.cjs_files,
+    result.files,
     &[(
       "mod.ts",
       concat!(
@@ -81,7 +81,7 @@ async fn transform_global_this_deno() {
     .unwrap();
 
   assert_files!(
-    result.cjs_files,
+    result.files,
     &[(
       "mod.ts",
       concat!(
@@ -112,7 +112,7 @@ async fn transform_deno_collision() {
     .unwrap();
 
   assert_files!(
-    result.cjs_files,
+    result.files,
     &[(
       "mod.ts",
       concat!(
@@ -127,7 +127,7 @@ async fn transform_deno_collision() {
 }
 
 #[tokio::test]
-async fn transform_other_file_no_extensions() {
+async fn transform_relative_file() {
   let result = TestBuilder::new()
     .with_loader(|loader| {
       loader
@@ -139,28 +139,7 @@ async fn transform_other_file_no_extensions() {
     .unwrap();
 
   assert_files!(
-    result.cjs_files,
-    &[
-      ("mod.ts", "import * as other from './other';"),
-      ("other.ts", "5;")
-    ]
-  );
-}
-
-#[tokio::test]
-async fn transform_other_file_keep_extensions_in_mjs() {
-  let result = TestBuilder::new()
-    .with_loader(|loader| {
-      loader
-        .add_local_file("/mod.ts", "import * as other from './other.ts';")
-        .add_local_file("/other.ts", "5;");
-    })
-    .transform()
-    .await
-    .unwrap();
-
-  assert_files!(
-    result.mjs_files,
+    result.files,
     &[
       ("mod.ts", "import * as other from './other.js';"),
       ("other.ts", "5;")
@@ -224,30 +203,30 @@ async fn transform_remote_files() {
     .unwrap();
 
   assert_files!(
-    result.cjs_files,
+    result.files,
     &[
-      ("mod.ts", "import * as other from './deps/0/mod';"),
-      ("deps/0/mod.ts", "import * as myOther from './other';"),
-      ("deps/0/other.ts", "import * as folder from './folder';"),
-      ("deps/0/folder.js", "import * as folder2 from './folder_2';"),
+      ("mod.ts", "import * as other from './deps/0/mod.js';"),
+      ("deps/0/mod.ts", "import * as myOther from './other.js';"),
+      ("deps/0/other.ts", "import * as folder from './folder.js';"),
+      ("deps/0/folder.js", "import * as folder2 from './folder_2.js';"),
       (
         "deps/0/folder_2.ts",
-        "import * as folder3 from './folder_3';"
+        "import * as folder3 from './folder_3.js';"
       ),
       (
         "deps/0/folder_3.js",
-        "import * as otherFolder from './otherFolder';"
+        "import * as otherFolder from './otherFolder.js';"
       ),
       (
         "deps/0/otherFolder.js",
-        "import * as subFolder from './sub/subfolder';"
+        "import * as subFolder from './sub/subfolder.js';"
       ),
       (
         "deps/0/sub/subfolder.js",
-        "import * as localhost2 from '../../1';"
+        "import * as localhost2 from '../../1.js';"
       ),
-      ("deps/1.js", "import * as localhost3Mod from './2/mod';"),
-      ("deps/2/mod.ts", "import * as localhost3 from '../2';"),
+      ("deps/1.js", "import * as localhost3Mod from './2/mod.js';"),
+      ("deps/2/mod.ts", "import * as localhost3 from '../2.js';"),
       ("deps/2.ts", "5;"),
     ]
   );
@@ -369,9 +348,9 @@ async fn transform_typescript_types_in_headers() {
     .unwrap();
 
   assert_files!(
-    result.cjs_files,
+    result.files,
     &[
-      ("mod.ts", "export * from './deps/0/mod';"),
+      ("mod.ts", "export * from './deps/0/mod.js';"),
       ("deps/0/mod.js", "function test() { return 5; }"),
       ("deps/0/mod.d.ts", "declare function test(): number;"),
     ]
@@ -390,7 +369,7 @@ async fn transform_typescript_types_in_deno_types() {
     .transform().await.unwrap();
 
   assert_files!(
-    result.cjs_files,
+    result.files,
     &[
       // todo: remove this deno-types comment
       (
@@ -413,8 +392,8 @@ async fn transform_typescript_type_references() {
     })
     .transform().await.unwrap();
 
-  assert_files!(result.cjs_files, &[
-    ("mod.ts", "export * from './deps/0/mod';"),
+  assert_files!(result.files, &[
+    ("mod.ts", "export * from './deps/0/mod.js';"),
     // todo: remove this type reference directive comment
     ("deps/0/mod.js", "/// <reference types='./declarations.d.ts' />\nfunction test() { return 5; }"),
     ("deps/0/mod.d.ts", "declare function test(): number;"),
@@ -445,7 +424,7 @@ async fn transform_specifier_mappings() {
     .unwrap();
 
   assert_files!(
-    result.cjs_files,
+    result.files,
     &[
       ("mod.ts", "import * as remote from 'remote-module';\nimport * as local from 'local-module';\n"),
     ]
@@ -493,7 +472,7 @@ async fn node_module_mapping() {
     .unwrap();
 
   assert_files!(
-    result.cjs_files,
+    result.files,
     &[
       ("mod.ts", concat!(
         "import * as path from 'path';\n",
@@ -521,7 +500,7 @@ async fn skypack_module_mapping() {
     .unwrap();
 
   assert_files!(
-    result.cjs_files,
+    result.files,
     &[
       ("mod.ts", concat!(
         "import package1 from 'preact';\n",

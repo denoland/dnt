@@ -24,8 +24,7 @@ export interface TransformOutput {
   /** If the shim is used in any of the output files. */
   shimUsed: boolean;
   dependencies: Dependency[];
-  cjsFiles: OutputFile[];
-  mjsFiles: OutputFile[];
+  files: OutputFile[];
 }
 
 export interface OutputFile {
