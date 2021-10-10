@@ -44,6 +44,25 @@ async fn transform_deno_shim() {
 }
 
 #[tokio::test]
+async fn no_transform_deno_ignored() {
+  let result = TestBuilder::new()
+    .with_loader(|loader| {
+      loader.add_local_file("/mod.ts", "// deno-shim-ignore\nDeno.readTextFile();");
+    })
+    .transform()
+    .await
+    .unwrap();
+
+  assert_files!(
+    result.files,
+    &[(
+      "mod.ts",
+      "// deno-shim-ignore\nDeno.readTextFile();",
+    )]
+  );
+}
+
+#[tokio::test]
 async fn transform_deno_shim_with_name_collision() {
   let result = TestBuilder::new()
     .with_loader(|loader| {

@@ -91,7 +91,9 @@ export async function build(options: BuildOptions): Promise<void> {
       jsxFragmentFactory: "React.Fragment",
       importsNotUsedAsValues: ts.ImportsNotUsedAsValues.Remove,
       module: ts.ModuleKind.ES2015,
+      moduleResolution: ts.ModuleResolutionKind.NodeJs,
       target: ts.ScriptTarget.ES2015,
+      allowSyntheticDefaultImports: true,
     },
   });
 

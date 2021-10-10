@@ -20,6 +20,7 @@ struct Context<'a> {
   has_top_level_deno_decl: bool,
   import_shim: bool,
   text_changes: Vec<TextChange>,
+  ignore_line_indexes: HashSet<usize>,
 }
 
 pub fn get_deno_global_text_changes<'a>(
@@ -27,28 +28,30 @@ pub fn get_deno_global_text_changes<'a>(
 ) -> Vec<TextChange> {
   let top_level_decls =
     get_top_level_declarations(params.program, params.top_level_context);
+  let ignore_line_indexes = get_ignore_line_indexes(params.program);
   let mut context = Context {
     program: params.program,
     top_level_context: params.top_level_context,
     has_top_level_deno_decl: top_level_decls.contains("Deno"),
     import_shim: false,
     text_changes: Vec::new(),
+    ignore_line_indexes,
   };
   let program = params.program;
 
   // currently very crude. This should be improved to only look
   // at binding declarations
   let all_ident_names = get_all_ident_names(context.program);
-  let deno_name = get_unique_name("denoShim", &all_ident_names);
+  let deno_shim_name = get_unique_name("denoShim", &all_ident_names);
 
-  visit_children(&program.into(), &deno_name, &mut context);
+  visit_children(&program.into(), &deno_shim_name, &mut context);
 
   if context.import_shim {
     context.text_changes.push(TextChange {
       span: Span::new(BytePos(0), BytePos(0), Default::default()),
       new_text: format!(
         "import * as {} from \"{}\";\n",
-        deno_name, params.shim_package_name,
+        deno_shim_name, params.shim_package_name,
       ),
     });
   }
@@ -65,7 +68,7 @@ fn visit_children(node: &Node, import_name: &str, context: &mut Context) {
     let id = ident.inner.to_id();
     let is_top_level_context = id.1 == context.top_level_context;
     let ident_text = ident.text_fast(context.program);
-    if is_top_level_context && ident_text == "globalThis" {
+    if is_top_level_context && ident_text == "globalThis" && !should_ignore(ident.span(), context) {
       context.text_changes.push(TextChange {
         span: ident.span(),
         new_text: format!("({{ Deno: {}.Deno, ...globalThis }})", import_name),
@@ -77,6 +80,7 @@ fn visit_children(node: &Node, import_name: &str, context: &mut Context) {
     if is_top_level_context
       && !context.has_top_level_deno_decl
       && ident_text == "Deno"
+      && !should_ignore(ident.span(), context)
     {
       context.text_changes.push(TextChange {
         span: ident.span(),
@@ -85,6 +89,27 @@ fn visit_children(node: &Node, import_name: &str, context: &mut Context) {
       context.import_shim = true;
     }
   }
+}
+
+fn should_ignore(span: Span, context: &Context) -> bool {
+  context.ignore_line_indexes.contains(&span.start_line_fast(context.program))
+}
+
+fn get_ignore_line_indexes(program: &Program) -> HashSet<usize> {
+  let mut result = HashSet::new();
+  for comment in program.comments().unwrap().all_comments() {
+    if comment.text.trim().to_lowercase().starts_with("deno-shim-ignore") {
+      // todo: use token_container, but it is buggy right now
+      for token in program.tokens_fast(program) {
+        if token.span.lo > comment.span.hi {
+          result.insert(token.span.lo.start_line_fast(program));
+          break;
+        }
+      }
+      println!("{:?}", result);
+    }
+  }
+  result
 }
 
 fn get_top_level_declarations(
