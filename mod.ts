@@ -126,7 +126,7 @@ export async function build(options: BuildOptions): Promise<void> {
   emit();
   writeFile(
     path.join(mjsOutDir, "package.json"),
-    `{\n  "type": "module"}"\n}\n`,
+    `{\n  "type": "module"\n}\n`,
   );
 
   // emit the cjs files
@@ -140,7 +140,7 @@ export async function build(options: BuildOptions): Promise<void> {
   emit();
   writeFile(
     path.join(cjsOutDir, "package.json"),
-    `{\n  "type": "commonjs"}"\n}\n`,
+    `{\n  "type": "commonjs"\n}\n`,
   );
 
   function emit(opts?: { onlyDtsFiles?: boolean }) {
