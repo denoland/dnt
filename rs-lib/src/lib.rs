@@ -8,7 +8,6 @@ use std::path::PathBuf;
 use anyhow::Result;
 use deno_graph::create_graph;
 use deno_graph::ModuleGraph;
-use deno_graph::Resolved;
 #[macro_use]
 extern crate lazy_static;
 
@@ -88,7 +87,9 @@ pub async fn transform(options: TransformOptions) -> Result<TransformOutput> {
   );
   let source_parser = parser::CapturingSourceParser::new();
   let module_graph = create_graph(
-    options.entry_point.clone(),
+    vec![options.entry_point.clone()],
+    false,
+    None,
     &mut loader,
     None,
     None,
@@ -222,13 +223,13 @@ fn get_specifiers_from_loader(
         .unwrap_or_else(|| panic!("Could not find module for {}", specifier));
 
       match &module.maybe_types_dependency {
-        Some((text, Resolved::Err(err, _))) => anyhow::bail!(
+        Some((text, Some(Err(err)))) => anyhow::bail!(
           "Error resolving types for {} with reference {}. {}",
           specifier,
           text,
           err.to_string()
         ),
-        Some((_, Resolved::Specifier(type_specifier, _))) => {
+        Some((_, Some(Ok((type_specifier, _))))) => {
           types.insert(specifier.clone(), type_specifier.clone());
         }
         _ => {}

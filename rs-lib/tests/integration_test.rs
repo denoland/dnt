@@ -183,9 +183,10 @@ async fn transform_remote_files() {
           "http://localhost/other.ts",
           "import * as folder from './folder';",
         )
-        .add_remote_file(
+        .add_remote_file_with_headers(
           "http://localhost/folder",
           "import * as folder2 from './folder.ts';",
+          &[("content-type", "application/javascript")],
         )
         .add_remote_file(
           "http://localhost/folder.ts",
@@ -195,17 +196,20 @@ async fn transform_remote_files() {
           "http://localhost/folder.js",
           "import * as otherFolder from './otherFolder';",
         )
-        .add_remote_file(
+        .add_remote_file_with_headers(
           "http://localhost/otherFolder",
           "import * as subFolder from './sub/subfolder';",
+          &[("content-type", "application/javascript")],
         )
-        .add_remote_file(
+        .add_remote_file_with_headers(
           "http://localhost/sub/subfolder",
           "import * as localhost2 from 'http://localhost2';",
+          &[("content-type", "application/javascript")],
         )
-        .add_remote_file(
+        .add_remote_file_with_headers(
           "http://localhost2",
           "import * as localhost3Mod from 'https://localhost3/mod.ts';",
+          &[("content-type", "application/javascript")],
         )
         .add_remote_file(
           "https://localhost3/mod.ts",
@@ -265,7 +269,7 @@ async fn transform_local_file_not_exists() {
     .err()
     .unwrap();
 
-  assert_eq!(err_message.to_string(), "An error was returned from the loader: entity not found (file:///other.ts)");
+  assert_eq!(err_message.to_string(), "entity not found (file:///other.ts)");
 }
 
 #[tokio::test]
@@ -283,7 +287,7 @@ async fn transform_remote_file_not_exists() {
     .err()
     .unwrap();
 
-  assert_eq!(err_message.to_string(), "An error was returned from the loader: Not found. (http://localhost/other.ts)");
+  assert_eq!(err_message.to_string(), "Not found. (http://localhost/other.ts)");
 }
 
 #[tokio::test]
@@ -301,7 +305,7 @@ async fn transform_remote_file_error() {
     .err()
     .unwrap();
 
-  assert_eq!(err_message.to_string(), "An error was returned from the loader: Some error loading. (http://localhost/mod.ts)");
+  assert_eq!(err_message.to_string(), "Some error loading. (http://localhost/mod.ts)");
 }
 
 #[tokio::test]
@@ -325,7 +329,7 @@ async fn transform_parse_error() {
     .err()
     .unwrap();
 
-  assert_eq!(err_message.to_string(), "The module's source code would not be parsed: Expected ';', '}' or <eof> at http://localhost/declarations.d.ts:1:6 (http://localhost/declarations.d.ts)");
+  assert_eq!(err_message.to_string(), "The module's source code could not be parsed: Expected ';', '}' or <eof> at http://localhost/declarations.d.ts:1:6 (http://localhost/declarations.d.ts)");
 }
 
 #[tokio::test]
@@ -346,7 +350,13 @@ async fn transform_typescript_types_resolution_error() {
     .err()
     .unwrap();
 
-  assert_eq!(err_message.to_string(), "Error resolving types for https://localhost/mod.js with reference http://localhost/declarations.d.ts. Modules imported via https are not allowed to import http modules.");
+  assert_eq!(err_message.to_string(),
+    concat!(
+      "Error resolving types for https://localhost/mod.js with reference http://localhost/declarations.d.ts. ",
+      "Modules imported via https are not allowed to import http modules.\n",
+      "  Importing: http://localhost/declarations.d.ts"
+    )
+  );
 }
 
 #[tokio::test]
@@ -430,7 +440,7 @@ async fn transform_specifier_mappings() {
           "/mod.ts",
           concat!(
             "import * as remote from 'http://localhost/mod.ts';\n",
-            "import * as local from '/file.ts';\n"
+            "import * as local from './file.ts';\n"
           ),
         )
         .add_remote_file(
@@ -516,8 +526,15 @@ async fn skypack_esm_module_mapping() {
             "import package5 from 'https://esm.sh/test@1.2.5?deps=react@16.14.0';\n",
           ),
         )
-        .add_remote_file("https://esm.sh/swr?deps=react@16.14.0", "")
-        .add_remote_file("https://esm.sh/test@1.2.5?deps=react@16.14.0", "");
+        .add_remote_file_with_headers(
+          "https://esm.sh/swr?deps=react@16.14.0", "",
+          &[("content-type", "application/typescript")]
+        )
+        .add_remote_file_with_headers(
+          "https://esm.sh/test@1.2.5?deps=react@16.14.0",
+          "",
+          &[("content-type", "application/typescript")]
+       );
     })
     .transform()
     .await
@@ -535,10 +552,10 @@ async fn skypack_esm_module_mapping() {
         "import package5 from './deps/0/test_1.js';\n"
       )
     ), (
-      "deps/0/swr.js",
+      "deps/0/swr.ts",
       "",
     ), (
-      "deps/0/test_1.js",
+      "deps/0/test_1.ts",
       "",
     )]
   );

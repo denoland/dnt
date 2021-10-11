@@ -2,6 +2,9 @@
 
 use std::collections::HashSet;
 
+use deno_ast::swc::common::BytePos;
+use deno_ast::swc::common::Span;
+use deno_ast::swc::common::Spanned;
 use deno_ast::swc::common::SyntaxContext;
 use deno_ast::swc::utils::ident::IdentLike;
 use deno_ast::view::*;
@@ -97,16 +100,11 @@ fn should_ignore(span: Span, context: &Context) -> bool {
 
 fn get_ignore_line_indexes(program: &Program) -> HashSet<usize> {
   let mut result = HashSet::new();
-  for comment in program.comments().unwrap().all_comments() {
+  for comment in program.comment_container().unwrap().all_comments() {
     if comment.text.trim().to_lowercase().starts_with("deno-shim-ignore") {
-      // todo: use token_container, but it is buggy right now
-      for token in program.tokens_fast(program) {
-        if token.span.lo > comment.span.hi {
-          result.insert(token.span.lo.start_line_fast(program));
-          break;
-        }
+      if let Some(next_token) = comment.next_token_fast(program) {
+        result.insert(next_token.span.lo.start_line_fast(program));
       }
-      println!("{:?}", result);
     }
   }
   result

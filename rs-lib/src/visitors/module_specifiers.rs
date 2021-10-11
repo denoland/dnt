@@ -5,6 +5,7 @@ use std::path::PathBuf;
 
 use deno_ast::swc::common::BytePos;
 use deno_ast::swc::common::Span;
+use deno_ast::swc::common::Spanned;
 use deno_ast::view::*;
 use deno_ast::ModuleSpecifier;
 use deno_graph::ModuleGraph;
@@ -65,13 +66,26 @@ pub fn get_module_specifier_text_changes<'a>(
 
 fn visit_module_specifier(str: &Str, context: &mut Context) {
   let value = str.value().to_string();
-  let specifier = match context
+  let specifier = context
     .module_graph
-    .resolve_dependency(&value, &context.specifier)
-  {
-    Some(specifier) => specifier,
-    // todo: error instead of panic
-    None => panic!("Could not resolve specifier: {}", value),
+    .resolve_dependency(&value, &context.specifier, false)
+    .cloned()
+    .or_else(|| {
+      let value_lower = value.to_lowercase();
+      if value_lower.starts_with("https://") ||
+        value_lower.starts_with("http://") ||
+        value_lower.starts_with("file://")
+      {
+        ModuleSpecifier::parse(&value).ok()
+      } else if value_lower.starts_with("./") || value_lower.starts_with("../") {
+        context.specifier.join(&value).ok()
+      } else {
+        None
+      }
+    });
+  let specifier = match specifier {
+    Some(s) => s,
+    None => return,
   };
 
   let new_text = if let Some(bare_specifier) = context

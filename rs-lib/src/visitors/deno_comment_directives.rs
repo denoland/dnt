@@ -1,5 +1,9 @@
 // Copyright 2018-2021 the Deno authors. All rights reserved. MIT license.
 
+use deno_ast::swc::common::BytePos;
+use deno_ast::swc::common::Span;
+use deno_ast::swc::common::Spanned;
+use deno_ast::swc::common::comments::Comment;
 use deno_ast::view::*;
 use regex::Regex;
 
@@ -44,7 +48,7 @@ pub fn get_deno_comment_directive_text_changes(
   }
 
   // strip all `@deno-types` comments
-  for comment in program.comments().unwrap().all_comments() {
+  for comment in program.comment_container().unwrap().all_comments() {
     if DENO_TYPES_RE.is_match(&comment.text) {
       text_changes.push(TextChange {
         new_text: String::new(),
