@@ -12,9 +12,10 @@ default = ["console_error_panic_hook"]
 
 [dependencies]
 anyhow = "1.0.44"
+dnt = { path = "../rs-lib", default-features = false, features = ["serialization"], package="deno_node_transform" }
+js-sys = "0.3.55"
 wasm-bindgen = { version = "0.2.63", features = ["serde-serialize"] }
 wasm-bindgen-futures = "0.4.28"
-dnt = { path = "../rs-lib", default-features = false, features = ["serialization"], package="deno_node_transform" }
 
 # The `console_error_panic_hook` crate provides better debugging of panics by
 # logging them with `console.error`. This is great for development, but requires
@@ -30,7 +31,6 @@ serde = { version = "1.0", features = ["derive"] }
 #
 # Unfortunately, `wee_alloc` requires nightly Rust when targeting wasm for now.
 wee_alloc = { version = "0.4.5", optional = true }
-web-sys = { version = "0.3.4", features = ["Headers", "Request", "RequestInit", "RequestMode", "Response", "Window"] }
 
 [dev-dependencies]
 wasm-bindgen-test = "0.3.13"

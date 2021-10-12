@@ -4,6 +4,7 @@
 - Support multiple entrypoints with a default entrypoint used in package.json (the first one)
 - Handle dynamic imports (at least ones that are statically analyzable and maybe warn on others)
 - Support lockfile
+- Special handling of a remote module that is only an `import type ... from "...";` or `export type` (only get declarations).
 
 Notes from Kitson:
 

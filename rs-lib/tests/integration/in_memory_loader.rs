@@ -11,6 +11,7 @@ use futures::Future;
 use deno_node_transform::LoadResponse;
 use deno_node_transform::Loader;
 use deno_node_transform::ModuleSpecifier;
+use deno_node_transform::url_to_file_path;
 
 #[derive(Clone)]
 pub struct InMemoryLoader {
@@ -83,29 +84,33 @@ impl InMemoryLoader {
 }
 
 impl Loader for InMemoryLoader {
-  fn read_file(
-    &self,
-    file_path: PathBuf,
-  ) -> Pin<Box<dyn Future<Output = std::io::Result<String>> + 'static>> {
-    let result = self
-      .local_files
-      .get(&file_path)
-      .map(ToOwned::to_owned)
-      .ok_or_else(|| std::io::ErrorKind::NotFound.into());
-    Box::pin(futures::future::ready(result))
-  }
-
-  fn make_request(
+  fn load(
     &self,
     specifier: ModuleSpecifier,
   ) -> Pin<Box<dyn Future<Output = Result<LoadResponse>> + 'static>> {
+    if specifier.scheme() == "file" {
+      let file_path = url_to_file_path(&specifier).unwrap();
+      let result = self
+        .local_files
+        .get(&file_path)
+        .map(ToOwned::to_owned)
+        .ok_or_else(|| anyhow::anyhow!("file not found"));
+      return Box::pin(async move {
+        return Ok(LoadResponse {
+          content: result?,
+          headers: None,
+          specifier,
+        });
+      });
+    }
     let result = self
       .remote_files
       .get(&specifier)
       .map(|result| match result {
         Ok(result) => Ok(LoadResponse {
+          specifier, // todo: test a re-direct
           content: result.0.clone(),
-          maybe_headers: result.1.clone(),
+          headers: result.1.clone(),
         }),
         Err(err) => Err(err),
       });

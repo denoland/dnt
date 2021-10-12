@@ -49,6 +49,8 @@ export async function build(options: BuildOptions): Promise<void> {
       return [key, value];
     }),
   );
+
+  console.log("Transforming...");
   const transformOutput = await transform({
     entryPoint: options.entryPoint,
     shimPackageName: shimPackage.name,
@@ -69,11 +71,13 @@ export async function build(options: BuildOptions): Promise<void> {
       Deno.writeTextFileSync(filePath, fileText);
     });
 
+  console.log("Running npm install...");
   createPackageJson();
   // npm install in order to prepare for checking TS diagnostics
   await npmInstall();
 
-  const mjsOutDir = path.join(options.outDir, "mjs");
+  console.log("Building TypeScript project...");
+  const esmOutDir = path.join(options.outDir, "esm");
   const cjsOutDir = path.join(options.outDir, "cjs");
   const typesOutDir = path.join(options.outDir, "types");
   const project = createProjectSync({
@@ -107,6 +111,7 @@ export async function build(options: BuildOptions): Promise<void> {
   let program = project.createProgram();
 
   if (options.typeCheck) {
+    console.log("Type checking...");
     const diagnostics = ts.getPreEmitDiagnostics(program);
     if (diagnostics.length > 0) {
       outputDiagnostics(diagnostics);
@@ -115,21 +120,24 @@ export async function build(options: BuildOptions): Promise<void> {
   }
 
   // emit only the .d.ts files
+  console.log("Emitting declaration files...");
   emit({ onlyDtsFiles: true });
 
-  // emit the mjs files
+  // emit the esm files
+  console.log("Emitting esm module...");
   project.compilerOptions.set({
     declaration: false,
-    outDir: mjsOutDir,
+    outDir: esmOutDir,
   });
   program = project.createProgram();
   emit();
   writeFile(
-    path.join(mjsOutDir, "package.json"),
+    path.join(esmOutDir, "package.json"),
     `{\n  "type": "module"\n}\n`,
   );
 
   // emit the cjs files
+  console.log("Emitting cjs module...");
   project.compilerOptions.set({
     declaration: false,
     esModuleInterop: true,
@@ -191,13 +199,13 @@ export async function build(options: BuildOptions): Promise<void> {
         // override with specified dependencies
         ...(options.package.dependencies ?? {}),
       },
+      module: options.package.module ?? `./esm/${entryPointPath}`,
       main: options.package.main ?? `./cjs/${entryPointPath}`,
-      module: options.package.module ?? `./mjs/${entryPointPath}`,
       types: options.package.types ?? `./types/${entryPointDtsFilePath}`,
       exports: {
         ...(options.package.exports ?? {}),
         ".": {
-          import: `./mjs/${entryPointPath}`,
+          import: `./esm/${entryPointPath}`,
           require: `./cjs/${entryPointPath}`,
           types: options.package.types ?? `./types/${entryPointDtsFilePath}`,
           ...(options.package.exports?.["."] ?? {}),

@@ -25,6 +25,7 @@ use visitors::GetModuleSpecifierTextChangesParams;
 pub use deno_ast::ModuleSpecifier;
 pub use loader::LoadResponse;
 pub use loader::Loader;
+pub use utils::url_to_file_path;
 
 use crate::loader::MappedSpecifierEntry;
 

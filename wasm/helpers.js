@@ -1,3 +1,8 @@
-export function read_file_sync(file_path) {
-  return Deno.readTextFileSync(file_path);
+import { DenoDir, FileFetcher } from "https://deno.land/x/deno_cache@0.1.0/mod.ts";
+
+const denoDir = new DenoDir();
+const fileFetcher = new FileFetcher(denoDir.deps);
+
+export function fetch_specifier(specifier) {
+  return fileFetcher.fetch(new URL(specifier));
 }

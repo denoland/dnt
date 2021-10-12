@@ -269,7 +269,7 @@ async fn transform_local_file_not_exists() {
     .err()
     .unwrap();
 
-  assert_eq!(err_message.to_string(), "entity not found (file:///other.ts)");
+  assert_eq!(err_message.to_string(), "file not found (file:///other.ts)");
 }
 
 #[tokio::test]

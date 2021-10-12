@@ -1,6 +1,5 @@
 // Copyright 2018-2021 the Deno authors. All rights reserved. MIT license.
 
-use std::path::PathBuf;
 use std::pin::Pin;
 
 use anyhow::Result;
@@ -9,6 +8,7 @@ use futures::Future;
 
 use crate::LoadResponse;
 use crate::Loader;
+use crate::utils::url_to_file_path;
 
 pub struct DefaultLoader {}
 
@@ -19,18 +19,21 @@ impl DefaultLoader {
 }
 
 impl Loader for DefaultLoader {
-  fn read_file(
-    &self,
-    file_path: PathBuf,
-  ) -> Pin<Box<dyn Future<Output = std::io::Result<String>> + 'static>> {
-    Box::pin(tokio::fs::read_to_string(file_path))
-  }
-
-  fn make_request(
+  fn load(
     &self,
     specifier: ModuleSpecifier,
   ) -> Pin<Box<dyn Future<Output = Result<LoadResponse>> + 'static>> {
     Box::pin(async move {
+      if specifier.scheme() == "file" {
+        let file_path = url_to_file_path(&specifier)?;
+        let result = tokio::fs::read_to_string(file_path).await?;
+        return Ok(LoadResponse {
+          specifier,
+          content: result,
+          headers: None,
+        });
+      }
+
       let response = reqwest::get(specifier.clone()).await?;
       let headers = response
         .headers()
@@ -40,11 +43,13 @@ impl Loader for DefaultLoader {
           Err(_) => None,
         })
         .collect();
+      let final_url = response.url().to_owned();
       let text = response.text().await?;
 
       Ok(LoadResponse {
+        specifier: final_url,
         content: text,
-        maybe_headers: Some(headers),
+        headers: Some(headers),
       })
     })
   }
