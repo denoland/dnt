@@ -23,7 +23,7 @@ pub struct Specifiers {
   pub remote: Vec<ModuleSpecifier>,
   pub types: BTreeMap<ModuleSpecifier, ModuleSpecifier>,
   pub found_ignored: HashSet<ModuleSpecifier>,
-  pub mapped: Vec<MappedSpecifierEntry>,
+  pub mapped: BTreeMap<ModuleSpecifier, MappedSpecifierEntry>,
 }
 
 pub struct Mappings {

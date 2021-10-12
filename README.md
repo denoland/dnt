@@ -20,7 +20,7 @@ await build({
   package: {
     // package.json properties
     name: "my-package",
-    version: Deno.args[0],
+    version: Deno.args[0] ?? "0.0.0",
     description: "My package.",
     license: "MIT",
     repository: {
@@ -48,7 +48,7 @@ await build({
 
 ```bash
 # run script. This will output an npm package with cjs and mjs distributions bundling remote dependencies
-deno run --allow-read=./ --allow-write=./npm --allow-net --allow-run scripts/create_npm_package.ts 0.1.0
+deno run --allow-read --allow-write --allow-net --allow-run scripts/create_npm_package.ts 0.1.0
 
 # go to output directory and publish
 cd npm

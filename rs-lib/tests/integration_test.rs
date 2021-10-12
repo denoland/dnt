@@ -231,16 +231,17 @@ async fn transform_remote_files() {
       ("mod.ts", "import * as other from './deps/0/mod.js';"),
       ("deps/0/mod.ts", "import * as myOther from './other.js';"),
       ("deps/0/other.ts", "import * as folder from './folder.js';"),
+      // seems out of order, but that's ok... as long as they're unique
       (
         "deps/0/folder.js",
-        "import * as folder2 from './folder_2.js';"
+        "import * as folder2 from './folder_3.js';"
       ),
       (
-        "deps/0/folder_2.ts",
-        "import * as folder3 from './folder_3.js';"
+        "deps/0/folder_3.ts",
+        "import * as folder3 from './folder_2.js';"
       ),
       (
-        "deps/0/folder_3.js",
+        "deps/0/folder_2.js",
         "import * as otherFolder from './otherFolder.js';"
       ),
       (
@@ -403,10 +404,9 @@ async fn transform_typescript_types_in_deno_types() {
   assert_files!(
     result.files,
     &[
-      // todo: remove this deno-types comment
       (
         "mod.ts",
-        "// @deno-types='./declarations.d.ts';\nexport * from './deps/0/mod';"
+        "export * from './deps/0/mod.js';"
       ),
       ("deps/0/mod.js", "function test() { return 5; }"),
       ("deps/0/mod.d.ts", "declare function test(): number;"),

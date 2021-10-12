@@ -6,6 +6,7 @@ use std::collections::HashSet;
 use std::path::PathBuf;
 
 use anyhow::Result;
+use deno_graph::Module;
 use deno_graph::create_graph;
 use deno_graph::ModuleGraph;
 #[macro_use]
@@ -86,7 +87,7 @@ pub async fn transform(options: TransformOptions) -> Result<TransformOutput> {
     get_all_specifier_mappers(),
     ignored_specifiers.as_ref(),
   );
-  let source_parser = parser::CapturingSourceParser::new();
+  let source_parser = parser::ScopeAnalysisParser::new();
   let module_graph = create_graph(
     vec![options.entry_point.clone()],
     false,
@@ -99,6 +100,21 @@ pub async fn transform(options: TransformOptions) -> Result<TransformOutput> {
   .await;
 
   let specifiers = get_specifiers_from_loader(loader, &module_graph)?;
+
+  let errors = module_graph.errors()
+    .into_iter()
+    .filter(|e| !specifiers.found_ignored.contains(e.specifier()) && !specifiers.mapped.contains_key(e.specifier()))
+    .collect::<Vec<_>>();
+  if !errors.is_empty() {
+    let mut error_message = String::new();
+    for error in errors {
+      if !error_message.is_empty() {
+        error_message.push_str("\n\n");
+      }
+      error_message.push_str(&format!("{} ({})", error.to_string(), error.specifier()));
+    }
+    anyhow::bail!("{}", error_message);
+  }
 
   if let Some(ignored_specifiers) = ignored_specifiers {
     let mut not_found_specifiers = ignored_specifiers
@@ -121,7 +137,7 @@ pub async fn transform(options: TransformOptions) -> Result<TransformOutput> {
       specifier_mappings = Some(HashMap::new());
     }
     let specifier_mappings = specifier_mappings.as_mut().unwrap();
-    for entry in specifiers.mapped.iter() {
+    for entry in specifiers.mapped.values() {
       specifier_mappings
         .insert(entry.from_specifier.clone(), entry.to_specifier.clone());
     }
@@ -136,7 +152,9 @@ pub async fn transform(options: TransformOptions) -> Result<TransformOutput> {
     .chain(specifiers.remote.iter())
     .chain(specifiers.types.iter().map(|(_, from)| from))
   {
-    let parsed_source = source_parser.get_parsed_source(specifier)?;
+    let module = module_graph.get(specifier)
+      .ok_or_else(|| anyhow::anyhow!("Programming error: Could not find module for {}", specifier))?;
+    let parsed_source = module.parsed_source.clone();
 
     let text_changes = parsed_source.with_view(|program| {
       let mut text_changes =
@@ -189,20 +207,28 @@ fn get_specifiers_from_loader(
 ) -> Result<Specifiers> {
   let specifiers = loader.into_specifiers();
   let mut types = BTreeMap::new();
+  let mut local_specifiers = Vec::new();
+  let mut remote_specifiers = Vec::new();
 
-  handle_specifiers(&specifiers.local, module_graph, &mut types)?;
-  handle_specifiers(&specifiers.remote, module_graph, &mut types)?;
+  for module in module_graph.modules() {
+    match module.specifier.scheme().to_lowercase().as_str() {
+      "file" => local_specifiers.push(module.specifier.clone()),
+      "http" | "https" => remote_specifiers.push(module.specifier.clone()),
+      _ => {
+        anyhow::bail!("Unhandled scheme on url: {}", module.specifier);
+      }
+    }
+    handle_module(module, &mut types)?;
+  }
 
   let type_specifiers = types.values().collect::<HashSet<_>>();
 
   return Ok(Specifiers {
-    local: specifiers
-      .local
+    local: local_specifiers
       .into_iter()
       .filter(|l| !type_specifiers.contains(&l))
       .collect(),
-    remote: specifiers
-      .remote
+    remote: remote_specifiers
       .into_iter()
       .filter(|l| !type_specifiers.contains(&l))
       .collect(),
@@ -211,30 +237,21 @@ fn get_specifiers_from_loader(
     mapped: get_mapped(specifiers.mapped)?,
   });
 
-  fn handle_specifiers(
-    specifiers: &[ModuleSpecifier],
-    module_graph: &ModuleGraph,
+  fn handle_module(
+    module: &Module,
     types: &mut BTreeMap<ModuleSpecifier, ModuleSpecifier>,
   ) -> Result<()> {
-    for specifier in specifiers {
-      let module = module_graph.try_get(specifier).map_err(|err| {
-        anyhow::anyhow!("{} ({})", err.to_string(), specifier)
-      })?;
-      let module = module
-        .unwrap_or_else(|| panic!("Could not find module for {}", specifier));
-
-      match &module.maybe_types_dependency {
-        Some((text, Some(Err(err)))) => anyhow::bail!(
-          "Error resolving types for {} with reference {}. {}",
-          specifier,
-          text,
-          err.to_string()
-        ),
-        Some((_, Some(Ok((type_specifier, _))))) => {
-          types.insert(specifier.clone(), type_specifier.clone());
-        }
-        _ => {}
+    match &module.maybe_types_dependency {
+      Some((text, Some(Err(err)))) => anyhow::bail!(
+        "Error resolving types for {} with reference {}. {}",
+        module.specifier,
+        text,
+        err.to_string()
+      ),
+      Some((_, Some(Ok((type_specifier, _))))) => {
+        types.insert(module.specifier.clone(), type_specifier.clone());
       }
+      _ => {}
     }
 
     Ok(())
@@ -242,10 +259,10 @@ fn get_specifiers_from_loader(
 
   fn get_mapped(
     mapped_specifiers: Vec<MappedSpecifierEntry>,
-  ) -> Result<Vec<MappedSpecifierEntry>> {
+  ) -> Result<BTreeMap<ModuleSpecifier, MappedSpecifierEntry>> {
     let mut specifier_for_name: HashMap<String, MappedSpecifierEntry> =
       HashMap::new();
-    let mut result = Vec::new();
+    let mut result = BTreeMap::new();
     for mapped_specifier in mapped_specifiers {
       if let Some(specifier) =
         specifier_for_name.get(&mapped_specifier.to_specifier)
@@ -263,7 +280,7 @@ fn get_specifiers_from_loader(
           mapped_specifier.to_specifier.to_string(),
           mapped_specifier.clone(),
         );
-        result.push(mapped_specifier);
+        result.insert(mapped_specifier.from_specifier.clone(), mapped_specifier);
       }
     }
 
@@ -276,9 +293,9 @@ fn get_dependencies(specifiers: Specifiers) -> Vec<Dependency> {
     .mapped
     .into_iter()
     .filter_map(|entry| {
-      if let Some(version) = entry.version {
+      if let Some(version) = entry.1.version {
         Some(Dependency {
-          name: entry.to_specifier,
+          name: entry.1.to_specifier,
           version,
         })
       } else {

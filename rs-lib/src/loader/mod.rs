@@ -35,8 +35,6 @@ pub trait Loader {
 }
 
 pub struct LoaderSpecifiers {
-  pub local: Vec<ModuleSpecifier>,
-  pub remote: Vec<ModuleSpecifier>,
   pub found_ignored: HashSet<ModuleSpecifier>,
   pub mapped: Vec<MappedSpecifierEntry>,
 }
@@ -57,8 +55,6 @@ impl<'a> SourceLoader<'a> {
     Self {
       loader: Arc::new(loader),
       specifiers: LoaderSpecifiers {
-        local: Vec::new(),
-        remote: Vec::new(),
         found_ignored: HashSet::new(),
         mapped: Vec::new(),
       },
@@ -94,17 +90,6 @@ impl<'a> deno_graph::source::Loader for SourceLoader<'a> {
         self.specifiers.mapped.push(entry);
         return Box::pin(future::ready((specifier.clone(), Ok(None))));
       }
-    }
-
-    if specifier.scheme() == "https" || specifier.scheme() == "http" {
-      self.specifiers.remote.push(specifier.clone());
-    } else if specifier.scheme() == "file" {
-      self.specifiers.local.push(specifier.clone());
-    } else {
-      return Box::pin(future::ready((
-        specifier.clone(),
-        Err(anyhow::format_err!("Unsupported scheme: {}", specifier)),
-      )));
     }
 
     let loader = self.loader.clone();

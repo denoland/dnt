@@ -33,6 +33,8 @@ export interface BuildOptions {
 
 /** Emits the specified Deno module to an npm package using the TypeScript compiler. */
 export async function build(options: BuildOptions): Promise<void> {
+  await Deno.permissions.request({ name: "write", path: options.outDir });
+
   const shimPackage = options.shimPackage ?? {
     name: "deno.ns",
     version: "0.4.3",
@@ -219,8 +221,10 @@ export async function build(options: BuildOptions): Promise<void> {
   }
 
   async function npmInstall() {
-    const cmd = Deno.run({
-      cmd: getCmdArgs(),
+    const cmd = getCmd();
+    await Deno.permissions.request({ name: "run", command: cmd[0] });
+    const process = Deno.run({
+      cmd,
       cwd: options.outDir,
       stderr: "inherit",
       stdout: "inherit",
@@ -228,15 +232,15 @@ export async function build(options: BuildOptions): Promise<void> {
     });
 
     try {
-      const status = await cmd.status();
+      const status = await process.status();
       if (!status.success) {
         throw new Error(`npm install failed with exit code ${status.code}`);
       }
     } finally {
-      cmd.close();
+      process.close();
     }
 
-    function getCmdArgs() {
+    function getCmd() {
       const args = ["npm", "install"];
       if (Deno.build.os === "windows") {
         return ["cmd", "/c", ...args];

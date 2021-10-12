@@ -4,7 +4,7 @@ use std::cmp::Ordering;
 
 use deno_ast::swc::common::Span;
 
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 pub struct TextChange {
   pub span: Span,
   pub new_text: String,
