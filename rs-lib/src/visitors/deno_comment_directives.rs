@@ -1,9 +1,9 @@
 // Copyright 2018-2021 the Deno authors. All rights reserved. MIT license.
 
+use deno_ast::swc::common::comments::Comment;
 use deno_ast::swc::common::BytePos;
 use deno_ast::swc::common::Span;
 use deno_ast::swc::common::Spanned;
-use deno_ast::swc::common::comments::Comment;
 use deno_ast::view::*;
 use regex::Regex;
 
@@ -33,11 +33,13 @@ pub fn get_deno_comment_directive_text_changes(
   // strip deno specific path triple slash references
   for comment in program.leading_comments_fast(program) {
     if TRIPLE_SLASH_REFERENCE_RE.is_match(&comment.text) {
-      if let Some(captures) = TYPES_REFERENCE_RE.captures(&comment.text)
-      {
+      if let Some(captures) = TYPES_REFERENCE_RE.captures(&comment.text) {
         let specifier = captures.get(1).unwrap().as_str().to_lowercase();
-        if specifier.starts_with("./") || specifier.starts_with("../")
-          || specifier.starts_with("https://") || specifier.starts_with("http://") {
+        if specifier.starts_with("./")
+          || specifier.starts_with("../")
+          || specifier.starts_with("https://")
+          || specifier.starts_with("http://")
+        {
           text_changes.push(TextChange {
             new_text: String::new(),
             span: get_extended_comment_span(program, comment),

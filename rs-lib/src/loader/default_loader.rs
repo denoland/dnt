@@ -6,9 +6,9 @@ use anyhow::Result;
 use deno_ast::ModuleSpecifier;
 use futures::Future;
 
+use crate::utils::url_to_file_path;
 use crate::LoadResponse;
 use crate::Loader;
-use crate::utils::url_to_file_path;
 
 pub struct DefaultLoader {}
 

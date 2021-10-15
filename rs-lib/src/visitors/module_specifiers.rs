@@ -8,8 +8,8 @@ use deno_ast::swc::common::Span;
 use deno_ast::swc::common::Spanned;
 use deno_ast::view::*;
 use deno_ast::ModuleSpecifier;
-use deno_graph::ModuleGraph;
 
+use crate::graph::ModuleGraph;
 use crate::mappings::Mappings;
 use crate::text_changes::TextChange;
 use crate::utils::get_relative_path;
@@ -68,21 +68,7 @@ fn visit_module_specifier(str: &Str, context: &mut Context) {
   let value = str.value().to_string();
   let specifier = context
     .module_graph
-    .resolve_dependency(&value, &context.specifier, false)
-    .cloned()
-    .or_else(|| {
-      let value_lower = value.to_lowercase();
-      if value_lower.starts_with("https://") ||
-        value_lower.starts_with("http://") ||
-        value_lower.starts_with("file://")
-      {
-        ModuleSpecifier::parse(&value).ok()
-      } else if value_lower.starts_with("./") || value_lower.starts_with("../") {
-        context.specifier.join(&value).ok()
-      } else {
-        None
-      }
-    });
+    .resolve_dependency(&value, &context.specifier);
   let specifier = match specifier {
     Some(s) => s,
     None => return,

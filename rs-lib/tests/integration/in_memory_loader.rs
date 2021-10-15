@@ -8,10 +8,10 @@ use std::pin::Pin;
 use anyhow::Result;
 use futures::Future;
 
+use deno_node_transform::url_to_file_path;
 use deno_node_transform::LoadResponse;
 use deno_node_transform::Loader;
 use deno_node_transform::ModuleSpecifier;
-use deno_node_transform::url_to_file_path;
 
 #[derive(Clone)]
 pub struct InMemoryLoader {

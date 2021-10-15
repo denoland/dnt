@@ -47,7 +47,8 @@ async fn transform_deno_shim() {
 async fn no_transform_deno_ignored() {
   let result = TestBuilder::new()
     .with_loader(|loader| {
-      loader.add_local_file("/mod.ts", "// deno-shim-ignore\nDeno.readTextFile();");
+      loader
+        .add_local_file("/mod.ts", "// deno-shim-ignore\nDeno.readTextFile();");
     })
     .transform()
     .await
@@ -55,10 +56,7 @@ async fn no_transform_deno_ignored() {
 
   assert_files!(
     result.files,
-    &[(
-      "mod.ts",
-      "// deno-shim-ignore\nDeno.readTextFile();",
-    )]
+    &[("mod.ts", "// deno-shim-ignore\nDeno.readTextFile();",)]
   );
 }
 
@@ -288,7 +286,10 @@ async fn transform_remote_file_not_exists() {
     .err()
     .unwrap();
 
-  assert_eq!(err_message.to_string(), "Not found. (http://localhost/other.ts)");
+  assert_eq!(
+    err_message.to_string(),
+    "Not found. (http://localhost/other.ts)"
+  );
 }
 
 #[tokio::test]
@@ -306,7 +307,10 @@ async fn transform_remote_file_error() {
     .err()
     .unwrap();
 
-  assert_eq!(err_message.to_string(), "Some error loading. (http://localhost/mod.ts)");
+  assert_eq!(
+    err_message.to_string(),
+    "Some error loading. (http://localhost/mod.ts)"
+  );
 }
 
 #[tokio::test]
@@ -390,7 +394,6 @@ async fn transform_typescript_types_in_headers() {
   );
 }
 
-#[ignore]
 #[tokio::test]
 async fn transform_typescript_types_in_deno_types() {
   let result = TestBuilder::new()
@@ -404,10 +407,7 @@ async fn transform_typescript_types_in_deno_types() {
   assert_files!(
     result.files,
     &[
-      (
-        "mod.ts",
-        "export * from './deps/0/mod.js';"
-      ),
+      ("mod.ts", "export * from './deps/0/mod.js';"),
       ("deps/0/mod.js", "function test() { return 5; }"),
       ("deps/0/mod.d.ts", "declare function test(): number;"),
     ]
@@ -424,11 +424,164 @@ async fn transform_typescript_type_references() {
     })
     .transform().await.unwrap();
 
-  assert_files!(result.files, &[
-    ("mod.ts", "export * from './deps/0/mod.js';"),
-    ("deps/0/mod.js", "function test() { return 5; }"),
-    ("deps/0/mod.d.ts", "declare function test(): number;"),
-  ]);
+  assert_files!(
+    result.files,
+    &[
+      ("mod.ts", "export * from './deps/0/mod.js';"),
+      ("deps/0/mod.js", "function test() { return 5; }"),
+      ("deps/0/mod.d.ts", "declare function test(): number;"),
+    ]
+  );
+}
+
+#[tokio::test]
+async fn transform_deno_types_and_type_ref_for_same_file() {
+  let result = TestBuilder::new()
+    .with_loader(|loader| {
+      loader.add_local_file("/mod.ts", "// @deno-types='./declarations.d.ts'\nexport * from './file.js';\n// @deno-types='./declarations.d.ts'\nexport * as test2 from './file.js';\nexport * from './other.ts';")
+      .add_local_file("/file.js", "/// <reference types='./declarations.d.ts' />\nfunction test() { return 5; }")
+      .add_local_file("/other.ts", "// @deno-types='./declarations.d.ts'\nexport * as other from './file.js';")
+      .add_local_file("/declarations.d.ts", "declare function test(): number;");
+    })
+    .transform().await.unwrap();
+
+  assert!(result.warnings.is_empty());
+  assert_files!(
+    result.files,
+    &[
+      (
+        "mod.ts",
+        "export * from './file.js';\nexport * as test2 from './file.js';\nexport * from './other.js';"
+      ),
+      (
+        "other.ts",
+        "export * as other from './file.js';"
+      ),
+      ("file.js", "function test() { return 5; }"),
+      ("file.d.ts", "declare function test(): number;"),
+    ]
+  );
+}
+
+#[tokio::test]
+async fn transform_deno_types_and_type_ref_for_different_local_file() {
+  let result = TestBuilder::new()
+    .with_loader(|loader| {
+      loader.add_local_file(
+        "/mod.ts",
+        "// @deno-types='./declarations.d.ts'\nexport * from './file.js';\nexport * from './other.ts';"
+      )
+      .add_local_file("/file.js", "/// <reference types='./declarations3.d.ts' />\nfunction test() { return 5; }")
+      .add_local_file("/other.ts", "// @deno-types='./declarations2.d.ts'\nexport * as other from './file.js';")
+      .add_local_file("/declarations.d.ts", "declare function test1(): number;")
+      .add_local_file("/declarations2.d.ts", "declare function test2(): number;")
+      .add_local_file("/declarations3.d.ts", "declare function test3(): number;");
+    })
+    .transform().await.unwrap();
+
+  assert_eq!(
+    result.warnings,
+    vec![
+      concat!(
+        "Duplicate declaration file found for file:///file.js\n",
+        "  Specified file:///declarations.d.ts in file:///mod.ts\n",
+        "  Selected file:///declarations3.d.ts\n",
+        "  Supress this warning by having only one local file specify the declaration file for this module.",
+      ),
+      concat!(
+        "Duplicate declaration file found for file:///file.js\n",
+        "  Specified file:///declarations2.d.ts in file:///other.ts\n",
+        "  Selected file:///declarations3.d.ts\n",
+        "  Supress this warning by having only one local file specify the declaration file for this module.",
+      ),
+    ]
+  );
+  assert_files!(
+    result.files,
+    &[
+      (
+        "mod.ts",
+        "export * from './file.js';\nexport * from './other.js';"
+      ),
+      ("other.ts", "export * as other from './file.js';"),
+      ("file.js", "function test() { return 5; }"),
+      ("file.d.ts", "declare function test3(): number;"),
+    ]
+  );
+}
+
+#[tokio::test]
+async fn transform_deno_types_and_type_ref_for_different_remote_file() {
+  fn setup() -> TestBuilder {
+    let mut test_builder = TestBuilder::new();
+      test_builder .with_loader(|loader| {
+        loader.add_local_file(
+          "/mod.ts",
+          "import 'http://localhost/mod.ts';"
+        )
+        .add_remote_file(
+          "http://localhost/mod.ts",
+          "// @deno-types='./declarations.d.ts'\nexport * from './file.js';\nexport * from './other.ts';"
+        )
+        .add_remote_file("http://localhost/file.js", "/// <reference types='./declarations3.d.ts' />\nfunction test() { return 5; }")
+        .add_remote_file("http://localhost/other.ts", "// @deno-types='./declarations2.d.ts'\nexport * as other from './file.js';")
+        .add_remote_file("http://localhost/declarations.d.ts", "declare function test1(): number;")
+        .add_remote_file("http://localhost/declarations2.d.ts", "declare function test2(): number;")
+        .add_remote_file("http://localhost/declarations3.d.ts", "declare function test3(): number;");
+      });
+    test_builder
+  }
+
+  let result = setup().transform().await.unwrap();
+
+  assert_eq!(
+    result.warnings,
+    vec![
+      concat!(
+        "Duplicate declaration file found for http://localhost/file.js\n",
+        "  Specified http://localhost/declarations.d.ts in http://localhost/mod.ts\n",
+        "  Selected http://localhost/declarations3.d.ts\n",
+        "  Supress this warning by specifying a declaration file for this module locally via `@deno-types`.",
+      ),
+      concat!(
+        "Duplicate declaration file found for http://localhost/file.js\n",
+        "  Specified http://localhost/declarations2.d.ts in http://localhost/other.ts\n",
+        "  Selected http://localhost/declarations3.d.ts\n",
+        "  Supress this warning by specifying a declaration file for this module locally via `@deno-types`.",
+      ),
+    ]
+  );
+  assert_files!(
+    result.files,
+    &[
+      (
+        "mod.ts",
+        "import './deps/0/mod.js';",
+      ),
+      (
+        "deps/0/mod.ts",
+        "export * from './file.js';\nexport * from './other.js';"
+      ),
+      ("deps/0/other.ts", "export * as other from './file.js';"),
+      ("deps/0/file.js", "function test() { return 5; }"),
+      ("deps/0/file.d.ts", "declare function test3(): number;"),
+    ]
+  );
+
+  // Now specify the declaration file locally. This should clear out the warnings.
+  let mut test_builder = setup();
+  test_builder.with_loader(|loader| {
+    // overwrite the existing /mod.ts
+    loader.add_local_file(
+      "/mod.ts",
+      "import 'http://localhost/mod.ts';\n// @deno-types='http://localhost/declarations2.d.ts'\nimport * as test from 'http://localhost/file.js'",
+    );
+  });
+  let result = test_builder.transform().await.unwrap();
+
+  assert!(result.warnings.is_empty());
+  assert_eq!(result.files.len(), 5);
+  assert_eq!(result.files.iter().find(|f| f.file_path.to_string_lossy() == "deps/0/file.d.ts").unwrap().file_text, "declare function test2(): number;");
 }
 
 #[tokio::test]
@@ -542,22 +695,20 @@ async fn skypack_esm_module_mapping() {
 
   assert_files!(
     result.files,
-    &[(
-      "mod.ts",
-      concat!(
-        "import package1 from 'preact';\n",
-        "import package2 from '@scope/package-name';\n",
-        "import package3 from 'react';\n",
-        "import package4 from './deps/0/swr.js';\n",
-        "import package5 from './deps/0/test_1.js';\n"
-      )
-    ), (
-      "deps/0/swr.ts",
-      "",
-    ), (
-      "deps/0/test_1.ts",
-      "",
-    )]
+    &[
+      (
+        "mod.ts",
+        concat!(
+          "import package1 from 'preact';\n",
+          "import package2 from '@scope/package-name';\n",
+          "import package3 from 'react';\n",
+          "import package4 from './deps/0/swr.js';\n",
+          "import package5 from './deps/0/test_1.js';\n"
+        )
+      ),
+      ("deps/0/swr.ts", "",),
+      ("deps/0/test_1.ts", "",)
+    ]
   );
   assert_eq!(
     result.dependencies,

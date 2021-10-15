@@ -1,7 +1,7 @@
 // Copyright 2018-2021 the Deno authors. All rights reserved. MIT license.
 
 import { outputDiagnostics } from "./lib/compiler.ts";
-import { createProjectSync, path, ts } from "./lib/mod.deps.ts";
+import { colors, createProjectSync, path, ts } from "./lib/mod.deps.ts";
 import { PackageJsonObject } from "./lib/types.ts";
 import { transform } from "./transform.ts";
 
@@ -52,7 +52,7 @@ export async function build(options: BuildOptions): Promise<void> {
     }),
   );
 
-  console.log("Transforming...");
+  log("Transforming...");
   const transformOutput = await transform({
     entryPoint: options.entryPoint,
     shimPackageName: shimPackage.name,
@@ -62,6 +62,9 @@ export async function build(options: BuildOptions): Promise<void> {
       }),
     ),
   });
+  for (const warning of transformOutput.warnings) {
+    warn(warning);
+  }
   const createdDirectories = new Set<string>();
   const writeFile = options.writeFile ??
     ((filePath: string, fileText: string) => {
@@ -73,12 +76,12 @@ export async function build(options: BuildOptions): Promise<void> {
       Deno.writeTextFileSync(filePath, fileText);
     });
 
-  console.log("Running npm install...");
+  log("Running npm install...");
   createPackageJson();
   // npm install in order to prepare for checking TS diagnostics
   await npmInstall();
 
-  console.log("Building TypeScript project...");
+  log("Building TypeScript project...");
   const esmOutDir = path.join(options.outDir, "esm");
   const cjsOutDir = path.join(options.outDir, "cjs");
   const typesOutDir = path.join(options.outDir, "types");
@@ -113,7 +116,7 @@ export async function build(options: BuildOptions): Promise<void> {
   let program = project.createProgram();
 
   if (options.typeCheck) {
-    console.log("Type checking...");
+    log("Type checking...");
     const diagnostics = ts.getPreEmitDiagnostics(program);
     if (diagnostics.length > 0) {
       outputDiagnostics(diagnostics);
@@ -122,11 +125,11 @@ export async function build(options: BuildOptions): Promise<void> {
   }
 
   // emit only the .d.ts files
-  console.log("Emitting declaration files...");
+  log("Emitting declaration files...");
   emit({ onlyDtsFiles: true });
 
   // emit the esm files
-  console.log("Emitting esm module...");
+  log("Emitting esm module...");
   project.compilerOptions.set({
     declaration: false,
     outDir: esmOutDir,
@@ -139,7 +142,7 @@ export async function build(options: BuildOptions): Promise<void> {
   );
 
   // emit the cjs files
-  console.log("Emitting cjs module...");
+  log("Emitting cjs module...");
   project.compilerOptions.set({
     declaration: false,
     esModuleInterop: true,
@@ -248,5 +251,13 @@ export async function build(options: BuildOptions): Promise<void> {
         return args;
       }
     }
+  }
+
+  function log(message: string) {
+    console.log(`[dnt] ${message}`);
+  }
+
+  function warn(message: string) {
+    console.warn(colors.yellow(`[dnt] ${message}`));
   }
 }

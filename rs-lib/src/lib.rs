@@ -1,21 +1,15 @@
 // Copyright 2018-2021 the Deno authors. All rights reserved. MIT license.
 
-use std::collections::BTreeMap;
 use std::collections::HashMap;
-use std::collections::HashSet;
 use std::path::PathBuf;
 
 use anyhow::Result;
-use deno_graph::Module;
-use deno_graph::create_graph;
-use deno_graph::ModuleGraph;
 #[macro_use]
 extern crate lazy_static;
 
-use loader::get_all_specifier_mappers;
-use loader::SourceLoader;
+use graph::ModuleGraphOptions;
 use mappings::Mappings;
-use mappings::Specifiers;
+use specifiers::Specifiers;
 use text_changes::apply_text_changes;
 use visitors::get_deno_comment_directive_text_changes;
 use visitors::get_deno_global_text_changes;
@@ -28,11 +22,14 @@ pub use loader::LoadResponse;
 pub use loader::Loader;
 pub use utils::url_to_file_path;
 
-use crate::loader::MappedSpecifierEntry;
+use crate::declaration_file_resolution::TypesDependency;
 
+mod declaration_file_resolution;
+mod graph;
 mod loader;
 mod mappings;
 mod parser;
+mod specifiers;
 mod text_changes;
 mod utils;
 mod visitors;
@@ -61,6 +58,7 @@ pub struct TransformOutput {
   pub shim_used: bool,
   pub dependencies: Vec<Dependency>,
   pub files: Vec<OutputFile>,
+  pub warnings: Vec<String>,
 }
 
 pub struct TransformOptions {
@@ -76,59 +74,14 @@ pub async fn transform(options: TransformOptions) -> Result<TransformOutput> {
     .specifier_mappings
     .as_ref()
     .map(|t| t.keys().map(ToOwned::to_owned).collect());
-  let mut loader = loader::SourceLoader::new(
-    options.loader.unwrap_or_else(|| {
-      #[cfg(feature = "tokio-loader")]
-      return Box::new(loader::DefaultLoader::new());
-      #[cfg(not(feature = "tokio-loader"))]
-      panic!("You must provide a loader or use the 'tokio-loader' feature.")
-    }),
-    // todo: support configuring this in the future
-    get_all_specifier_mappers(),
-    ignored_specifiers.as_ref(),
-  );
-  let source_parser = parser::ScopeAnalysisParser::new();
-  let module_graph = create_graph(
-    vec![options.entry_point.clone()],
-    false,
-    None,
-    &mut loader,
-    None,
-    None,
-    Some(&source_parser),
-  )
-  .await;
 
-  let specifiers = get_specifiers_from_loader(loader, &module_graph)?;
-
-  let errors = module_graph.errors()
-    .into_iter()
-    .filter(|e| !specifiers.found_ignored.contains(e.specifier()) && !specifiers.mapped.contains_key(e.specifier()))
-    .collect::<Vec<_>>();
-  if !errors.is_empty() {
-    let mut error_message = String::new();
-    for error in errors {
-      if !error_message.is_empty() {
-        error_message.push_str("\n\n");
-      }
-      error_message.push_str(&format!("{} ({})", error.to_string(), error.specifier()));
-    }
-    anyhow::bail!("{}", error_message);
-  }
-
-  if let Some(ignored_specifiers) = ignored_specifiers {
-    let mut not_found_specifiers = ignored_specifiers
-      .into_iter()
-      .filter(|s| !specifiers.found_ignored.contains(s))
-      .collect::<Vec<_>>();
-    if !not_found_specifiers.is_empty() {
-      not_found_specifiers.sort();
-      anyhow::bail!(
-        "The following specifiers were indicated to be mapped, but were not found:\n{}",
-        not_found_specifiers.into_iter().map(|s| format!("  * {}", s)).collect::<Vec<_>>().join("\n"),
-      );
-    }
-  }
+  let (module_graph, specifiers) =
+    crate::graph::ModuleGraph::build_with_specifiers(ModuleGraphOptions {
+      entry_point: options.entry_point.clone(),
+      ignored_specifiers: ignored_specifiers.as_ref(),
+      loader: options.loader,
+    })
+    .await?;
 
   let mappings = Mappings::new(&module_graph, &specifiers)?;
   let mut specifier_mappings = options.specifier_mappings;
@@ -150,10 +103,9 @@ pub async fn transform(options: TransformOptions) -> Result<TransformOutput> {
     .local
     .iter()
     .chain(specifiers.remote.iter())
-    .chain(specifiers.types.iter().map(|(_, from)| from))
+    .chain(specifiers.types.iter().map(|(_, d)| &d.selected.specifier))
   {
-    let module = module_graph.get(specifier)
-      .ok_or_else(|| anyhow::anyhow!("Programming error: Could not find module for {}", specifier))?;
+    let module = module_graph.get(specifier);
     let parsed_source = module.parsed_source.clone();
 
     let text_changes = parsed_source.with_view(|program| {
@@ -195,97 +147,11 @@ pub async fn transform(options: TransformOptions) -> Result<TransformOutput> {
       .get_file_path(&options.entry_point)
       .to_string_lossy()
       .to_string(),
+    warnings: get_declaration_warnings(&specifiers),
     dependencies: get_dependencies(specifiers),
     shim_used,
     files,
   })
-}
-
-fn get_specifiers_from_loader(
-  loader: SourceLoader,
-  module_graph: &ModuleGraph,
-) -> Result<Specifiers> {
-  let specifiers = loader.into_specifiers();
-  let mut types = BTreeMap::new();
-  let mut local_specifiers = Vec::new();
-  let mut remote_specifiers = Vec::new();
-
-  for module in module_graph.modules() {
-    match module.specifier.scheme().to_lowercase().as_str() {
-      "file" => local_specifiers.push(module.specifier.clone()),
-      "http" | "https" => remote_specifiers.push(module.specifier.clone()),
-      _ => {
-        anyhow::bail!("Unhandled scheme on url: {}", module.specifier);
-      }
-    }
-    handle_module(module, &mut types)?;
-  }
-
-  let type_specifiers = types.values().collect::<HashSet<_>>();
-
-  return Ok(Specifiers {
-    local: local_specifiers
-      .into_iter()
-      .filter(|l| !type_specifiers.contains(&l))
-      .collect(),
-    remote: remote_specifiers
-      .into_iter()
-      .filter(|l| !type_specifiers.contains(&l))
-      .collect(),
-    types,
-    found_ignored: specifiers.found_ignored,
-    mapped: get_mapped(specifiers.mapped)?,
-  });
-
-  fn handle_module(
-    module: &Module,
-    types: &mut BTreeMap<ModuleSpecifier, ModuleSpecifier>,
-  ) -> Result<()> {
-    match &module.maybe_types_dependency {
-      Some((text, Some(Err(err)))) => anyhow::bail!(
-        "Error resolving types for {} with reference {}. {}",
-        module.specifier,
-        text,
-        err.to_string()
-      ),
-      Some((_, Some(Ok((type_specifier, _))))) => {
-        types.insert(module.specifier.clone(), type_specifier.clone());
-      }
-      _ => {}
-    }
-
-    Ok(())
-  }
-
-  fn get_mapped(
-    mapped_specifiers: Vec<MappedSpecifierEntry>,
-  ) -> Result<BTreeMap<ModuleSpecifier, MappedSpecifierEntry>> {
-    let mut specifier_for_name: HashMap<String, MappedSpecifierEntry> =
-      HashMap::new();
-    let mut result = BTreeMap::new();
-    for mapped_specifier in mapped_specifiers {
-      if let Some(specifier) =
-        specifier_for_name.get(&mapped_specifier.to_specifier)
-      {
-        if specifier.version != mapped_specifier.version {
-          anyhow::bail!("Specifier {} with version {} did not match specifier {} with version {}.",
-            specifier.from_specifier,
-            specifier.version.as_ref().map(|v| v.as_str()).unwrap_or("<unknown>"),
-            mapped_specifier.from_specifier,
-            mapped_specifier.version.as_ref().map(|v| v.as_str()).unwrap_or("<unknown>"),
-          );
-        }
-      } else {
-        specifier_for_name.insert(
-          mapped_specifier.to_specifier.to_string(),
-          mapped_specifier.clone(),
-        );
-        result.insert(mapped_specifier.from_specifier.clone(), mapped_specifier);
-      }
-    }
-
-    Ok(result)
-  }
 }
 
 fn get_dependencies(specifiers: Specifiers) -> Vec<Dependency> {
@@ -303,4 +169,41 @@ fn get_dependencies(specifiers: Specifiers) -> Vec<Dependency> {
       }
     })
     .collect()
+}
+
+fn get_declaration_warnings(specifiers: &Specifiers) -> Vec<String> {
+  let mut messages = Vec::new();
+  for (code_specifier, d) in specifiers.types.iter() {
+    if d.selected.referrer.scheme() == "file" {
+      let local_referrers =
+        d.ignored.iter().filter(|d| d.referrer.scheme() == "file");
+      for dep in local_referrers {
+        messages.push(get_dep_warning(
+          code_specifier,
+          dep,
+          &d.selected,
+          "Supress this warning by having only one local file specify the declaration file for this module.",
+        ));
+      }
+    } else {
+      for dep in d.ignored.iter() {
+        messages.push(get_dep_warning(
+          code_specifier,
+          dep,
+          &d.selected,
+          "Supress this warning by specifying a declaration file for this module locally via `@deno-types`.",
+        ));
+      }
+    }
+  }
+  return messages;
+
+  fn get_dep_warning(
+    code_specifier: &ModuleSpecifier,
+    dep: &TypesDependency,
+    selected_dep: &TypesDependency,
+    post_message: &str,
+  ) -> String {
+    format!("Duplicate declaration file found for {}\n  Specified {} in {}\n  Selected {}\n  {}", code_specifier, dep.specifier, dep.referrer, selected_dep.specifier, post_message)
+  }
 }

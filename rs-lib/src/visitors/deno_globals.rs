@@ -71,7 +71,10 @@ fn visit_children(node: &Node, import_name: &str, context: &mut Context) {
     let id = ident.inner.to_id();
     let is_top_level_context = id.1 == context.top_level_context;
     let ident_text = ident.text_fast(context.program);
-    if is_top_level_context && ident_text == "globalThis" && !should_ignore(ident.span(), context) {
+    if is_top_level_context
+      && ident_text == "globalThis"
+      && !should_ignore(ident.span(), context)
+    {
       context.text_changes.push(TextChange {
         span: ident.span(),
         new_text: format!("({{ Deno: {}.Deno, ...globalThis }})", import_name),
@@ -95,13 +98,20 @@ fn visit_children(node: &Node, import_name: &str, context: &mut Context) {
 }
 
 fn should_ignore(span: Span, context: &Context) -> bool {
-  context.ignore_line_indexes.contains(&span.start_line_fast(context.program))
+  context
+    .ignore_line_indexes
+    .contains(&span.start_line_fast(context.program))
 }
 
 fn get_ignore_line_indexes(program: &Program) -> HashSet<usize> {
   let mut result = HashSet::new();
   for comment in program.comment_container().unwrap().all_comments() {
-    if comment.text.trim().to_lowercase().starts_with("deno-shim-ignore") {
+    if comment
+      .text
+      .trim()
+      .to_lowercase()
+      .starts_with("deno-shim-ignore")
+    {
       if let Some(next_token) = comment.next_token_fast(program) {
         result.insert(next_token.span.lo.start_line_fast(program));
       }

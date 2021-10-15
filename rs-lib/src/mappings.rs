@@ -1,6 +1,5 @@
 // Copyright 2018-2021 the Deno authors. All rights reserved. MIT license.
 
-use std::collections::BTreeMap;
 use std::collections::HashMap;
 use std::collections::HashSet;
 use std::path::PathBuf;
@@ -8,22 +7,14 @@ use std::path::PathBuf;
 use anyhow::Result;
 use deno_ast::MediaType;
 use deno_ast::ModuleSpecifier;
-use deno_graph::ModuleGraph;
 use regex::Regex;
 
-use crate::loader::MappedSpecifierEntry;
+use crate::graph::ModuleGraph;
+use crate::specifiers::Specifiers;
 use crate::utils::url_to_file_path;
 
 lazy_static! {
   static ref HAS_EXTENSION_RE: Regex = Regex::new(r"\.[A-Za-z0-9]*$").unwrap();
-}
-
-pub struct Specifiers {
-  pub local: Vec<ModuleSpecifier>,
-  pub remote: Vec<ModuleSpecifier>,
-  pub types: BTreeMap<ModuleSpecifier, ModuleSpecifier>,
-  pub found_ignored: HashSet<ModuleSpecifier>,
-  pub mapped: BTreeMap<ModuleSpecifier, MappedSpecifierEntry>,
 }
 
 pub struct Mappings {
@@ -48,15 +39,7 @@ impl Mappings {
       Vec<(ModuleSpecifier, MediaType)>,
     )> = Vec::new();
     for remote_specifier in specifiers.remote.iter() {
-      let media_type = module_graph
-        .get(&remote_specifier)
-        .ok_or_else(|| {
-          anyhow::anyhow!(
-            "Programming error. Could not find module for: {}",
-            remote_specifier.to_string()
-          )
-        })?
-        .media_type;
+      let media_type = module_graph.get(&remote_specifier).media_type;
       let mut found = false;
       for (root_specifier, specifiers) in root_remote_specifiers.iter_mut() {
         if let Some(relative_url) =
@@ -113,16 +96,16 @@ impl Mappings {
       }
     }
 
-    for (from, to) in specifiers.types.iter() {
-      let file_path = mappings.get(&from).unwrap_or_else(|| {
-        panic!("Already had from {} in map when mapping to {}.", from, to)
-      });
+    for (code_specifier, d) in specifiers.types.iter() {
+      let to = &d.selected.specifier;
+      let file_path = mappings.get(&code_specifier).unwrap();
       let new_file_path = file_path.with_extension("d.ts");
       if let Some(past_path) = mappings.insert(to.clone(), new_file_path) {
+        // this would indicate a programming error
         panic!(
-          "Already had path {} in map when mapping from {} to {}",
+          "Already had path {} in map when adding declaration file for {}. Adding: {}",
           past_path.display(),
-          from,
+          code_specifier,
           to
         );
       }
@@ -160,7 +143,11 @@ fn sanitize_filepath(text: String) -> String {
   let mut chars = Vec::with_capacity(text.len()); // not chars, but good enough
   for c in text.chars() {
     // use an allow list of characters that won't have any issues
-    if c.is_alphabetic() || c.is_numeric() || c.is_whitespace() || matches!(c, '_' | '-' | '.' | '/' | '\\') {
+    if c.is_alphabetic()
+      || c.is_numeric()
+      || c.is_whitespace()
+      || matches!(c, '_' | '-' | '.' | '/' | '\\')
+    {
       chars.push(c);
     } else {
       chars.push('_');

@@ -5,3 +5,4 @@ export {
   createProjectSync,
   ts,
 } from "https://deno.land/x/ts_morph@12.0.0/bootstrap/mod.ts";
+export * as colors from "https://deno.land/std@0.111.0/fmt/colors.ts";

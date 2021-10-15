@@ -26,6 +26,7 @@ export interface TransformOutput {
   shimUsed: boolean;
   dependencies: Dependency[];
   files: OutputFile[];
+  warnings: string[];
 }
 
 export interface OutputFile {
