@@ -1,8 +1,7 @@
-import { DenoDir, FileFetcher } from "https://deno.land/x/deno_cache@0.1.0/mod.ts";
+import { createCache } from "https://deno.land/x/deno_cache@0.2.0/mod.ts";
 
-const denoDir = new DenoDir();
-const fileFetcher = new FileFetcher(denoDir.deps);
+const fileFetcher = createCache();
 
 export function fetch_specifier(specifier) {
-  return fileFetcher.fetch(new URL(specifier));
+  return fileFetcher.load(new URL(specifier));
 }
