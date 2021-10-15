@@ -11,6 +11,7 @@ use super::InMemoryLoader;
 pub struct TestBuilder {
   loader: InMemoryLoader,
   entry_point: String,
+  additional_entry_points: Vec<String>,
   shim_package_name: Option<String>,
   specifier_mappings: Option<HashMap<ModuleSpecifier, String>>,
 }
@@ -21,6 +22,7 @@ impl TestBuilder {
     Self {
       loader,
       entry_point: "file:///mod.ts".to_string(),
+      additional_entry_points: Vec::new(),
       shim_package_name: None,
       specifier_mappings: None,
     }
@@ -36,6 +38,13 @@ impl TestBuilder {
 
   pub fn entry_point(&mut self, value: impl AsRef<str>) -> &mut Self {
     self.entry_point = value.as_ref().to_string();
+    self
+  }
+
+  pub fn add_entry_point(&mut self, value: impl AsRef<str>) -> &mut Self {
+    self
+      .additional_entry_points
+      .push(value.as_ref().to_string());
     self
   }
 
@@ -63,8 +72,16 @@ impl TestBuilder {
   }
 
   pub async fn transform(&self) -> Result<TransformOutput> {
+    let mut entry_points =
+      vec![ModuleSpecifier::parse(&self.entry_point).unwrap()];
+    entry_points.extend(
+      self
+        .additional_entry_points
+        .iter()
+        .map(|p| ModuleSpecifier::parse(p).unwrap()),
+    );
     transform(TransformOptions {
-      entry_point: ModuleSpecifier::parse(&self.entry_point).unwrap(),
+      entry_points,
       shim_package_name: self
         .shim_package_name
         .as_ref()

@@ -7,7 +7,7 @@ import { source } from "./lib/pkg/dnt_wasm_bg.ts";
 await init(source);
 
 export interface TransformOptions {
-  entryPoint: string | URL;
+  entryPoints: (string | URL)[];
   shimPackageName: string;
   /** The specifier to bare specifier mappings. */
   specifierMappings?: {
@@ -21,6 +21,7 @@ export interface Dependency {
 }
 
 export interface TransformOutput {
+  /** The main entrypoint file path. */
   entryPointFilePath: string;
   /** If the shim is used in any of the output files. */
   shimUsed: boolean;
@@ -38,14 +39,18 @@ export interface OutputFile {
  * outputs canonical TypeScript code in memory. The output of this function
  * can then be sent to the TypeScript compiler or a bundler for further processing. */
 export function transform(options: TransformOptions): Promise<TransformOutput> {
+  if (options.entryPoints.length === 0) {
+    throw new Error("Specify one or more entry points.");
+  }
   const newOptions = {
     ...options,
+    entryPoints: options.entryPoints.map((entryPoint) => {
+      if (entryPoint instanceof URL) {
+        return entryPoint.toString();
+      } else {
+        return path.toFileUrl(path.resolve(entryPoint)).toString();
+      }
+    }),
   };
-  if (newOptions.entryPoint instanceof URL) {
-    newOptions.entryPoint = newOptions.entryPoint.toString();
-  } else {
-    newOptions.entryPoint = path.toFileUrl(path.resolve(newOptions.entryPoint))
-      .toString();
-  }
   return wasmFuncs.transform(newOptions);
 }

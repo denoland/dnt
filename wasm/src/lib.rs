@@ -45,7 +45,7 @@ impl dnt::Loader for JsLoader {
 #[derive(Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct TransformOptions {
-  pub entry_point: String,
+  pub entry_points: Vec<String>,
   pub shim_package_name: String,
   pub specifier_mappings: Option<HashMap<ModuleSpecifier, String>>,
 }
@@ -55,9 +55,15 @@ pub async fn transform(options: JsValue) -> Result<JsValue, JsValue> {
   set_panic_hook();
 
   let options: TransformOptions = options.into_serde().unwrap();
+  let mut entry_points = Vec::new();
+  for entry_point in options.entry_points {
+    let entry_point = dnt::ModuleSpecifier::parse(&entry_point)
+      .map_err(|err| format!("Error parsing {}. {}", entry_point, err))?;
+    entry_points.push(entry_point);
+  }
 
   let result = dnt::transform(dnt::TransformOptions {
-    entry_point: dnt::ModuleSpecifier::parse(&options.entry_point).unwrap(),
+    entry_points,
     shim_package_name: options.shim_package_name,
     loader: Some(Box::new(JsLoader {})),
     specifier_mappings: options.specifier_mappings,

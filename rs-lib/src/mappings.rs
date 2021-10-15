@@ -2,8 +2,8 @@
 
 use std::collections::HashMap;
 use std::collections::HashSet;
-use std::path::PathBuf;
 use std::path::Component;
+use std::path::PathBuf;
 
 use anyhow::Result;
 use deno_ast::MediaType;
@@ -34,7 +34,9 @@ impl Mappings {
       let file_path = url_to_file_path(specifier)?;
       let relative_file_path = file_path.strip_prefix(&base_dir)?;
       mappings.insert(specifier.clone(), relative_file_path.to_path_buf());
-      if let Some(Component::Normal(first_dir)) = relative_file_path.components().next() {
+      if let Some(Component::Normal(first_dir)) =
+        relative_file_path.components().next()
+      {
         root_local_dirs.insert(PathBuf::from(first_dir));
       }
     }
@@ -78,7 +80,8 @@ impl Mappings {
 
     let mut mapped_base_dirs = HashSet::new();
     let mut mapped_filepaths_no_ext = HashSet::new();
-    let deps_path = get_unique_path(PathBuf::from("deps"), &mut root_local_dirs);
+    let deps_path =
+      get_unique_path(PathBuf::from("deps"), &mut root_local_dirs);
     for (root, specifiers) in root_remote_specifiers.into_iter() {
       let base_dir = deps_path.join(get_unique_path(
         get_dir_name_for_root(&root),
@@ -226,7 +229,10 @@ mod test {
     run_test("http://localhost/test%20test", "localhost_test_20test");
 
     fn run_test(specifier: &str, expected: &str) {
-      assert_eq!(get_dir_name_for_root(&ModuleSpecifier::parse(specifier).unwrap()), PathBuf::from(expected));
+      assert_eq!(
+        get_dir_name_for_root(&ModuleSpecifier::parse(specifier).unwrap()),
+        PathBuf::from(expected)
+      );
     }
   }
 }

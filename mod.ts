@@ -10,7 +10,7 @@ export * from "./transform.ts";
 export interface BuildOptions {
   outDir: string;
   typeCheck?: boolean;
-  entryPoint: string | URL;
+  entryPoints: (string | URL)[];
   shimPackage?: {
     name: string;
     version: string;
@@ -37,7 +37,7 @@ export async function build(options: BuildOptions): Promise<void> {
 
   const shimPackage = options.shimPackage ?? {
     name: "deno.ns",
-    version: "0.4.3",
+    version: "0.4.4",
   };
   const specifierMappings = options.mappings && Object.fromEntries(
     Object.entries(options.mappings).map(([key, value]) => {
@@ -54,7 +54,7 @@ export async function build(options: BuildOptions): Promise<void> {
 
   log("Transforming...");
   const transformOutput = await transform({
-    entryPoint: options.entryPoint,
+    entryPoints: options.entryPoints,
     shimPackageName: shimPackage.name,
     specifierMappings: specifierMappings && Object.fromEntries(
       Object.entries(specifierMappings).map(([key, value]) => {

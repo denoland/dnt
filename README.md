@@ -14,7 +14,7 @@ probably drastically change.
 import { build } from "https://deno.land/x/dnt/mod.ts";
 
 await build({
-  entryPoint: "./mod.ts",
+  entryPoints: ["./mod.ts"],
   outDir: "./npm",
   typeCheck: true,
   package: {

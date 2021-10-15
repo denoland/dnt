@@ -281,14 +281,8 @@ async fn transform_handle_local_deps_folder() {
           "/mod.ts",
           "import 'http://localhost/mod.ts';\nimport './deps/localhost/mod.ts'",
         )
-        .add_local_file(
-          "/deps/localhost/mod.ts",
-          "local;",
-        )
-        .add_remote_file(
-          "http://localhost/mod.ts",
-          "remote;",
-        );
+        .add_local_file("/deps/localhost/mod.ts", "local;")
+        .add_remote_file("http://localhost/mod.ts", "remote;");
     })
     .transform()
     .await
@@ -301,14 +295,8 @@ async fn transform_handle_local_deps_folder() {
         "mod.ts",
         "import './deps_2/localhost/mod.js';\nimport './deps/localhost/mod.js'"
       ),
-      (
-        "deps/localhost/mod.ts",
-        "local;"
-      ),
-      (
-        "deps_2/localhost/mod.ts",
-        "remote;"
-      ),
+      ("deps/localhost/mod.ts", "local;"),
+      ("deps_2/localhost/mod.ts", "remote;"),
     ]
   );
 }
@@ -825,5 +813,29 @@ async fn skypack_module_mapping_different_versions() {
   assert_eq!(
     error_message.to_string(),
     "Specifier https://cdn.skypack.dev/preact@^10.5.0 with version ^10.5.0 did not match specifier https://cdn.skypack.dev/preact@^10.5.2 with version ^10.5.2."
+  );
+}
+
+#[tokio::test]
+async fn transform_multiple_entry_points() {
+  let result = TestBuilder::new()
+    .with_loader(|loader| {
+      loader
+        .add_local_file("/mod.ts", "import './ref.ts';mod1;")
+        .add_local_file("/mod2.ts", "import './ref.ts';mod2;")
+        .add_local_file("/ref.ts", "export const test = 5;");
+    })
+    .add_entry_point("file:////mod2.ts")
+    .transform()
+    .await
+    .unwrap();
+
+  assert_files!(
+    result.files,
+    &[
+      ("mod.ts", "import './ref.js';mod1;"),
+      ("mod2.ts", "import './ref.js';mod2;"),
+      ("ref.ts", "export const test = 5;"),
+    ]
   );
 }

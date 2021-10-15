@@ -62,13 +62,17 @@ pub struct TransformOutput {
 }
 
 pub struct TransformOptions {
-  pub entry_point: ModuleSpecifier,
+  pub entry_points: Vec<ModuleSpecifier>,
   pub shim_package_name: String,
   pub loader: Option<Box<dyn Loader>>,
   pub specifier_mappings: Option<HashMap<ModuleSpecifier, String>>,
 }
 
 pub async fn transform(options: TransformOptions) -> Result<TransformOutput> {
+  if options.entry_points.is_empty() {
+    anyhow::bail!("at least one entry point must be specified");
+  }
+
   let shim_package_name = options.shim_package_name;
   let ignored_specifiers = options
     .specifier_mappings
@@ -77,7 +81,7 @@ pub async fn transform(options: TransformOptions) -> Result<TransformOutput> {
 
   let (module_graph, specifiers) =
     crate::graph::ModuleGraph::build_with_specifiers(ModuleGraphOptions {
-      entry_point: options.entry_point.clone(),
+      entry_points: options.entry_points.clone(),
       ignored_specifiers: ignored_specifiers.as_ref(),
       loader: options.loader,
     })
@@ -144,7 +148,7 @@ pub async fn transform(options: TransformOptions) -> Result<TransformOutput> {
 
   Ok(TransformOutput {
     entry_point_file_path: mappings
-      .get_file_path(&options.entry_point)
+      .get_file_path(&options.entry_points[0])
       .to_string_lossy()
       .to_string(),
     warnings: get_declaration_warnings(&specifiers),

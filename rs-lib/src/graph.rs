@@ -10,7 +10,7 @@ use anyhow::Result;
 use deno_ast::ModuleSpecifier;
 
 pub struct ModuleGraphOptions<'a> {
-  pub entry_point: ModuleSpecifier,
+  pub entry_points: Vec<ModuleSpecifier>,
   pub loader: Option<Box<dyn Loader>>,
   pub ignored_specifiers: Option<&'a HashSet<ModuleSpecifier>>,
 }
@@ -38,7 +38,7 @@ impl ModuleGraph {
     let source_parser = ScopeAnalysisParser::new();
     let graph = Self {
       graph: deno_graph::create_graph(
-        vec![options.entry_point],
+        options.entry_points,
         false,
         None,
         &mut loader,
