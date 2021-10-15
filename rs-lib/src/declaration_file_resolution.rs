@@ -88,7 +88,8 @@ fn select_best_types_dep(
       } else {
         // as a last resort, use the declaration file that's the largest
         let dep_file_len = module_graph.get(&dep.specifier).source.len();
-        let selected_dep_file_len = module_graph.get(&selected_dep.specifier).source.len();
+        let selected_dep_file_len =
+          module_graph.get(&selected_dep.specifier).source.len();
         dep_file_len > selected_dep_file_len
       }
     } else {

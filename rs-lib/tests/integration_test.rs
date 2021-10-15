@@ -226,33 +226,89 @@ async fn transform_remote_files() {
   assert_files!(
     result.files,
     &[
-      ("mod.ts", "import * as other from './deps/0/mod.js';"),
-      ("deps/0/mod.ts", "import * as myOther from './other.js';"),
-      ("deps/0/other.ts", "import * as folder from './folder.js';"),
+      (
+        "mod.ts",
+        "import * as other from './deps/localhost/mod.js';"
+      ),
+      (
+        "deps/localhost/mod.ts",
+        "import * as myOther from './other.js';"
+      ),
+      (
+        "deps/localhost/other.ts",
+        "import * as folder from './folder.js';"
+      ),
       // seems out of order, but that's ok... as long as they're unique
       (
-        "deps/0/folder.js",
+        "deps/localhost/folder.js",
         "import * as folder2 from './folder_3.js';"
       ),
       (
-        "deps/0/folder_3.ts",
+        "deps/localhost/folder_3.ts",
         "import * as folder3 from './folder_2.js';"
       ),
       (
-        "deps/0/folder_2.js",
+        "deps/localhost/folder_2.js",
         "import * as otherFolder from './otherFolder.js';"
       ),
       (
-        "deps/0/otherFolder.js",
+        "deps/localhost/otherFolder.js",
         "import * as subFolder from './sub/subfolder.js';"
       ),
       (
-        "deps/0/sub/subfolder.js",
-        "import * as localhost2 from '../../1.js';"
+        "deps/localhost/sub/subfolder.js",
+        "import * as localhost2 from '../../localhost2.js';"
       ),
-      ("deps/1.js", "import * as localhost3Mod from './2/mod.js';"),
-      ("deps/2/mod.ts", "import * as localhost3 from '../2.js';"),
-      ("deps/2.ts", "5;"),
+      (
+        "deps/localhost2.js",
+        "import * as localhost3Mod from './localhost3/mod.js';"
+      ),
+      (
+        "deps/localhost3/mod.ts",
+        "import * as localhost3 from '../localhost3.js';"
+      ),
+      ("deps/localhost3.ts", "5;"),
+    ]
+  );
+}
+
+#[tokio::test]
+async fn transform_handle_local_deps_folder() {
+  let result = TestBuilder::new()
+    .with_loader(|loader| {
+      loader
+        .add_local_file(
+          "/mod.ts",
+          "import 'http://localhost/mod.ts';\nimport './deps/localhost/mod.ts'",
+        )
+        .add_local_file(
+          "/deps/localhost/mod.ts",
+          "local;",
+        )
+        .add_remote_file(
+          "http://localhost/mod.ts",
+          "remote;",
+        );
+    })
+    .transform()
+    .await
+    .unwrap();
+
+  assert_files!(
+    result.files,
+    &[
+      (
+        "mod.ts",
+        "import './deps_2/localhost/mod.js';\nimport './deps/localhost/mod.js'"
+      ),
+      (
+        "deps/localhost/mod.ts",
+        "local;"
+      ),
+      (
+        "deps_2/localhost/mod.ts",
+        "remote;"
+      ),
     ]
   );
 }
@@ -387,9 +443,12 @@ async fn transform_typescript_types_in_headers() {
   assert_files!(
     result.files,
     &[
-      ("mod.ts", "export * from './deps/0/mod.js';"),
-      ("deps/0/mod.js", "function test() { return 5; }"),
-      ("deps/0/mod.d.ts", "declare function test(): number;"),
+      ("mod.ts", "export * from './deps/localhost/mod.js';"),
+      ("deps/localhost/mod.js", "function test() { return 5; }"),
+      (
+        "deps/localhost/mod.d.ts",
+        "declare function test(): number;"
+      ),
     ]
   );
 }
@@ -407,9 +466,12 @@ async fn transform_typescript_types_in_deno_types() {
   assert_files!(
     result.files,
     &[
-      ("mod.ts", "export * from './deps/0/mod.js';"),
-      ("deps/0/mod.js", "function test() { return 5; }"),
-      ("deps/0/mod.d.ts", "declare function test(): number;"),
+      ("mod.ts", "export * from './deps/localhost/mod.js';"),
+      ("deps/localhost/mod.js", "function test() { return 5; }"),
+      (
+        "deps/localhost/mod.d.ts",
+        "declare function test(): number;"
+      ),
     ]
   );
 }
@@ -427,9 +489,12 @@ async fn transform_typescript_type_references() {
   assert_files!(
     result.files,
     &[
-      ("mod.ts", "export * from './deps/0/mod.js';"),
-      ("deps/0/mod.js", "function test() { return 5; }"),
-      ("deps/0/mod.d.ts", "declare function test(): number;"),
+      ("mod.ts", "export * from './deps/localhost/mod.js';"),
+      ("deps/localhost/mod.js", "function test() { return 5; }"),
+      (
+        "deps/localhost/mod.d.ts",
+        "declare function test(): number;"
+      ),
     ]
   );
 }
@@ -514,7 +579,7 @@ async fn transform_deno_types_and_type_ref_for_different_local_file() {
 async fn transform_deno_types_and_type_ref_for_different_remote_file() {
   fn setup() -> TestBuilder {
     let mut test_builder = TestBuilder::new();
-      test_builder .with_loader(|loader| {
+    test_builder .with_loader(|loader| {
         loader.add_local_file(
           "/mod.ts",
           "import 'http://localhost/mod.ts';"
@@ -554,17 +619,20 @@ async fn transform_deno_types_and_type_ref_for_different_remote_file() {
   assert_files!(
     result.files,
     &[
+      ("mod.ts", "import './deps/localhost/mod.js';",),
       (
-        "mod.ts",
-        "import './deps/0/mod.js';",
-      ),
-      (
-        "deps/0/mod.ts",
+        "deps/localhost/mod.ts",
         "export * from './file.js';\nexport * from './other.js';"
       ),
-      ("deps/0/other.ts", "export * as other from './file.js';"),
-      ("deps/0/file.js", "function test() { return 5; }"),
-      ("deps/0/file.d.ts", "declare function test3(): number;"),
+      (
+        "deps/localhost/other.ts",
+        "export * as other from './file.js';"
+      ),
+      ("deps/localhost/file.js", "function test() { return 5; }"),
+      (
+        "deps/localhost/file.d.ts",
+        "declare function test3(): number;"
+      ),
     ]
   );
 
@@ -581,7 +649,15 @@ async fn transform_deno_types_and_type_ref_for_different_remote_file() {
 
   assert!(result.warnings.is_empty());
   assert_eq!(result.files.len(), 5);
-  assert_eq!(result.files.iter().find(|f| f.file_path.to_string_lossy() == "deps/0/file.d.ts").unwrap().file_text, "declare function test2(): number;");
+  assert_eq!(
+    result
+      .files
+      .iter()
+      .find(|f| f.file_path == PathBuf::from("deps/localhost/file.d.ts"))
+      .unwrap()
+      .file_text,
+    "declare function test2(): number;"
+  );
 }
 
 #[tokio::test]
@@ -702,12 +778,12 @@ async fn skypack_esm_module_mapping() {
           "import package1 from 'preact';\n",
           "import package2 from '@scope/package-name';\n",
           "import package3 from 'react';\n",
-          "import package4 from './deps/0/swr.js';\n",
-          "import package5 from './deps/0/test_1.js';\n"
+          "import package4 from './deps/esm_sh/swr.js';\n",
+          "import package5 from './deps/esm_sh/test_1.js';\n"
         )
       ),
-      ("deps/0/swr.ts", "",),
-      ("deps/0/test_1.ts", "",)
+      ("deps/esm_sh/swr.ts", "",),
+      ("deps/esm_sh/test_1.ts", "",)
     ]
   );
   assert_eq!(

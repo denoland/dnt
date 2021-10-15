@@ -3,6 +3,7 @@
 use std::collections::HashMap;
 use std::collections::HashSet;
 use std::path::PathBuf;
+use std::path::Component;
 
 use anyhow::Result;
 use deno_ast::MediaType;
@@ -28,10 +29,14 @@ impl Mappings {
   ) -> Result<Self> {
     let mut mappings = HashMap::new();
     let base_dir = get_base_dir(&specifiers.local)?;
+    let mut root_local_dirs = HashSet::new();
     for specifier in specifiers.local.iter() {
       let file_path = url_to_file_path(specifier)?;
       let relative_file_path = file_path.strip_prefix(&base_dir)?;
       mappings.insert(specifier.clone(), relative_file_path.to_path_buf());
+      if let Some(Component::Normal(first_dir)) = relative_file_path.components().next() {
+        root_local_dirs.insert(PathBuf::from(first_dir));
+      }
     }
 
     let mut root_remote_specifiers: Vec<(
@@ -47,7 +52,7 @@ impl Mappings {
         {
           // found a new root
           if relative_url.starts_with("../") {
-            // todo: improve, this was just laziness
+            // todo(dsherret): improve, this was just laziness
             let mut new_root_specifier = root_specifier.clone();
             let mut relative_url = relative_url.as_str();
             while relative_url.starts_with("../") {
@@ -71,25 +76,21 @@ impl Mappings {
       }
     }
 
+    let mut mapped_base_dirs = HashSet::new();
     let mut mapped_filepaths_no_ext = HashSet::new();
-    for (i, (root, specifiers)) in
-      root_remote_specifiers.into_iter().enumerate()
-    {
-      let base_dir = PathBuf::from(format!("deps/{}/", i.to_string()));
+    let deps_path = get_unique_path(PathBuf::from("deps"), &mut root_local_dirs);
+    for (root, specifiers) in root_remote_specifiers.into_iter() {
+      let base_dir = deps_path.join(get_unique_path(
+        get_dir_name_for_root(&root),
+        &mut mapped_base_dirs,
+      ));
       for (specifier, media_type) in specifiers {
-        let relative = sanitize_filepath(make_url_relative(&root, &specifier)?);
-        let mut filepath_no_ext = base_dir.join(relative).with_extension("");
-        let original_file_name = filepath_no_ext
-          .file_name()
-          .unwrap()
-          .to_string_lossy()
-          .to_string();
-        let mut count = 2;
-        while !mapped_filepaths_no_ext.insert(filepath_no_ext.clone()) {
-          filepath_no_ext
-            .set_file_name(format!("{}_{}", original_file_name, count));
-          count += 1;
-        }
+        let relative =
+          sanitize_filepath(&make_url_relative(&root, &specifier)?);
+        let filepath_no_ext = get_unique_path(
+          base_dir.join(relative).with_extension(""),
+          &mut mapped_filepaths_no_ext,
+        );
         let file_path =
           filepath_no_ext.with_extension(&media_type.as_ts_extension()[1..]);
         mappings.insert(specifier, file_path);
@@ -124,6 +125,19 @@ impl Mappings {
   }
 }
 
+fn get_unique_path(
+  mut path: PathBuf,
+  unique_set: &mut HashSet<PathBuf>,
+) -> PathBuf {
+  let original_path = path.to_string_lossy().to_string();
+  let mut count = 2;
+  while !unique_set.insert(path.clone()) {
+    path = PathBuf::from(format!("{}_{}", original_path, count));
+    count += 1;
+  }
+  path
+}
+
 fn make_url_relative(
   root: &ModuleSpecifier,
   url: &ModuleSpecifier,
@@ -139,7 +153,34 @@ fn make_url_relative(
   })
 }
 
-fn sanitize_filepath(text: String) -> String {
+fn get_dir_name_for_root(root: &ModuleSpecifier) -> PathBuf {
+  let mut result = String::new();
+  if let Some(domain) = root.domain() {
+    result.push_str(&sanitize_filepath(&domain));
+  }
+  if let Some(port) = root.port() {
+    if !result.is_empty() {
+      result.push_str("_");
+    }
+    result.push_str(&port.to_string());
+  }
+  if let Some(segments) = root.path_segments() {
+    for segment in segments.filter(|s| !s.is_empty()) {
+      if !result.is_empty() {
+        result.push_str("_");
+      }
+      result.push_str(&sanitize_filepath(segment));
+    }
+  }
+
+  PathBuf::from(if result.is_empty() {
+    "unknown".to_string()
+  } else {
+    result.replace(".", "_")
+  })
+}
+
+fn sanitize_filepath(text: &str) -> String {
   let mut chars = Vec::with_capacity(text.len()); // not chars, but good enough
   for c in text.chars() {
     // use an allow list of characters that won't have any issues
@@ -157,7 +198,7 @@ fn sanitize_filepath(text: String) -> String {
 }
 
 fn get_base_dir(specifiers: &[ModuleSpecifier]) -> Result<PathBuf> {
-  // todo: should maybe error on windows when the files
+  // todo(dsherret): should maybe error on windows when the files
   // span different drives...
   let mut base_dir = url_to_file_path(&specifiers[0])?
     .to_path_buf()
@@ -172,4 +213,20 @@ fn get_base_dir(specifiers: &[ModuleSpecifier]) -> Result<PathBuf> {
     }
   }
   Ok(base_dir)
+}
+
+#[cfg(test)]
+mod test {
+  use super::*;
+
+  #[test]
+  fn should_get_dir_name_root() {
+    run_test("http://deno.land/x/test", "deno_land_x_test");
+    run_test("http://localhost", "localhost");
+    run_test("http://localhost/test%20test", "localhost_test_20test");
+
+    fn run_test(specifier: &str, expected: &str) {
+      assert_eq!(get_dir_name_for_root(&ModuleSpecifier::parse(specifier).unwrap()), PathBuf::from(expected));
+    }
+  }
 }
