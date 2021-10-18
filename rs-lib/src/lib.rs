@@ -54,7 +54,7 @@ pub struct Dependency {
 #[cfg_attr(feature = "serialization", serde(rename_all = "camelCase"))]
 #[derive(Debug, PartialEq)]
 pub struct TransformOutput {
-  pub entry_point_file_path: String,
+  pub entry_points: Vec<String>,
   pub shim_used: bool,
   pub dependencies: Vec<Dependency>,
   pub files: Vec<OutputFile>,
@@ -147,10 +147,11 @@ pub async fn transform(options: TransformOptions) -> Result<TransformOutput> {
   }
 
   Ok(TransformOutput {
-    entry_point_file_path: mappings
-      .get_file_path(&options.entry_points[0])
-      .to_string_lossy()
-      .to_string(),
+    entry_points: options
+      .entry_points
+      .iter()
+      .map(|p| mappings.get_file_path(p).to_string_lossy().to_string())
+      .collect(),
     warnings: get_declaration_warnings(&specifiers),
     dependencies: get_dependencies(specifiers),
     shim_used,

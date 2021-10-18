@@ -20,7 +20,7 @@ await build({
   package: {
     // package.json properties
     name: "my-package",
-    version: Deno.args[0] ?? "0.0.0",
+    version: Deno.args[0],
     description: "My package.",
     license: "MIT",
     repository: {

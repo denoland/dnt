@@ -4,6 +4,7 @@
 - Handle dynamic imports (at least ones that are statically analyzable and maybe warn on others)
 - Support lockfile
 - Special handling of a remote module that is only an `import type ... from "...";` or `export type` (only get declarations).
+- specifier mappings for dev dependencies
 
 Notes from Kitson:
 

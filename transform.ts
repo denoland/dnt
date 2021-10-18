@@ -21,8 +21,7 @@ export interface Dependency {
 }
 
 export interface TransformOutput {
-  /** The main entrypoint file path. */
-  entryPointFilePath: string;
+  entryPoints: string[];
   /** If the shim is used in any of the output files. */
   shimUsed: boolean;
   dependencies: Dependency[];

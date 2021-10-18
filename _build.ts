@@ -1,5 +1,5 @@
 import * as path from "https://deno.land/std@0.109.0/path/mod.ts";
-import { encode } from "https://deno.land/std@0.109.0/encoding/base64.ts"
+import { encode } from "https://deno.land/std@0.109.0/encoding/base64.ts";
 
 const rootDir = path.dirname(path.fromFileUrl(import.meta.url));
 await buildWasm();
@@ -25,7 +25,9 @@ async function buildWasm() {
 
   await Deno.writeTextFile(
     path.join(rootDir, "./lib/pkg/dnt_wasm_bg.ts"),
-    `export const source = Uint8Array.from(atob("${encode(wasmBytes)}"), c => c.charCodeAt(0));\n`,
+    `export const source = Uint8Array.from(atob("${
+      encode(wasmBytes)
+    }"), c => c.charCodeAt(0));\n`,
   );
   await Deno.remove(wasmFilePath);
   await Deno.remove(path.join(rootDir, "./lib/pkg/.gitignore"));
