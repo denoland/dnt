@@ -303,39 +303,37 @@ export async function build(options: BuildOptions): Promise<void> {
     }
 
     log("Transforming test files...");
-    const testTransformOutput = await transformEntryPoints(testFilePaths);
+    const testTransformOutput = await transformEntryPoints([
+      ...testFilePaths,
+      ...options.entryPoints,
+    ]);
     for (const warning of testTransformOutput.warnings) {
       warnOnce(warning);
     }
     const outputFileNames = new Set(
       transformOutput.files.map((f) => f.filePath),
     );
-    const outputDependencyNames = new Set(
-      transformOutput.dependencies.map((d) => d.name),
+    const testFiles = testTransformOutput.files.filter((f) =>
+      !outputFileNames.has(f.filePath)
     );
-    const testDependencies = [];
-    const testFiles = [];
-
-    for (const outputFile of testTransformOutput.files) {
-      if (!outputFileNames.has(outputFile.filePath)) {
-        testFiles.push(outputFile);
-      }
-    }
 
     if (testFiles.length === 0) {
       return undefined;
     }
 
-    for (const dep of testTransformOutput.dependencies) {
-      if (!outputDependencyNames.has(dep.name)) {
-        testDependencies.push(dep);
-      }
-    }
+    const outputDependencyNames = new Set(
+      transformOutput.dependencies.map((d) => d.name),
+    );
+    const outputEntryPoints = new Set(transformOutput.entryPoints);
 
     return {
-      entryPoints: testTransformOutput.entryPoints,
+      entryPoints: testTransformOutput.entryPoints.filter((e) =>
+        !outputEntryPoints.has(e)
+      ),
       shimUsed: testTransformOutput.shimUsed,
-      dependencies: testDependencies,
+      dependencies: testTransformOutput.dependencies.filter((d) =>
+        !outputDependencyNames.has(d.name)
+      ),
       files: testFiles,
     };
   }
@@ -379,16 +377,21 @@ export async function build(options: BuildOptions): Promise<void> {
       fileText += `const denoShim = require("${shimPackage.name}");\n\n`;
     }
 
-    fileText += "async function main() {\n";
+    fileText += "const filePaths = [\n";
     for (const entryPoint of testOutput.entryPoints) {
-      const fileName = entryPoint.replace(/\.ts$/, ".js");
-      fileText +=
-        `  console.log("\\nRunning tests in ./cjs/${fileName}...\\n");\n`;
-      fileText += `  require("./cjs/${fileName}");\n`;
-      fileText +=
-        `  console.log("\\nRunning tests in ./esm/${fileName}...\\n");\n`;
-      fileText += `  await import("./esm/${fileName}");\n`;
+      fileText += `  "${entryPoint.replace(/\.ts$/, ".js")}",\n`;
     }
+    fileText += "];\n";
+
+    fileText += "async function main() {\n";
+    fileText += "  for (const filePath of filePaths) {\n";
+    fileText += `    const cjsPath = "./cjs/" + filePath;\n`
+    fileText += `    console.log("\\nRunning tests in " + cjsPath + "...\\n");\n`
+    fileText += `    require(cjsPath);\n\n`
+    fileText += `    const esmPath = "./esm/" + filePath;\n`
+    fileText += `    console.log("\\nRunning tests in " + esmPath + "...\\n");\n`
+    fileText += `    await import(esmPath);\n`
+    fileText += "  }\n";
     fileText += "}\n\n main();\n";
 
     // todo: rest of deno shim testing
