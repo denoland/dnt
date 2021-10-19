@@ -230,6 +230,9 @@ export async function build(options: BuildOptions): Promise<void> {
     };
     const devDependencies = testOutput
       ? ({
+        ...(!Object.keys(dependencies).includes("chalk") ? {
+          "chalk": "4.1.2",
+        } : {}),
         // add dependencies from transform
         ...Object.fromEntries(
           testOutput.dependencies.map((d) => [d.name, d.version]) ?? [],
@@ -394,7 +397,7 @@ export async function build(options: BuildOptions): Promise<void> {
       return;
     }
 
-    let fileText = "";
+    let fileText = `const chalk = require("chalk");\n`;
     if (testOutput.shimUsed) {
       fileText += `const denoShim = require("${shimPackage.name}");\n` +
         `const { testDefinitions } = require("${shimPackage.name}/test-internals");\n\n`;
@@ -409,11 +412,11 @@ export async function build(options: BuildOptions): Promise<void> {
     fileText += `async function main() {
   for (const filePath of filePaths) {
     const cjsPath = "./cjs/" + filePath;
-    console.log("\\nRunning tests in " + cjsPath + "...\\n");
+    console.log("\\nRunning tests in " + chalk.underline(cjsPath) + "...\\n");
     require(cjsPath);
     await runTestDefinitions();
     const esmPath = "./esm/" + filePath;
-    console.log("\\nRunning tests in " + esmPath + "...\\n");
+    console.log("\\nRunning tests in " + chalk.underline(esmPath) + "...\\n");
     await import(esmPath);
     await runTestDefinitions();
   }
@@ -469,7 +472,7 @@ async function runTestDefinitions() {
   const currentDefinitions = testDefinitions.splice(0, testDefinitions.length);
   const testFailures = [];
   for (const definition of currentDefinitions) {
-    process.stdout.write(definition.name + " ...");
+    process.stdout.write("test " + definition.name + " ...");
     if (definition.ignored) {
      process.stdout.write(" ignored\\n");
      continue;
@@ -492,7 +495,8 @@ async function runTestDefinitions() {
     } else {
       process.stdout.write(" ");
     }
-    process.stdout.write(pass ? "ok\\n" : "fail\\n");
+    process.stdout.write(getStatusText(pass ? "ok" : "fail"));
+    process.stdout.write("\\n");
   }
 
   if (testFailures.length > 0) {
@@ -517,7 +521,7 @@ function getTestContext() {
     getOutput() {
       let output = "";
       if (this.name) {
-        output += this.name + " ...";
+        output += "test " + this.name + " ...";
       }
       if (this.children.length > 0) {
         output += "\\n" + this.children.map(c => indentText(c.getOutput(), 1)).join("\\n") + "\\n";
@@ -534,7 +538,7 @@ function getTestContext() {
         }
       }
       if (this.name) {
-        output += this.status;
+        output += getStatusText(this.status);
       }
       return output;
     },
@@ -585,6 +589,20 @@ function getTestContext() {
       }
     }
   };
+}
+
+function getStatusText(status) {
+  switch (status) {
+    case "ok":
+      return chalk.green(status);
+    case "fail":
+    case "pending":
+      return chalk.red(status);
+    case "ignore":
+      return chalk.gray(status);
+    default:
+      return status;
+  }
 }
 
 function indentText(text, indentLevel) {
