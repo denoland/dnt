@@ -47,7 +47,7 @@ await build({
 ```
 
 ```bash
-# run script. This will output an npm package with cjs and mjs distributions bundling remote dependencies
+# run script. This will output an npm package with cjs and esm distributions bundling remote dependencies
 deno run --allow-read --allow-write --allow-net --allow-run scripts/create_npm_package.ts 0.1.0
 
 # go to output directory and publish

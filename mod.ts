@@ -14,11 +14,13 @@ import {
 export * from "./transform.ts";
 
 export interface BuildOptions {
+  entryPoints: (string | URL)[];
   outDir: string;
   typeCheck?: boolean;
   /** Whether to collect and run test files. */
   test?: boolean;
-  entryPoints: (string | URL)[];
+  /** Whether to keep the test files after tests run. */
+  keepTestFiles?: boolean;
   /** The root directory to find test files in. Defaults to the cwd. */
   rootTestDir?: string;
   shimPackage?: {
@@ -48,7 +50,7 @@ export async function build(options: BuildOptions): Promise<void> {
 
   const shimPackage = options.shimPackage ?? {
     name: "deno.ns",
-    version: "0.4.4",
+    version: "0.5.0",
   };
   const specifierMappings = options.mappings && Object.fromEntries(
     Object.entries(options.mappings).map(([key, value]) => {
@@ -173,7 +175,12 @@ export async function build(options: BuildOptions): Promise<void> {
     log("Running tests...");
     await createTestLauncherScript();
     await runNpmCommand(["run", "test"]);
+    if (!options.keepTestFiles) {
+      await deleteTestFiles();
+    }
   }
+
+  log("Complete!");
 
   function emit(opts?: { onlyDtsFiles?: boolean }) {
     const emitResult = program.emit(
@@ -275,15 +282,30 @@ export async function build(options: BuildOptions): Promise<void> {
       return;
     }
 
-    const fileText =
-      testOutput.files.map((f) => `./esm/${f.filePath}`).join("\n") +
-      "\n" +
-      testOutput.files.map((f) => `./cjs/${f.filePath}`).join("\n") +
-      "\n./test_runner.js";
+    const fileText = Array.from(getTestFileNames()).join("\n");
     writeFile(
       path.join(options.outDir, ".npmignore"),
       fileText,
     );
+  }
+
+  async function deleteTestFiles() {
+    for (const file of getTestFileNames()) {
+      await Deno.remove(path.join(options.outDir, file));
+    }
+  }
+
+  function* getTestFileNames() {
+    if (!testOutput) {
+      return;
+    }
+
+    for (const file of testOutput.files) {
+      const filePath = file.filePath.replace(/\.ts$/i, ".js");
+      yield `./esm/${filePath}`;
+      yield `./cjs/${filePath}`;
+    }
+    yield "./test_runner.js";
   }
 
   interface TestOutput {
@@ -374,27 +396,32 @@ export async function build(options: BuildOptions): Promise<void> {
 
     let fileText = "";
     if (testOutput.shimUsed) {
-      fileText += `const denoShim = require("${shimPackage.name}");\n\n`;
+      fileText += `const denoShim = require("${shimPackage.name}");\n` +
+        `const { testDefinitions } = require("${shimPackage.name}/test-internals");\n\n`;
     }
 
     fileText += "const filePaths = [\n";
     for (const entryPoint of testOutput.entryPoints) {
       fileText += `  "${entryPoint.replace(/\.ts$/, ".js")}",\n`;
     }
-    fileText += "];\n";
+    fileText += "];\n\n";
 
-    fileText += "async function main() {\n";
-    fileText += "  for (const filePath of filePaths) {\n";
-    fileText += `    const cjsPath = "./cjs/" + filePath;\n`
-    fileText += `    console.log("\\nRunning tests in " + cjsPath + "...\\n");\n`
-    fileText += `    require(cjsPath);\n\n`
-    fileText += `    const esmPath = "./esm/" + filePath;\n`
-    fileText += `    console.log("\\nRunning tests in " + esmPath + "...\\n");\n`
-    fileText += `    await import(esmPath);\n`
-    fileText += "  }\n";
-    fileText += "}\n\n main();\n";
-
-    // todo: rest of deno shim testing
+    fileText += `async function main() {
+  for (const filePath of filePaths) {
+    const cjsPath = "./cjs/" + filePath;
+    console.log("\\nRunning tests in " + cjsPath + "...\\n");
+    require(cjsPath);
+    await runTestDefinitions();
+    const esmPath = "./esm/" + filePath;
+    console.log("\\nRunning tests in " + esmPath + "...\\n");
+    await import(esmPath);
+    await runTestDefinitions();
+  }
+}\n\n`;
+    if (testOutput.shimUsed) {
+      fileText += `${getRunTestDefinitionsCode()}\n\n`;
+    }
+    fileText += "main();\n";
 
     writeFile(
       path.join(options.outDir, "test_runner.js"),
@@ -433,4 +460,142 @@ export async function build(options: BuildOptions): Promise<void> {
       }
     }
   }
+}
+
+function getRunTestDefinitionsCode() {
+  // todo: extract out for unit testing
+  return `
+async function runTestDefinitions() {
+  const currentDefinitions = testDefinitions.splice(0, testDefinitions.length);
+  const testFailures = [];
+  for (const definition of currentDefinitions) {
+    process.stdout.write(definition.name + " ...");
+    if (definition.ignored) {
+     process.stdout.write(" ignored\\n");
+     continue;
+    }
+    const context = getTestContext();
+    let pass = false;
+    try {
+      await definition.fn(context);
+      if (context.hasFailingChild) {
+        testFailures.push({ name: definition.name, err: new Error("Had failing test step.") });
+      } else {
+        pass = true;
+      }
+    } catch (err) {
+      testFailures.push({ name: definition.name, err });
+    }
+    const testStepOutput = context.getOutput();
+    if (testStepOutput.length > 0) {
+      process.stdout.write(testStepOutput);
+    } else {
+      process.stdout.write(" ");
+    }
+    process.stdout.write(pass ? "ok\\n" : "fail\\n");
+  }
+
+  if (testFailures.length > 0) {
+    console.log("\\nFAILURES\\n");
+    for (const failure of testFailures) {
+      console.log(failure.name);
+      console.log(indentText(failure.err, 1));
+      console.log("");
+    }
+    process.exit(1);
+  }
+}
+
+function getTestContext() {
+  return {
+    name: undefined,
+    status: "ok",
+    children: [],
+    get hasFailingChild() {
+      return this.children.some(c => c.status === "fail" || c.status === "pending");
+    },
+    getOutput() {
+      let output = "";
+      if (this.name) {
+        output += this.name + " ...";
+      }
+      if (this.children.length > 0) {
+        output += "\\n" + this.children.map(c => indentText(c.getOutput(), 1)).join("\\n") + "\\n";
+      } else if (!this.err) {
+        output += " ";
+      }
+      if (this.name && this.err) {
+        output += "\\n";
+      }
+      if (this.err) {
+        output += indentText(this.err.toString(), 1);
+        if (this.name) {
+          output += "\\n";
+        }
+      }
+      if (this.name) {
+        output += this.status;
+      }
+      return output;
+    },
+    async step(nameOrTestDefinition, fn) {
+      const definition = getDefinition();
+
+      const context = getTestContext();
+      context.status = "pending";
+      context.name = definition.name;
+      context.status = "pending";
+      this.children.push(context);
+
+      if (definition.ignored) {
+        context.status = "ignored";
+        return false;
+      }
+
+      try {
+        await definition.fn(context);
+        context.status = "ok";
+        if (context.hasFailingChild) {
+          context.status = "fail";
+          return false;
+        }
+        return true;
+      } catch (err) {
+        context.status = "fail";
+        context.err = err;
+        return false;
+      }
+
+      function getDefinition() {
+        if (typeof nameOrTestDefinition === "string") {
+          if (!(fn instanceof Function)) {
+            throw new TypeError("Expected function for second argument.");
+          }
+          return {
+            name: nameOrTestDefinition,
+            fn,
+          };
+        } else if (typeof nameOrTestDefinition === "object") {
+          return nameOrTestDefinition;
+        } else {
+          throw new TypeError(
+            "Expected a test definition or name and function.",
+          );
+        }
+      }
+    }
+  };
+}
+
+function indentText(text, indentLevel) {
+  if (text === undefined) {
+    text = "[undefined]";
+  } else if (text === null) {
+    text = "[null]";
+  } else {
+    text = text.toString();
+  }
+  return text.split(/\\r?\\n/).map(line => "  ".repeat(indentLevel) + line).join("\\n");
+}
+`.trim();
 }

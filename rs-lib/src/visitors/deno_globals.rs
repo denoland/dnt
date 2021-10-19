@@ -47,7 +47,7 @@ pub fn get_deno_global_text_changes<'a>(
   let all_ident_names = get_all_ident_names(context.program);
   let deno_shim_name = get_unique_name("denoShim", &all_ident_names);
 
-  visit_children(&program.into(), &deno_shim_name, &mut context);
+  visit_children(program.into(), &deno_shim_name, &mut context);
 
   if context.import_shim {
     context.text_changes.push(TextChange {
@@ -62,9 +62,9 @@ pub fn get_deno_global_text_changes<'a>(
   context.text_changes
 }
 
-fn visit_children(node: &Node, import_name: &str, context: &mut Context) {
+fn visit_children(node: Node, import_name: &str, context: &mut Context) {
   for child in node.children() {
-    visit_children(&child, import_name, context);
+    visit_children(child, import_name, context);
   }
 
   if let Node::Ident(ident) = node {
@@ -73,7 +73,7 @@ fn visit_children(node: &Node, import_name: &str, context: &mut Context) {
     let ident_text = ident.text_fast(context.program);
     if is_top_level_context
       && ident_text == "globalThis"
-      && !should_ignore(ident.span(), context)
+      && !should_ignore(ident.into(), context)
     {
       context.text_changes.push(TextChange {
         span: ident.span(),
@@ -86,7 +86,7 @@ fn visit_children(node: &Node, import_name: &str, context: &mut Context) {
     if is_top_level_context
       && !context.has_top_level_deno_decl
       && ident_text == "Deno"
-      && !should_ignore(ident.span(), context)
+      && !should_ignore(ident.into(), context)
     {
       context.text_changes.push(TextChange {
         span: ident.span(),
@@ -97,10 +97,20 @@ fn visit_children(node: &Node, import_name: &str, context: &mut Context) {
   }
 }
 
-fn should_ignore(span: Span, context: &Context) -> bool {
+fn should_ignore(node: Node, context: &Context) -> bool {
   context
     .ignore_line_indexes
-    .contains(&span.start_line_fast(context.program))
+    .contains(&node.span().start_line_fast(context.program))
+    || in_left_hand_assignment(node)
+}
+
+fn in_left_hand_assignment(node: Node) -> bool {
+  for ancestor in node.ancestors() {
+    if let Node::AssignExpr(expr) = ancestor {
+      return expr.left.span().contains(node.span());
+    }
+  }
+  false
 }
 
 fn get_ignore_line_indexes(program: &Program) -> HashSet<usize> {

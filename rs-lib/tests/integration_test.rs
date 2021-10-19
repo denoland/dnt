@@ -90,7 +90,7 @@ async fn transform_deno_shim_with_name_collision() {
 async fn transform_global_this_deno() {
   let result = TestBuilder::new()
     .with_loader(|loader| {
-      loader.add_local_file("/mod.ts", r#"globalThis.Deno.readTextFile();"#);
+      loader.add_local_file("/mod.ts", r#"globalThis.Deno.readTextFile(); globalThis.test = 5;"#);
     })
     .shim_package_name("test-shim")
     .transform()
@@ -103,7 +103,7 @@ async fn transform_global_this_deno() {
       "mod.ts",
       concat!(
         r#"import * as denoShim from "test-shim";"#,
-        "\n({ Deno: denoShim.Deno, ...globalThis }).Deno.readTextFile();"
+        "\n({ Deno: denoShim.Deno, ...globalThis }).Deno.readTextFile(); globalThis.test = 5;"
       )
     )]
   );
