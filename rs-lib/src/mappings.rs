@@ -179,8 +179,16 @@ fn get_dir_name_for_root(root: &ModuleSpecifier) -> PathBuf {
   PathBuf::from(if result.is_empty() {
     "unknown".to_string()
   } else {
-    result.replace(".", "_")
+    // limit the size of the directory to reduce the chance of max path errors on Windows
+    truncate_str(&result.replace(".", "_"), 30).trim_end_matches('_').to_string()
   })
+}
+
+fn truncate_str(text: &str, max: usize) -> &str {
+  match text.char_indices().nth(max) {
+    Some((i, _)) => &text[..i],
+    None => text,
+  }
 }
 
 fn sanitize_filepath(text: &str) -> String {
@@ -227,6 +235,8 @@ mod test {
     run_test("http://deno.land/x/test", "deno_land_x_test");
     run_test("http://localhost", "localhost");
     run_test("http://localhost/test%20test", "localhost_test_20test");
+    // will truncate
+    run_test("http://localhost/test%20testingtestingtesting", "localhost_test_20testingtestin");
 
     fn run_test(specifier: &str, expected: &str) {
       assert_eq!(
