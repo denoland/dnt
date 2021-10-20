@@ -92,8 +92,14 @@ export async function build(options: BuildOptions): Promise<void> {
   createNpmIgnore();
 
   // npm install in order to prepare for checking TS diagnostics
-  log("Running npm install in parallel...");
+  log("Running npm install...");
   const npmInstallPromise = runNpmCommand(["install"]);
+  if (options.typeCheck || options.declaration) {
+    // Unfortunately this can't be run in parallel to building the project
+    // in this case because TypeScript will resolve the npm packages when
+    // creating the project.
+    await npmInstallPromise;
+  }
 
   log("Building project...");
   const esmOutDir = path.join(options.outDir, "esm");
@@ -104,7 +110,7 @@ export async function build(options: BuildOptions): Promise<void> {
       outDir: typesOutDir,
       allowJs: true,
       stripInternal: true,
-      declaration: true,
+      declaration: options.declaration,
       esModuleInterop: false,
       isolatedModules: true,
       useDefineForClassFields: true,
@@ -135,7 +141,6 @@ export async function build(options: BuildOptions): Promise<void> {
   let program = project.createProgram();
 
   if (options.typeCheck) {
-    await npmInstallPromise; // need to ensure this is done before type checking
     log("Type checking...");
     const diagnostics = ts.getPreEmitDiagnostics(program);
     if (diagnostics.length > 0) {
