@@ -1,0 +1,2 @@
+# exclude this in the language stats
+lib/pkg/ linguist-vendored
