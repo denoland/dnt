@@ -230,9 +230,17 @@ export async function build(options: BuildOptions): Promise<void> {
     };
     const devDependencies = testOutput
       ? ({
-        ...(!Object.keys(dependencies).includes("chalk") ? {
-          "chalk": "4.1.2",
-        } : {}),
+        ...(!Object.keys(dependencies).includes("chalk")
+          ? {
+            "chalk": "4.1.2",
+          }
+          : {}),
+        ...(!Object.keys(dependencies).includes("@types/node") &&
+            (transformOutput.shimUsed || testOutput.shimUsed)
+          ? {
+            "@types/node": "16.11.1",
+          }
+          : {}),
         // add dependencies from transform
         ...Object.fromEntries(
           testOutput.dependencies.map((d) => [d.name, d.version]) ?? [],
