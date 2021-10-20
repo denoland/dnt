@@ -120,10 +120,12 @@ export async function build(options: BuildOptions): Promise<void> {
     },
   });
 
-  for (const outputFile of [
-    ...transformOutput.main.files,
-    ...transformOutput.test.files
-  ]) {
+  for (
+    const outputFile of [
+      ...transformOutput.main.files,
+      ...transformOutput.test.files,
+    ]
+  ) {
     project.createSourceFile(
       path.join(options.outDir, "src", outputFile.filePath),
       outputFile.fileText,
@@ -251,7 +253,8 @@ export async function build(options: BuildOptions): Promise<void> {
           : {}),
         // add dependencies from transform
         ...Object.fromEntries(
-          transformOutput.test.dependencies.map((d) => [d.name, d.version]) ?? [],
+          transformOutput.test.dependencies.map((d) => [d.name, d.version]) ??
+            [],
         ),
         // add shim if not in dependencies
         ...(transformOutput.test.shimUsed &&
@@ -326,10 +329,12 @@ export async function build(options: BuildOptions): Promise<void> {
   async function transformEntryPoints(): Promise<TransformOutput> {
     return transform({
       entryPoints: options.entryPoints,
-      testEntryPoints: options.test ? await getTestFilePaths({
-        rootDir: options.rootTestDir ?? Deno.cwd(),
-        excludeDirs: [options.outDir],
-      }) : [],
+      testEntryPoints: options.test
+        ? await getTestFilePaths({
+          rootDir: options.rootTestDir ?? Deno.cwd(),
+          excludeDirs: [options.outDir],
+        })
+        : [],
       shimPackageName: shimPackage.name,
       specifierMappings: specifierMappings && Object.fromEntries(
         Object.entries(specifierMappings).map(([key, value]) => {

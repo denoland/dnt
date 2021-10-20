@@ -11,41 +11,14 @@ It takes a Deno module and creates an npm package for use on Node.
 There are several steps done in a pipeline:
 
 1. Transforms Deno code to Node/canonical TypeScript including files found by `deno test`.
-   1. Rewrites module specifiers.
-   1. Injects a [Deno shim](https://github.com/denoland/deno.ns) for any `Deno` namespace usages.
-   1. Downloads remote dependencies and rewrites specifiers to make them local.
-   1. Rewrites Skypack and ESM specifiers to a bare specifier and includes these dependencies in a package.json.
-   1. Allows mapping any specifier to an npm package.
-1. Emits ESM, CommonJS, and TypeScript declaration files along with a *package.json* file.
+   - Rewrites module specifiers.
+   - Injects a [Deno shim](https://github.com/denoland/deno.ns) for any `Deno` namespace usages.
+   - Rewrites Skypack and ESM specifiers to a bare specifier and includes these dependencies in a package.json.
+   - When remote modules cannot be resolved to an npm package, it downloads them and rewrites specifiers to make them local.
+   - Allows mapping any specifier to an npm package.
+1. Emits ESM, CommonJS, and TypeScript declaration files along with a _package.json_ file.
 1. Type checks the final output.
 1. Runs the final output in Node through a test runner running all `Deno.test` calls. Deletes the test files when complete.
-
-### Example Build Logs
-
-```
-[dnt] Transforming...
-[dnt] Running npm install in parallel...
-[dnt] Building project...
-[dnt] Type checking...
-[dnt] Emitting declaration files...
-[dnt] Emitting esm module...
-[dnt] Emitting cjs module...
-[dnt] Running tests...
-
-> test
-> node test_runner.js
-
-Running tests in ./cjs/mod.test.js...
-
-test escapeForWithinString ... ok
-test escapeChar ... ok
-
-Running tests in ./esm/mod.test.js...
-
-test escapeForWithinString ... ok
-test escapeChar ... ok
-[dnt] Complete!
-```
 
 ## Setup
 
@@ -92,10 +65,36 @@ cd npm
 npm publish
 ```
 
+### Example Build Logs
+
+```
+[dnt] Transforming...
+[dnt] Running npm install in parallel...
+[dnt] Building project...
+[dnt] Type checking...
+[dnt] Emitting declaration files...
+[dnt] Emitting esm module...
+[dnt] Emitting cjs module...
+[dnt] Running tests...
+
+> test
+> node test_runner.js
+
+Running tests in ./cjs/mod.test.js...
+
+test escapeForWithinString ... ok
+test escapeChar ... ok
+
+Running tests in ./esm/mod.test.js...
+
+test escapeForWithinString ... ok
+test escapeChar ... ok
+[dnt] Complete!
+```
+
 ## JS API Example
 
-For only the Deno to canonical TypeScript transform which can be useful for
-bundlers, use the following:
+For only the Deno to canonical TypeScript transform which may be useful for bundlers, use the following:
 
 ```ts
 // docs: https://doc.deno.land/https/deno.land/x/dnt/transform.ts

@@ -69,7 +69,9 @@ pub async fn transform(options: JsValue) -> Result<JsValue, JsValue> {
   Ok(JsValue::from_serde(&result).unwrap())
 }
 
-fn parse_module_specifiers(values: Vec<String>) -> Result<Vec<ModuleSpecifier>, JsValue> {
+fn parse_module_specifiers(
+  values: Vec<String>,
+) -> Result<Vec<ModuleSpecifier>, JsValue> {
   let mut specifiers = Vec::new();
   for value in values {
     let entry_point = dnt::ModuleSpecifier::parse(&value)

@@ -113,12 +113,20 @@ impl<'a> deno_graph::source::Loader for SourceLoader<'a> {
   }
 }
 
-fn get_dummy_module(specifier: &ModuleSpecifier) -> deno_graph::source::LoadFuture {
+fn get_dummy_module(
+  specifier: &ModuleSpecifier,
+) -> deno_graph::source::LoadFuture {
   let mut headers = HashMap::new();
-  headers.insert("content-type".to_string(), "application/javascript".to_string());
-  Box::pin(future::ready((specifier.clone(), Ok(Some(deno_graph::source::LoadResponse {
-    specifier: specifier.clone(),
-    content: Arc::new(String::new()),
-    maybe_headers: Some(headers),
-  })))))
+  headers.insert(
+    "content-type".to_string(),
+    "application/javascript".to_string(),
+  );
+  Box::pin(future::ready((
+    specifier.clone(),
+    Ok(Some(deno_graph::source::LoadResponse {
+      specifier: specifier.clone(),
+      content: Arc::new(String::new()),
+      maybe_headers: Some(headers),
+    })),
+  )))
 }

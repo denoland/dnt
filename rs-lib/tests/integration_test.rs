@@ -90,7 +90,10 @@ async fn transform_deno_shim_with_name_collision() {
 async fn transform_global_this_deno() {
   let result = TestBuilder::new()
     .with_loader(|loader| {
-      loader.add_local_file("/mod.ts", r#"globalThis.Deno.readTextFile(); globalThis.test = 5;"#);
+      loader.add_local_file(
+        "/mod.ts",
+        r#"globalThis.Deno.readTextFile(); globalThis.test = 5;"#,
+      );
     })
     .shim_package_name("test-shim")
     .transform()
@@ -866,48 +869,37 @@ async fn test_entry_points() {
 
   assert_files!(
     result.main.files,
-    &[
-      (
-        "mod.ts",
-        "import package1 from 'preact';\n",
-      )
-    ]
+    &[("mod.ts", "import package1 from 'preact';\n",)]
   );
   assert_eq!(
     result.main.dependencies,
-    &[
-      Dependency {
-        name: "preact".to_string(),
-        version: "^10.5.0".to_string(),
-      },
-    ]
+    &[Dependency {
+      name: "preact".to_string(),
+      version: "^10.5.0".to_string(),
+    },]
   );
   assert_eq!(result.main.entry_points, &["mod.ts"]);
   assert_eq!(result.main.shim_used, false);
 
   assert_files!(
     result.test.files,
-    &[
-      (
-        "mod.test.ts",
-        concat!(
-          "import * as denoShim from \"deno.ns\";\n",
-          "import './mod.js';\n",
-          "import package1 from 'preact';\n",
-          "import package3 from 'react';\n",
-          "denoShim.Deno.writeTextFile('test', 'test')"
-        ),
-      )
-    ]
+    &[(
+      "mod.test.ts",
+      concat!(
+        "import * as denoShim from \"deno.ns\";\n",
+        "import './mod.js';\n",
+        "import package1 from 'preact';\n",
+        "import package3 from 'react';\n",
+        "denoShim.Deno.writeTextFile('test', 'test')"
+      ),
+    )]
   );
   assert_eq!(
     result.test.dependencies,
-    &[
-      Dependency {
-        name: "react".to_string(),
-        version: "17.0.2".to_string(),
-      },
-    ]
+    &[Dependency {
+      name: "react".to_string(),
+      version: "17.0.2".to_string(),
+    },]
   );
   assert_eq!(result.test.entry_points, &["mod.test.ts"]);
   assert_eq!(result.test.shim_used, true);

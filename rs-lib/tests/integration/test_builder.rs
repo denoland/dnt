@@ -51,9 +51,7 @@ impl TestBuilder {
   }
 
   pub fn add_test_entry_point(&mut self, value: impl AsRef<str>) -> &mut Self {
-    self
-      .test_entry_points
-      .push(value.as_ref().to_string());
+    self.test_entry_points.push(value.as_ref().to_string());
     self
   }
 
@@ -91,7 +89,11 @@ impl TestBuilder {
     );
     transform(TransformOptions {
       entry_points,
-      test_entry_points: self.test_entry_points.iter().map(|p| ModuleSpecifier::parse(p).unwrap()).collect(),
+      test_entry_points: self
+        .test_entry_points
+        .iter()
+        .map(|p| ModuleSpecifier::parse(p).unwrap())
+        .collect(),
       shim_package_name: self
         .shim_package_name
         .as_ref()

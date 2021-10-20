@@ -39,7 +39,12 @@ impl ModuleGraph {
     let source_parser = ScopeAnalysisParser::new();
     let graph = Self {
       graph: deno_graph::create_graph(
-        options.entry_points.iter().chain(options.test_entry_points.iter()).map(ToOwned::to_owned).collect(),
+        options
+          .entry_points
+          .iter()
+          .chain(options.test_entry_points.iter())
+          .map(ToOwned::to_owned)
+          .collect(),
         false,
         None,
         &mut loader,
@@ -50,11 +55,7 @@ impl ModuleGraph {
       .await,
     };
 
-    let errors = graph
-      .graph
-      .errors()
-      .into_iter()
-      .collect::<Vec<_>>();
+    let errors = graph.graph.errors().into_iter().collect::<Vec<_>>();
     if !errors.is_empty() {
       let mut error_message = String::new();
       for error in errors {
@@ -71,7 +72,12 @@ impl ModuleGraph {
     }
 
     let loader_specifiers = loader.into_specifiers();
-    let specifiers = get_specifiers(&options.entry_points, loader_specifiers, &graph, &graph.graph.modules())?;
+    let specifiers = get_specifiers(
+      &options.entry_points,
+      loader_specifiers,
+      &graph,
+      &graph.graph.modules(),
+    )?;
 
     if let Some(ignored_specifiers) = options.ignored_specifiers {
       let mut not_found_specifiers = ignored_specifiers

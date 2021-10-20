@@ -23,7 +23,8 @@ pub struct Specifiers {
 
 impl Specifiers {
   pub fn has_ignored_or_mapped(&self, specifier: &ModuleSpecifier) -> bool {
-    self.main.has_ignored_or_mapped(specifier) || self.test.has_ignored_or_mapped(specifier)
+    self.main.has_ignored_or_mapped(specifier)
+      || self.test.has_ignored_or_mapped(specifier)
   }
 }
 
@@ -47,7 +48,8 @@ pub fn get_specifiers(
   let mut local_specifiers = Vec::new();
   let mut remote_specifiers = Vec::new();
 
-  let mut modules: BTreeMap<&ModuleSpecifier, &Module> = modules.iter().map(|m| (&m.specifier, *m)).collect();
+  let mut modules: BTreeMap<&ModuleSpecifier, &Module> =
+    modules.iter().map(|m| (&m.specifier, *m)).collect();
 
   let mut found_module_specifiers = Vec::new();
   let mut found_mapped_specifiers = BTreeMap::new();
@@ -58,7 +60,8 @@ pub fn get_specifiers(
     let module = module_graph.get(entry_point);
     let mut pending = vec![&module.specifier];
 
-    while let Some(module) = pending.pop().map(|s| modules.remove(&s)).flatten() {
+    while let Some(module) = pending.pop().map(|s| modules.remove(&s)).flatten()
+    {
       let mut is_ignored = false;
       if let Some(mapped_entry) = specifiers.mapped.remove(&module.specifier) {
         found_mapped_specifiers.insert(module.specifier.clone(), mapped_entry);
@@ -88,13 +91,21 @@ pub fn get_specifiers(
   }
 
   // clear out all the ignored/mapped test modules
-  for specifier in specifiers.found_ignored.iter().chain(specifiers.mapped.keys()) {
+  for specifier in specifiers
+    .found_ignored
+    .iter()
+    .chain(specifiers.mapped.keys())
+  {
     modules.remove(specifier);
   }
 
   // at this point, the remaining modules are the test modules
   let test_modules = modules;
-  let all_modules = test_modules.values().map(|m| *m).chain(found_module_specifiers.iter().map(|s| module_graph.get(s))).collect::<Vec<_>>();
+  let all_modules = test_modules
+    .values()
+    .map(|m| *m)
+    .chain(found_module_specifiers.iter().map(|s| module_graph.get(s)))
+    .collect::<Vec<_>>();
 
   for module in all_modules.iter() {
     match module.specifier.scheme().to_lowercase().as_str() {
@@ -135,7 +146,7 @@ pub fn get_specifiers(
     test: EnvironmentSpecifiers {
       ignored: specifiers.found_ignored,
       mapped: specifiers.mapped,
-    }
+    },
   })
 }
 
@@ -143,9 +154,14 @@ fn ensure_mapped_specifiers_valid(
   mapped_specifiers: &BTreeMap<ModuleSpecifier, MappedSpecifierEntry>,
   test_mapped_specifiers: &BTreeMap<ModuleSpecifier, MappedSpecifierEntry>,
 ) -> Result<()> {
-  let mut specifier_for_name: HashMap<String, (ModuleSpecifier, MappedSpecifierEntry)> =
-    HashMap::new();
-  for (from_specifier, mapped_specifier) in mapped_specifiers.iter().chain(test_mapped_specifiers.iter()) {
+  let mut specifier_for_name: HashMap<
+    String,
+    (ModuleSpecifier, MappedSpecifierEntry),
+  > = HashMap::new();
+  for (from_specifier, mapped_specifier) in mapped_specifiers
+    .iter()
+    .chain(test_mapped_specifiers.iter())
+  {
     if let Some(specifier) =
       specifier_for_name.get(&mapped_specifier.to_specifier)
     {

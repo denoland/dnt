@@ -74,29 +74,27 @@ fn visit_module_specifier(str: &Str, context: &mut Context) {
     None => return,
   };
 
-  let new_text = if let Some(bare_specifier) = context
-    .specifier_mappings
-    .get(&specifier)
-  {
-    bare_specifier.to_string()
-  } else {
-    let specifier_file_path = context.mappings.get_file_path(&specifier);
-    let relative_path =
-      get_relative_path(context.output_file_path, specifier_file_path);
-    let relative_path_str = relative_path
-      .with_extension("js")
-      .to_string_lossy()
-      .to_string()
-      .replace("\\", "/");
-
-    if relative_path_str.starts_with("../")
-      || relative_path_str.starts_with("./")
-    {
-      relative_path_str
+  let new_text =
+    if let Some(bare_specifier) = context.specifier_mappings.get(&specifier) {
+      bare_specifier.to_string()
     } else {
-      format!("./{}", relative_path_str)
-    }
-  };
+      let specifier_file_path = context.mappings.get_file_path(&specifier);
+      let relative_path =
+        get_relative_path(context.output_file_path, specifier_file_path);
+      let relative_path_str = relative_path
+        .with_extension("js")
+        .to_string_lossy()
+        .to_string()
+        .replace("\\", "/");
+
+      if relative_path_str.starts_with("../")
+        || relative_path_str.starts_with("./")
+      {
+        relative_path_str
+      } else {
+        format!("./{}", relative_path_str)
+      }
+    };
 
   context.text_changes.push(TextChange {
     span: Span::new(

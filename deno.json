@@ -1,5 +1,8 @@
 {
   "fmt": {
+    "options": {
+      "proseWrap": "never"
+    },
     "files": {
       "exclude": ["target/", "wasm/target/", "lib/pkg/"]
     }

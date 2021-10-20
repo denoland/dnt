@@ -101,9 +101,13 @@ pub async fn transform(options: TransformOptions) -> Result<TransformOutput> {
 
   let mappings = Mappings::new(&module_graph, &specifiers)?;
   let mut specifier_mappings = options.specifier_mappings.unwrap_or_default();
-  for (key, entry) in specifiers.main.mapped.iter().chain(specifiers.test.mapped.iter()) {
-    specifier_mappings
-      .insert(key.clone(), entry.to_specifier.clone());
+  for (key, entry) in specifiers
+    .main
+    .mapped
+    .iter()
+    .chain(specifiers.test.mapped.iter())
+  {
+    specifier_mappings.insert(key.clone(), entry.to_specifier.clone());
   }
 
   // todo: parallelize
@@ -181,7 +185,9 @@ pub async fn transform(options: TransformOptions) -> Result<TransformOutput> {
   })
 }
 
-fn get_dependencies(mappings: BTreeMap<ModuleSpecifier, MappedSpecifierEntry>) -> Vec<Dependency> {
+fn get_dependencies(
+  mappings: BTreeMap<ModuleSpecifier, MappedSpecifierEntry>,
+) -> Vec<Dependency> {
   let mut dependencies = mappings
     .into_iter()
     .filter_map(|entry| {

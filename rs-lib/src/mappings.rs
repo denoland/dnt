@@ -180,7 +180,9 @@ fn get_dir_name_for_root(root: &ModuleSpecifier) -> PathBuf {
     "unknown".to_string()
   } else {
     // limit the size of the directory to reduce the chance of max path errors on Windows
-    truncate_str(&result.replace(".", "_"), 30).trim_end_matches('_').to_string()
+    truncate_str(&result.replace(".", "_"), 30)
+      .trim_end_matches('_')
+      .to_string()
   })
 }
 
@@ -236,7 +238,10 @@ mod test {
     run_test("http://localhost", "localhost");
     run_test("http://localhost/test%20test", "localhost_test_20test");
     // will truncate
-    run_test("http://localhost/test%20testingtestingtesting", "localhost_test_20testingtestin");
+    run_test(
+      "http://localhost/test%20testingtestingtesting",
+      "localhost_test_20testingtestin",
+    );
 
     fn run_test(specifier: &str, expected: &str) {
       assert_eq!(
