@@ -18,7 +18,7 @@ async fn transform_standalone_file() {
     .await
     .unwrap();
 
-  assert_files!(result.files, &[("mod.ts", "test;")]);
+  assert_files!(result.main.files, &[("mod.ts", "test;")]);
 }
 
 #[tokio::test]
@@ -32,7 +32,7 @@ async fn transform_deno_shim() {
     .unwrap();
 
   assert_files!(
-    result.files,
+    result.main.files,
     &[(
       "mod.ts",
       concat!(
@@ -55,7 +55,7 @@ async fn no_transform_deno_ignored() {
     .unwrap();
 
   assert_files!(
-    result.files,
+    result.main.files,
     &[("mod.ts", "// deno-shim-ignore\nDeno.readTextFile();",)]
   );
 }
@@ -75,7 +75,7 @@ async fn transform_deno_shim_with_name_collision() {
     .unwrap();
 
   assert_files!(
-    result.files,
+    result.main.files,
     &[(
       "mod.ts",
       concat!(
@@ -98,7 +98,7 @@ async fn transform_global_this_deno() {
     .unwrap();
 
   assert_files!(
-    result.files,
+    result.main.files,
     &[(
       "mod.ts",
       concat!(
@@ -129,7 +129,7 @@ async fn transform_deno_collision() {
     .unwrap();
 
   assert_files!(
-    result.files,
+    result.main.files,
     &[(
       "mod.ts",
       concat!(
@@ -156,7 +156,7 @@ async fn transform_relative_file() {
     .unwrap();
 
   assert_files!(
-    result.files,
+    result.main.files,
     &[
       ("mod.ts", "import * as other from './other.js';"),
       ("other.ts", "5;")
@@ -224,7 +224,7 @@ async fn transform_remote_files() {
     .unwrap();
 
   assert_files!(
-    result.files,
+    result.main.files,
     &[
       (
         "mod.ts",
@@ -238,17 +238,16 @@ async fn transform_remote_files() {
         "deps/localhost/other.ts",
         "import * as folder from './folder.js';"
       ),
-      // seems out of order, but that's ok... as long as they're unique
       (
         "deps/localhost/folder.js",
-        "import * as folder2 from './folder_3.js';"
+        "import * as folder2 from './folder_2.js';"
       ),
       (
-        "deps/localhost/folder_3.ts",
-        "import * as folder3 from './folder_2.js';"
+        "deps/localhost/folder_2.ts",
+        "import * as folder3 from './folder_3.js';"
       ),
       (
-        "deps/localhost/folder_2.js",
+        "deps/localhost/folder_3.js",
         "import * as otherFolder from './otherFolder.js';"
       ),
       (
@@ -289,7 +288,7 @@ async fn transform_handle_local_deps_folder() {
     .unwrap();
 
   assert_files!(
-    result.files,
+    result.main.files,
     &[
       (
         "mod.ts",
@@ -429,7 +428,7 @@ async fn transform_typescript_types_in_headers() {
     .unwrap();
 
   assert_files!(
-    result.files,
+    result.main.files,
     &[
       ("mod.ts", "export * from './deps/localhost/mod.js';"),
       ("deps/localhost/mod.js", "function test() { return 5; }"),
@@ -452,7 +451,7 @@ async fn transform_typescript_types_in_deno_types() {
     .transform().await.unwrap();
 
   assert_files!(
-    result.files,
+    result.main.files,
     &[
       ("mod.ts", "export * from './deps/localhost/mod.js';"),
       ("deps/localhost/mod.js", "function test() { return 5; }"),
@@ -475,7 +474,7 @@ async fn transform_typescript_type_references() {
     .transform().await.unwrap();
 
   assert_files!(
-    result.files,
+    result.main.files,
     &[
       ("mod.ts", "export * from './deps/localhost/mod.js';"),
       ("deps/localhost/mod.js", "function test() { return 5; }"),
@@ -500,7 +499,7 @@ async fn transform_deno_types_and_type_ref_for_same_file() {
 
   assert!(result.warnings.is_empty());
   assert_files!(
-    result.files,
+    result.main.files,
     &[
       (
         "mod.ts",
@@ -550,7 +549,7 @@ async fn transform_deno_types_and_type_ref_for_different_local_file() {
     ]
   );
   assert_files!(
-    result.files,
+    result.main.files,
     &[
       (
         "mod.ts",
@@ -605,7 +604,7 @@ async fn transform_deno_types_and_type_ref_for_different_remote_file() {
     ]
   );
   assert_files!(
-    result.files,
+    result.main.files,
     &[
       ("mod.ts", "import './deps/localhost/mod.js';",),
       (
@@ -636,9 +635,10 @@ async fn transform_deno_types_and_type_ref_for_different_remote_file() {
   let result = test_builder.transform().await.unwrap();
 
   assert!(result.warnings.is_empty());
-  assert_eq!(result.files.len(), 5);
+  assert_eq!(result.main.files.len(), 5);
   assert_eq!(
     result
+      .main
       .files
       .iter()
       .find(|f| f.file_path == PathBuf::from("deps/localhost/file.d.ts"))
@@ -672,7 +672,7 @@ async fn transform_specifier_mappings() {
     .unwrap();
 
   assert_files!(
-    result.files,
+    result.main.files,
     &[
       ("mod.ts", "import * as remote from 'remote-module';\nimport * as local from 'local-module';\n"),
     ]
@@ -716,7 +716,7 @@ async fn node_module_mapping() {
     .unwrap();
 
   assert_files!(
-    result.files,
+    result.main.files,
     &[(
       "mod.ts",
       concat!(
@@ -758,7 +758,7 @@ async fn skypack_esm_module_mapping() {
     .unwrap();
 
   assert_files!(
-    result.files,
+    result.main.files,
     &[
       (
         "mod.ts",
@@ -775,7 +775,7 @@ async fn skypack_esm_module_mapping() {
     ]
   );
   assert_eq!(
-    result.dependencies,
+    result.main.dependencies,
     &[
       Dependency {
         name: "@scope/package-name".to_string(),
@@ -825,17 +825,90 @@ async fn transform_multiple_entry_points() {
         .add_local_file("/mod2.ts", "import './ref.ts';mod2;")
         .add_local_file("/ref.ts", "export const test = 5;");
     })
-    .add_entry_point("file:////mod2.ts")
+    .add_entry_point("file:///mod2.ts")
     .transform()
     .await
     .unwrap();
 
   assert_files!(
-    result.files,
+    result.main.files,
     &[
       ("mod.ts", "import './ref.js';mod1;"),
       ("mod2.ts", "import './ref.js';mod2;"),
       ("ref.ts", "export const test = 5;"),
     ]
   );
+}
+
+#[tokio::test]
+async fn test_entry_points() {
+  let result = TestBuilder::new()
+    .with_loader(|loader| {
+      loader
+        .add_local_file(
+          "/mod.ts",
+          "import package1 from 'https://cdn.skypack.dev/preact@^10.5.0';\n",
+        )
+        .add_local_file(
+          "/mod.test.ts",
+          concat!(
+            "import './mod.ts';\n",
+            "import package1 from 'https://cdn.skypack.dev/preact@^10.5.0';\n",
+            "import package3 from 'https://esm.sh/react@17.0.2';\n",
+            "Deno.writeTextFile('test', 'test')",
+          ),
+        );
+    })
+    .add_test_entry_point("file:///mod.test.ts")
+    .transform()
+    .await
+    .unwrap();
+
+  assert_files!(
+    result.main.files,
+    &[
+      (
+        "mod.ts",
+        "import package1 from 'preact';\n",
+      )
+    ]
+  );
+  assert_eq!(
+    result.main.dependencies,
+    &[
+      Dependency {
+        name: "preact".to_string(),
+        version: "^10.5.0".to_string(),
+      },
+    ]
+  );
+  assert_eq!(result.main.entry_points, &["mod.ts"]);
+  assert_eq!(result.main.shim_used, false);
+
+  assert_files!(
+    result.test.files,
+    &[
+      (
+        "mod.test.ts",
+        concat!(
+          "import * as denoShim from \"deno.ns\";\n",
+          "import './mod.js';\n",
+          "import package1 from 'preact';\n",
+          "import package3 from 'react';\n",
+          "denoShim.Deno.writeTextFile('test', 'test')"
+        ),
+      )
+    ]
+  );
+  assert_eq!(
+    result.test.dependencies,
+    &[
+      Dependency {
+        name: "react".to_string(),
+        version: "17.0.2".to_string(),
+      },
+    ]
+  );
+  assert_eq!(result.test.entry_points, &["mod.test.ts"]);
+  assert_eq!(result.test.shim_used, true);
 }

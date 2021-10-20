@@ -5,9 +5,8 @@ pub trait SpecifierMapper {
   fn map(&self, specifier: &ModuleSpecifier) -> Option<MappedSpecifierEntry>;
 }
 
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 pub struct MappedSpecifierEntry {
-  pub from_specifier: ModuleSpecifier,
   pub to_specifier: String,
   pub version: Option<String>,
 }
@@ -52,7 +51,6 @@ impl SpecifierMapper for SkypackMapper {
     SKYPACK_MAPPING_RE
       .captures(specifier.as_str())
       .map(|captures| MappedSpecifierEntry {
-        from_specifier: specifier.clone(),
         to_specifier: captures.get(1).unwrap().as_str().to_string(),
         version: Some(captures.get(2).unwrap().as_str().to_string()),
       })
@@ -66,7 +64,6 @@ impl SpecifierMapper for EsmShMapper {
     ESMSH_MAPPING_RE
       .captures(specifier.as_str())
       .map(|captures| MappedSpecifierEntry {
-        from_specifier: specifier.clone(),
         to_specifier: captures.get(1).unwrap().as_str().to_string(),
         version: Some(captures.get(2).unwrap().as_str().to_string()),
       })
@@ -95,7 +92,6 @@ impl SpecifierMapper for NodeSpecifierMapper {
   fn map(&self, specifier: &ModuleSpecifier) -> Option<MappedSpecifierEntry> {
     if self.url_re.is_match(specifier.as_str()) {
       Some(MappedSpecifierEntry {
-        from_specifier: specifier.clone(),
         to_specifier: self.to_specifier.clone(),
         version: None,
       })

@@ -1,5 +1,6 @@
 // Copyright 2018-2021 the Deno authors. All rights reserved. MIT license.
 
+use std::collections::BTreeMap;
 use std::collections::HashMap;
 use std::path::PathBuf;
 
@@ -8,6 +9,7 @@ use anyhow::Result;
 extern crate lazy_static;
 
 use graph::ModuleGraphOptions;
+use loader::MappedSpecifierEntry;
 use mappings::Mappings;
 use specifiers::Specifiers;
 use text_changes::apply_text_changes;
@@ -54,15 +56,24 @@ pub struct Dependency {
 #[cfg_attr(feature = "serialization", serde(rename_all = "camelCase"))]
 #[derive(Debug, PartialEq)]
 pub struct TransformOutput {
+  pub main: TransformOutputEnvironment,
+  pub test: TransformOutputEnvironment,
+  pub warnings: Vec<String>,
+}
+
+#[cfg_attr(feature = "serialization", derive(serde::Serialize))]
+#[cfg_attr(feature = "serialization", serde(rename_all = "camelCase"))]
+#[derive(Debug, PartialEq, Default)]
+pub struct TransformOutputEnvironment {
   pub entry_points: Vec<String>,
+  pub files: Vec<OutputFile>,
   pub shim_used: bool,
   pub dependencies: Vec<Dependency>,
-  pub files: Vec<OutputFile>,
-  pub warnings: Vec<String>,
 }
 
 pub struct TransformOptions {
   pub entry_points: Vec<ModuleSpecifier>,
+  pub test_entry_points: Vec<ModuleSpecifier>,
   pub shim_package_name: String,
   pub loader: Option<Box<dyn Loader>>,
   pub specifier_mappings: Option<HashMap<ModuleSpecifier, String>>,
@@ -82,27 +93,39 @@ pub async fn transform(options: TransformOptions) -> Result<TransformOutput> {
   let (module_graph, specifiers) =
     crate::graph::ModuleGraph::build_with_specifiers(ModuleGraphOptions {
       entry_points: options.entry_points.clone(),
+      test_entry_points: options.test_entry_points.clone(),
       ignored_specifiers: ignored_specifiers.as_ref(),
       loader: options.loader,
     })
     .await?;
 
   let mappings = Mappings::new(&module_graph, &specifiers)?;
-  let mut specifier_mappings = options.specifier_mappings;
-  if !specifiers.mapped.is_empty() {
-    if specifier_mappings.is_none() {
-      specifier_mappings = Some(HashMap::new());
-    }
-    let specifier_mappings = specifier_mappings.as_mut().unwrap();
-    for entry in specifiers.mapped.values() {
-      specifier_mappings
-        .insert(entry.from_specifier.clone(), entry.to_specifier.clone());
-    }
+  let mut specifier_mappings = options.specifier_mappings.unwrap_or_default();
+  for (key, entry) in specifiers.main.mapped.iter().chain(specifiers.test.mapped.iter()) {
+    specifier_mappings
+      .insert(key.clone(), entry.to_specifier.clone());
   }
 
   // todo: parallelize
-  let mut files = Vec::new();
-  let mut shim_used = false;
+  let warnings = get_declaration_warnings(&specifiers);
+  let mut main_environment = TransformOutputEnvironment {
+    entry_points: options
+      .entry_points
+      .iter()
+      .map(|p| mappings.get_file_path(p).to_string_lossy().to_string())
+      .collect(),
+    dependencies: get_dependencies(specifiers.main.mapped),
+    ..Default::default()
+  };
+  let mut test_environment = TransformOutputEnvironment {
+    entry_points: options
+      .test_entry_points
+      .iter()
+      .map(|p| mappings.get_file_path(p).to_string_lossy().to_string())
+      .collect(),
+    dependencies: get_dependencies(specifiers.test.mapped),
+    ..Default::default()
+  };
   for specifier in specifiers
     .local
     .iter()
@@ -110,6 +133,11 @@ pub async fn transform(options: TransformOptions) -> Result<TransformOutput> {
     .chain(specifiers.types.iter().map(|(_, d)| &d.selected.specifier))
   {
     let module = module_graph.get(specifier);
+    let environment = if specifiers.test_modules.contains(specifier) {
+      &mut test_environment
+    } else {
+      &mut main_environment
+    };
     let parsed_source = module.parsed_source.clone();
 
     let text_changes = parsed_source.with_view(|program| {
@@ -120,7 +148,7 @@ pub async fn transform(options: TransformOptions) -> Result<TransformOutput> {
           shim_package_name: shim_package_name.as_str(),
         });
       if !text_changes.is_empty() {
-        shim_used = true;
+        environment.shim_used = true;
       }
       text_changes.extend(get_deno_comment_directive_text_changes(&program));
       text_changes.extend(get_module_specifier_text_changes(
@@ -129,7 +157,7 @@ pub async fn transform(options: TransformOptions) -> Result<TransformOutput> {
           module_graph: &module_graph,
           mappings: &mappings,
           program: &program,
-          specifier_mappings: specifier_mappings.as_ref(),
+          specifier_mappings: &specifier_mappings,
         },
       ));
 
@@ -137,7 +165,7 @@ pub async fn transform(options: TransformOptions) -> Result<TransformOutput> {
     });
 
     let file_path = mappings.get_file_path(specifier).to_owned();
-    files.push(OutputFile {
+    environment.files.push(OutputFile {
       file_path,
       file_text: apply_text_changes(
         parsed_source.source().text().to_string(),
@@ -147,21 +175,14 @@ pub async fn transform(options: TransformOptions) -> Result<TransformOutput> {
   }
 
   Ok(TransformOutput {
-    entry_points: options
-      .entry_points
-      .iter()
-      .map(|p| mappings.get_file_path(p).to_string_lossy().to_string())
-      .collect(),
-    warnings: get_declaration_warnings(&specifiers),
-    dependencies: get_dependencies(specifiers),
-    shim_used,
-    files,
+    main: main_environment,
+    test: test_environment,
+    warnings,
   })
 }
 
-fn get_dependencies(specifiers: Specifiers) -> Vec<Dependency> {
-  specifiers
-    .mapped
+fn get_dependencies(mappings: BTreeMap<ModuleSpecifier, MappedSpecifierEntry>) -> Vec<Dependency> {
+  let mut dependencies = mappings
     .into_iter()
     .filter_map(|entry| {
       if let Some(version) = entry.1.version {
@@ -173,7 +194,9 @@ fn get_dependencies(specifiers: Specifiers) -> Vec<Dependency> {
         None
       }
     })
-    .collect()
+    .collect::<Vec<_>>();
+  dependencies.sort_by(|a, b| a.name.cmp(&b.name));
+  dependencies
 }
 
 fn get_declaration_warnings(specifiers: &Specifiers) -> Vec<String> {

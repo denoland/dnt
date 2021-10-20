@@ -32,7 +32,7 @@ impl SourceParser for ScopeAnalysisParser {
       specifier: specifier.to_string(),
       source: SourceTextInfo::new(source),
       media_type,
-      capture_tokens: true, // todo: disable
+      capture_tokens: true,
       scope_analysis: true,
       maybe_syntax: None,
     })

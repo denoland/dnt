@@ -11,6 +11,7 @@ use deno_ast::ModuleSpecifier;
 
 pub struct ModuleGraphOptions<'a> {
   pub entry_points: Vec<ModuleSpecifier>,
+  pub test_entry_points: Vec<ModuleSpecifier>,
   pub loader: Option<Box<dyn Loader>>,
   pub ignored_specifiers: Option<&'a HashSet<ModuleSpecifier>>,
 }
@@ -38,7 +39,7 @@ impl ModuleGraph {
     let source_parser = ScopeAnalysisParser::new();
     let graph = Self {
       graph: deno_graph::create_graph(
-        options.entry_points,
+        options.entry_points.iter().chain(options.test_entry_points.iter()).map(ToOwned::to_owned).collect(),
         false,
         None,
         &mut loader,
@@ -49,22 +50,10 @@ impl ModuleGraph {
       .await,
     };
 
-    let modules = graph.graph.modules();
-    let loader_specifiers = loader.into_specifiers();
-    let ignored_mapped_specifiers = loader_specifiers
-      .mapped
-      .iter()
-      .map(|s| &s.from_specifier)
-      .collect::<HashSet<_>>();
-
     let errors = graph
       .graph
       .errors()
       .into_iter()
-      .filter(|e| {
-        !loader_specifiers.found_ignored.contains(e.specifier())
-          && !ignored_mapped_specifiers.contains(e.specifier())
-      })
       .collect::<Vec<_>>();
     if !errors.is_empty() {
       let mut error_message = String::new();
@@ -81,12 +70,13 @@ impl ModuleGraph {
       anyhow::bail!("{}", error_message);
     }
 
-    let specifiers = get_specifiers(loader_specifiers, &graph, &modules)?;
+    let loader_specifiers = loader.into_specifiers();
+    let specifiers = get_specifiers(&options.entry_points, loader_specifiers, &graph, &graph.graph.modules())?;
 
     if let Some(ignored_specifiers) = options.ignored_specifiers {
       let mut not_found_specifiers = ignored_specifiers
         .iter()
-        .filter(|s| !specifiers.found_ignored.contains(s))
+        .filter(|s| !specifiers.has_ignored_or_mapped(s))
         .collect::<Vec<_>>();
       if !not_found_specifiers.is_empty() {
         not_found_specifiers.sort();

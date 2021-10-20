@@ -46,6 +46,7 @@ impl dnt::Loader for JsLoader {
 #[serde(rename_all = "camelCase")]
 pub struct TransformOptions {
   pub entry_points: Vec<String>,
+  pub test_entry_points: Vec<String>,
   pub shim_package_name: String,
   pub specifier_mappings: Option<HashMap<ModuleSpecifier, String>>,
 }
@@ -55,15 +56,9 @@ pub async fn transform(options: JsValue) -> Result<JsValue, JsValue> {
   set_panic_hook();
 
   let options: TransformOptions = options.into_serde().unwrap();
-  let mut entry_points = Vec::new();
-  for entry_point in options.entry_points {
-    let entry_point = dnt::ModuleSpecifier::parse(&entry_point)
-      .map_err(|err| format!("Error parsing {}. {}", entry_point, err))?;
-    entry_points.push(entry_point);
-  }
-
   let result = dnt::transform(dnt::TransformOptions {
-    entry_points,
+    entry_points: parse_module_specifiers(options.entry_points)?,
+    test_entry_points: parse_module_specifiers(options.test_entry_points)?,
     shim_package_name: options.shim_package_name,
     loader: Some(Box::new(JsLoader {})),
     specifier_mappings: options.specifier_mappings,
@@ -72,4 +67,14 @@ pub async fn transform(options: JsValue) -> Result<JsValue, JsValue> {
   .unwrap();
 
   Ok(JsValue::from_serde(&result).unwrap())
+}
+
+fn parse_module_specifiers(values: Vec<String>) -> Result<Vec<ModuleSpecifier>, JsValue> {
+  let mut specifiers = Vec::new();
+  for value in values {
+    let entry_point = dnt::ModuleSpecifier::parse(&value)
+      .map_err(|err| format!("Error parsing {}. {}", value, err))?;
+    specifiers.push(entry_point);
+  }
+  Ok(specifiers)
 }

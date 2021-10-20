@@ -19,7 +19,7 @@ pub struct GetModuleSpecifierTextChangesParams<'a> {
   pub module_graph: &'a ModuleGraph,
   pub mappings: &'a Mappings,
   pub program: &'a Program<'a>,
-  pub specifier_mappings: Option<&'a HashMap<ModuleSpecifier, String>>,
+  pub specifier_mappings: &'a HashMap<ModuleSpecifier, String>,
 }
 
 struct Context<'a> {
@@ -28,7 +28,7 @@ struct Context<'a> {
   mappings: &'a Mappings,
   output_file_path: &'a PathBuf,
   text_changes: Vec<TextChange>,
-  specifier_mappings: Option<&'a HashMap<ModuleSpecifier, String>>,
+  specifier_mappings: &'a HashMap<ModuleSpecifier, String>,
 }
 
 pub fn get_module_specifier_text_changes<'a>(
@@ -76,8 +76,7 @@ fn visit_module_specifier(str: &Str, context: &mut Context) {
 
   let new_text = if let Some(bare_specifier) = context
     .specifier_mappings
-    .map(|m| m.get(&specifier))
-    .flatten()
+    .get(&specifier)
   {
     bare_specifier.to_string()
   } else {

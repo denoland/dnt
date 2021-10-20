@@ -4,24 +4,24 @@ import { outputDiagnostics } from "./lib/compiler.ts";
 import { colors, createProjectSync, path, ts } from "./lib/mod.deps.ts";
 import { getTestFilePaths } from "./lib/test_files.ts";
 import { PackageJsonObject } from "./lib/types.ts";
-import {
-  Dependency,
-  OutputFile,
-  transform,
-  TransformOutput,
-} from "./transform.ts";
+import { transform, TransformOutput } from "./transform.ts";
 
 export * from "./transform.ts";
 
 export interface BuildOptions {
+  /** Entrypoint(s) to the Deno module. Ex. `./mod.ts` */
   entryPoints: (string | URL)[];
+  /** Directory to output to. */
   outDir: string;
+  /** Type check the output (defaults to true). */
   typeCheck?: boolean;
-  /** Whether to collect and run test files. */
+  /** Collect and run test files (defaults to true). */
   test?: boolean;
-  /** Whether to keep the test files after tests run. */
+  /** Create declaration files (defaults to true). */
+  declaration?: boolean;
+  /** Keep the test files after tests run. */
   keepTestFiles?: boolean;
-  /** The root directory to find test files in. Defaults to the cwd. */
+  /** Root directory to find test files in. Defaults to the cwd. */
   rootTestDir?: string;
   shimPackage?: {
     name: string;
@@ -39,13 +39,20 @@ export interface BuildOptions {
       version?: string;
     };
   };
+  /** Package.json output. You may override dependencies and dev dependencies in here. */
   package: PackageJsonObject;
-  writeFile?: (filePath: string, text: string) => void;
 }
 
 /** Emits the specified Deno module to an npm package using the TypeScript compiler. */
 export async function build(options: BuildOptions): Promise<void> {
-  const warnedMessages = new Set<string>();
+  // set defaults
+  options = {
+    ...options,
+    typeCheck: options.typeCheck ?? true,
+    test: options.test ?? true,
+    declaration: options.declaration ?? true,
+  };
+
   await Deno.permissions.request({ name: "write", path: options.outDir });
 
   const shimPackage = options.shimPackage ?? {
@@ -66,35 +73,29 @@ export async function build(options: BuildOptions): Promise<void> {
   );
 
   log("Transforming...");
-  const transformOutput = await transformEntryPoints(options.entryPoints);
+  const transformOutput = await transformEntryPoints();
   for (const warning of transformOutput.warnings) {
-    warnOnce(warning);
-  }
-
-  let testOutput: TestOutput | undefined;
-  if (options.test) {
-    testOutput = await getTestOutput();
+    warn(warning);
   }
 
   const createdDirectories = new Set<string>();
-  const writeFile = options.writeFile ??
-    ((filePath: string, fileText: string) => {
-      const dir = path.dirname(filePath);
-      if (!createdDirectories.has(dir)) {
-        Deno.mkdirSync(dir, { recursive: true });
-        createdDirectories.add(dir);
-      }
-      Deno.writeTextFileSync(filePath, fileText);
-    });
+  const writeFile = ((filePath: string, fileText: string) => {
+    const dir = path.dirname(filePath);
+    if (!createdDirectories.has(dir)) {
+      Deno.mkdirSync(dir, { recursive: true });
+      createdDirectories.add(dir);
+    }
+    Deno.writeTextFileSync(filePath, fileText);
+  });
 
   createPackageJson();
   createNpmIgnore();
 
   // npm install in order to prepare for checking TS diagnostics
-  log("Running npm install...");
-  await runNpmCommand(["install"]);
+  log("Running npm install in parallel...");
+  const npmInstallPromise = runNpmCommand(["install"]);
 
-  log("Building TypeScript project...");
+  log("Building project...");
   const esmOutDir = path.join(options.outDir, "esm");
   const cjsOutDir = path.join(options.outDir, "cjs");
   const typesOutDir = path.join(options.outDir, "types");
@@ -119,9 +120,10 @@ export async function build(options: BuildOptions): Promise<void> {
     },
   });
 
-  for (
-    const outputFile of [...transformOutput.files, ...(testOutput?.files ?? [])]
-  ) {
+  for (const outputFile of [
+    ...transformOutput.main.files,
+    ...transformOutput.test.files
+  ]) {
     project.createSourceFile(
       path.join(options.outDir, "src", outputFile.filePath),
       outputFile.fileText,
@@ -131,6 +133,7 @@ export async function build(options: BuildOptions): Promise<void> {
   let program = project.createProgram();
 
   if (options.typeCheck) {
+    await npmInstallPromise; // need to ensure this is done before type checking
     log("Type checking...");
     const diagnostics = ts.getPreEmitDiagnostics(program);
     if (diagnostics.length > 0) {
@@ -140,8 +143,10 @@ export async function build(options: BuildOptions): Promise<void> {
   }
 
   // emit only the .d.ts files
-  log("Emitting declaration files...");
-  emit({ onlyDtsFiles: true });
+  if (options.declaration) {
+    log("Emitting declaration files...");
+    emit({ onlyDtsFiles: true });
+  }
 
   // emit the esm files
   log("Emitting esm module...");
@@ -171,7 +176,10 @@ export async function build(options: BuildOptions): Promise<void> {
     `{\n  "type": "commonjs"\n}\n`,
   );
 
-  if (testOutput) {
+  // ensure this is done before running tests
+  await npmInstallPromise;
+
+  if (options.test) {
     log("Running tests...");
     await createTestLauncherScript();
     await runNpmCommand(["run", "test"]);
@@ -203,15 +211,15 @@ export async function build(options: BuildOptions): Promise<void> {
 
   function createPackageJson() {
     const entryPointPath = transformOutput
-      .entryPoints[0]
+      .main.entryPoints[0]
       .replace(/\.ts$/i, ".js");
     const entryPointDtsFilePath = transformOutput
-      .entryPoints[0]
+      .main.entryPoints[0]
       .replace(/\.ts$/i, ".d.ts");
     const dependencies = {
       // add dependencies from transform
       ...Object.fromEntries(
-        transformOutput.dependencies.map((d) => [d.name, d.version]),
+        transformOutput.main.dependencies.map((d) => [d.name, d.version]),
       ),
       // add specifier mappings to dependencies
       ...(specifierMappings && Object.fromEntries(
@@ -220,7 +228,7 @@ export async function build(options: BuildOptions): Promise<void> {
           .map((value) => [value.name, value.version]),
       )) ?? {},
       // add shim
-      ...(transformOutput.shimUsed
+      ...(transformOutput.main.shimUsed
         ? {
           [shimPackage.name]: shimPackage.version,
         }
@@ -228,7 +236,7 @@ export async function build(options: BuildOptions): Promise<void> {
       // override with specified dependencies
       ...(options.package.dependencies ?? {}),
     };
-    const devDependencies = testOutput
+    const devDependencies = options.test
       ? ({
         ...(!Object.keys(dependencies).includes("chalk")
           ? {
@@ -236,17 +244,17 @@ export async function build(options: BuildOptions): Promise<void> {
           }
           : {}),
         ...(!Object.keys(dependencies).includes("@types/node") &&
-            (transformOutput.shimUsed || testOutput.shimUsed)
+            (transformOutput.main.shimUsed || transformOutput.test.shimUsed)
           ? {
             "@types/node": "16.11.1",
           }
           : {}),
         // add dependencies from transform
         ...Object.fromEntries(
-          testOutput.dependencies.map((d) => [d.name, d.version]) ?? [],
+          transformOutput.test.dependencies.map((d) => [d.name, d.version]) ?? [],
         ),
         // add shim if not in dependencies
-        ...(testOutput.shimUsed &&
+        ...(transformOutput.test.shimUsed &&
             !Object.keys(dependencies).includes(shimPackage.name)
           ? {
             [shimPackage.name]: shimPackage.version,
@@ -256,7 +264,7 @@ export async function build(options: BuildOptions): Promise<void> {
         ...(options.package.devDependencies ?? {}),
       })
       : options.package.devDependencies;
-    const scripts = testOutput
+    const scripts = options.test
       ? ({
         test: "node test_runner.js",
         // override with specified scripts
@@ -289,7 +297,7 @@ export async function build(options: BuildOptions): Promise<void> {
   }
 
   function createNpmIgnore() {
-    if (!testOutput) {
+    if (!options.test) {
       return;
     }
 
@@ -307,11 +315,7 @@ export async function build(options: BuildOptions): Promise<void> {
   }
 
   function* getTestFileNames() {
-    if (!testOutput) {
-      return;
-    }
-
-    for (const file of testOutput.files) {
+    for (const file of transformOutput.test.files) {
       const filePath = file.filePath.replace(/\.ts$/i, ".js");
       yield `./esm/${filePath}`;
       yield `./cjs/${filePath}`;
@@ -319,63 +323,13 @@ export async function build(options: BuildOptions): Promise<void> {
     yield "./test_runner.js";
   }
 
-  interface TestOutput {
-    entryPoints: string[];
-    shimUsed: boolean;
-    dependencies: Dependency[];
-    files: OutputFile[];
-  }
-
-  async function getTestOutput(): Promise<TestOutput | undefined> {
-    const testFilePaths = await getTestFilePaths({
-      rootDir: options.rootTestDir ?? Deno.cwd(),
-      excludeDirs: [options.outDir],
-    });
-    if (testFilePaths.length === 0) {
-      return undefined;
-    }
-
-    log("Transforming test files...");
-    const testTransformOutput = await transformEntryPoints([
-      ...testFilePaths,
-      ...options.entryPoints,
-    ]);
-    for (const warning of testTransformOutput.warnings) {
-      warnOnce(warning);
-    }
-    const outputFileNames = new Set(
-      transformOutput.files.map((f) => f.filePath),
-    );
-    const testFiles = testTransformOutput.files.filter((f) =>
-      !outputFileNames.has(f.filePath)
-    );
-
-    if (testFiles.length === 0) {
-      return undefined;
-    }
-
-    const outputDependencyNames = new Set(
-      transformOutput.dependencies.map((d) => d.name),
-    );
-    const outputEntryPoints = new Set(transformOutput.entryPoints);
-
-    return {
-      entryPoints: testTransformOutput.entryPoints.filter((e) =>
-        !outputEntryPoints.has(e)
-      ),
-      shimUsed: testTransformOutput.shimUsed,
-      dependencies: testTransformOutput.dependencies.filter((d) =>
-        !outputDependencyNames.has(d.name)
-      ),
-      files: testFiles,
-    };
-  }
-
-  function transformEntryPoints(
-    entryPoints: (string | URL)[],
-  ): Promise<TransformOutput> {
+  async function transformEntryPoints(): Promise<TransformOutput> {
     return transform({
-      entryPoints,
+      entryPoints: options.entryPoints,
+      testEntryPoints: options.test ? await getTestFilePaths({
+        rootDir: options.rootTestDir ?? Deno.cwd(),
+        excludeDirs: [options.outDir],
+      }) : [],
       shimPackageName: shimPackage.name,
       specifierMappings: specifierMappings && Object.fromEntries(
         Object.entries(specifierMappings).map(([key, value]) => {
@@ -389,38 +343,30 @@ export async function build(options: BuildOptions): Promise<void> {
     console.log(`[dnt] ${message}`);
   }
 
-  function warnOnce(message: string) {
-    if (!warnedMessages.has(message)) {
-      warnedMessages.add(message);
-      warn(message);
-    }
-  }
-
   function warn(message: string) {
     console.warn(colors.yellow(`[dnt] ${message}`));
   }
 
   async function createTestLauncherScript() {
-    if (!testOutput) {
-      return;
-    }
-
     let fileText = `const chalk = require("chalk");\n`;
-    if (testOutput.shimUsed) {
+    if (transformOutput.test.shimUsed) {
       fileText += `const denoShim = require("${shimPackage.name}");\n` +
         `const { testDefinitions } = require("${shimPackage.name}/test-internals");\n\n`;
     }
 
     fileText += "const filePaths = [\n";
-    for (const entryPoint of testOutput.entryPoints) {
+    for (const entryPoint of transformOutput.test.entryPoints) {
       fileText += `  "${entryPoint.replace(/\.ts$/, ".js")}",\n`;
     }
     fileText += "];\n\n";
 
     fileText += `async function main() {
-  for (const filePath of filePaths) {
+  for (const [i, filePath] of filePaths.entries()) {
     const cjsPath = "./cjs/" + filePath;
-    console.log("\\nRunning tests in " + chalk.underline(cjsPath) + "...\\n");
+    if (i > 0) {
+      console.log("");
+    }
+    console.log("Running tests in " + chalk.underline(cjsPath) + "...\\n");
     require(cjsPath);
     await runTestDefinitions();
     const esmPath = "./esm/" + filePath;
@@ -429,7 +375,7 @@ export async function build(options: BuildOptions): Promise<void> {
     await runTestDefinitions();
   }
 }\n\n`;
-    if (testOutput.shimUsed) {
+    if (transformOutput.test.shimUsed) {
       fileText += `${getRunTestDefinitionsCode()}\n\n`;
     }
     fileText += "main();\n";

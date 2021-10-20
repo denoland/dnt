@@ -1,5 +1,6 @@
 // Copyright 2018-2021 the Deno authors. All rights reserved. MIT license.
 
+use std::collections::BTreeMap;
 use std::collections::HashMap;
 use std::collections::HashSet;
 use std::pin::Pin;
@@ -36,7 +37,7 @@ pub trait Loader {
 
 pub struct LoaderSpecifiers {
   pub found_ignored: HashSet<ModuleSpecifier>,
-  pub mapped: Vec<MappedSpecifierEntry>,
+  pub mapped: BTreeMap<ModuleSpecifier, MappedSpecifierEntry>,
 }
 
 pub struct SourceLoader<'a> {
@@ -56,7 +57,7 @@ impl<'a> SourceLoader<'a> {
       loader: Arc::new(loader),
       specifiers: LoaderSpecifiers {
         found_ignored: HashSet::new(),
-        mapped: Vec::new(),
+        mapped: BTreeMap::new(),
       },
       specifier_mappers,
       ignored_specifiers,
@@ -82,13 +83,15 @@ impl<'a> deno_graph::source::Loader for SourceLoader<'a> {
       .unwrap_or(false)
     {
       self.specifiers.found_ignored.insert(specifier.clone());
-      return Box::pin(future::ready((specifier.clone(), Ok(None))));
+      // provide a dummy file so that this module can be analyzed later
+      return get_dummy_module(specifier);
     }
 
     for mapper in self.specifier_mappers.iter() {
       if let Some(entry) = mapper.map(specifier) {
-        self.specifiers.mapped.push(entry);
-        return Box::pin(future::ready((specifier.clone(), Ok(None))));
+        self.specifiers.mapped.insert(specifier.clone(), entry);
+        // provide a dummy file so that this module can be analyzed later
+        return get_dummy_module(specifier);
       }
     }
 
@@ -108,4 +111,14 @@ impl<'a> deno_graph::source::Loader for SourceLoader<'a> {
       )
     });
   }
+}
+
+fn get_dummy_module(specifier: &ModuleSpecifier) -> deno_graph::source::LoadFuture {
+  let mut headers = HashMap::new();
+  headers.insert("content-type".to_string(), "application/javascript".to_string());
+  Box::pin(future::ready((specifier.clone(), Ok(Some(deno_graph::source::LoadResponse {
+    specifier: specifier.clone(),
+    content: Arc::new(String::new()),
+    maybe_headers: Some(headers),
+  })))))
 }

@@ -8,6 +8,7 @@ await init(source);
 
 export interface TransformOptions {
   entryPoints: (string | URL)[];
+  testEntryPoints?: (string | URL)[];
   shimPackageName: string;
   /** The specifier to bare specifier mappings. */
   specifierMappings?: {
@@ -21,12 +22,17 @@ export interface Dependency {
 }
 
 export interface TransformOutput {
+  main: TransformOutputEnvironment;
+  test: TransformOutputEnvironment;
+  warnings: string[];
+}
+
+export interface TransformOutputEnvironment {
   entryPoints: string[];
   /** If the shim is used in any of the output files. */
   shimUsed: boolean;
   dependencies: Dependency[];
   files: OutputFile[];
-  warnings: string[];
 }
 
 export interface OutputFile {
@@ -43,13 +49,16 @@ export function transform(options: TransformOptions): Promise<TransformOutput> {
   }
   const newOptions = {
     ...options,
-    entryPoints: options.entryPoints.map((entryPoint) => {
-      if (entryPoint instanceof URL) {
-        return entryPoint.toString();
-      } else {
-        return path.toFileUrl(path.resolve(entryPoint)).toString();
-      }
-    }),
+    entryPoints: options.entryPoints.map(stringOrUrlToString),
+    testEntryPoints: (options.testEntryPoints ?? []).map(stringOrUrlToString),
   };
   return wasmFuncs.transform(newOptions);
+}
+
+function stringOrUrlToString(value: string | URL) {
+  if (value instanceof URL) {
+    return value.toString();
+  } else {
+    return path.toFileUrl(path.resolve(value)).toString();
+  }
 }

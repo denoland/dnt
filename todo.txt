@@ -1,6 +1,5 @@
 - tests for `build`
 - Handle deno-types when it specifies a declaration for a `.ts` file (maybe transform the .ts file to .js?)
-- Support multiple entrypoints with a default entrypoint used in package.json (the first one)
 - Handle dynamic imports (at least ones that are statically analyzable and maybe warn on others)
 - Support lockfile
 - Special handling of a remote module that is only an `import type ... from "...";` or `export type` (only get declarations).
@@ -8,9 +7,7 @@
 
 Notes from Kitson:
 
-- We would need to rewrite triple slash references
 - We might need to deal with the types in the tsconfig.json
-- How do we handle remote URLs, data URLs and blob dynamic imports?
-  - David: Just changed it to download everything for now, but in the future we can implement remote URL -> bare specifier mapping. Ideally this will be automatic, but in some cases the user will need to specify a bare specifier to use.
+- How do we handle data URLs and blob dynamic imports?
   - David: We could probably output data URLs to a file.
   - David: Blob dynamic imports... I'm not sure. Dynamic imports will be a problem if they're not statically analyzable, but we can warn the user about that when it happens.
