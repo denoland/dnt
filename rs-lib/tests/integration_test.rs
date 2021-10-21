@@ -48,27 +48,26 @@ async fn transform_deno_shim() {
         "\nconst obj = { test: denoShim.Deno };"
       ),
     ),
-  ]).await;
+  ])
+  .await;
 }
 
 #[tokio::test]
 async fn no_transform_deno_ignored() {
-  assert_identity_transforms(vec![
-    "// deno-shim-ignore\nDeno.readTextFile();",
-  ]).await;
+  assert_identity_transforms(vec!["// deno-shim-ignore\nDeno.readTextFile();"])
+    .await;
 }
 
 #[tokio::test]
 async fn transform_deno_shim_with_name_collision() {
-  assert_transforms(vec![
-    (
-      "Deno.readTextFile(); const denoShim = {};",
-      concat!(
-        r#"import * as denoShim1 from "test-shim";"#,
-        "\ndenoShim1.Deno.readTextFile(); const denoShim = {};"
-      )
+  assert_transforms(vec![(
+    "Deno.readTextFile(); const denoShim = {};",
+    concat!(
+      r#"import * as denoShim1 from "test-shim";"#,
+      "\ndenoShim1.Deno.readTextFile(); const denoShim = {};"
     ),
-  ]).await;
+  )])
+  .await;
 }
 
 #[tokio::test]
@@ -113,28 +112,28 @@ async fn no_shim_for_declarations() {
     "export { Deno as test } from 'test';",
     "try {} catch (Deno) {}",
     "function test(Deno) {}",
-  ]).await;
+  ])
+  .await;
 }
 
 #[tokio::test]
 async fn transform_deno_collision() {
-  assert_transforms(vec![
-    (
-      concat!(
-        "const Deno = {};",
-        "const { Deno: Deno2 } = globalThis;",
-        "Deno2.readTextFile();",
-        "Deno.test;"
-      ),
-      concat!(
-        r#"import * as denoShim from "test-shim";"#,
-        "\nconst Deno = {};",
-        "const { Deno: Deno2 } = ({ Deno: denoShim.Deno, ...globalThis });",
-        "Deno2.readTextFile();",
-        "Deno.test;"
-      )
+  assert_transforms(vec![(
+    concat!(
+      "const Deno = {};",
+      "const { Deno: Deno2 } = globalThis;",
+      "Deno2.readTextFile();",
+      "Deno.test;"
     ),
-  ]).await;
+    concat!(
+      r#"import * as denoShim from "test-shim";"#,
+      "\nconst Deno = {};",
+      "const { Deno: Deno2 } = ({ Deno: denoShim.Deno, ...globalThis });",
+      "Deno2.readTextFile();",
+      "Deno.test;"
+    ),
+  )])
+  .await;
 }
 
 #[tokio::test]

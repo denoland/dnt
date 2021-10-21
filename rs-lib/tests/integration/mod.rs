@@ -34,26 +34,42 @@ macro_rules! assert_files {
 }
 
 pub async fn assert_transforms(files: Vec<(&str, &str)>) {
-    let files = files.into_iter().enumerate()
-      .map(|(i, file)| {
-        (format!("mod{}.ts", if i == 0 { "".to_string() } else { i.to_string() }), file)
-      }).collect::<Vec<_>>();
-    let mut test_builder = TestBuilder::new();
-    test_builder.with_loader(|loader| {
+  let files = files
+    .into_iter()
+    .enumerate()
+    .map(|(i, file)| {
+      (
+        format!(
+          "mod{}.ts",
+          if i == 0 {
+            "".to_string()
+          } else {
+            i.to_string()
+          }
+        ),
+        file,
+      )
+    })
+    .collect::<Vec<_>>();
+  let mut test_builder = TestBuilder::new();
+  test_builder
+    .with_loader(|loader| {
       for (file_name, file) in files.iter() {
         loader.add_local_file(&format!("/{}", file_name), file.0);
       }
-    }).shim_package_name("test-shim");
+    })
+    .shim_package_name("test-shim");
 
-    for i in 1..files.len() {
-      test_builder.add_entry_point(format!("file:///mod{}.ts", i));
-    }
+  for i in 1..files.len() {
+    test_builder.add_entry_point(format!("file:///mod{}.ts", i));
+  }
 
-    let result = test_builder.transform()
-      .await
-      .unwrap();
-    let expected_files = files.into_iter().map(|(file_name, file)| (file_name, file.1)).collect::<Vec<_>>();
-    assert_files!(result.main.files, expected_files);
+  let result = test_builder.transform().await.unwrap();
+  let expected_files = files
+    .into_iter()
+    .map(|(file_name, file)| (file_name, file.1))
+    .collect::<Vec<_>>();
+  assert_files!(result.main.files, expected_files);
 }
 
 pub async fn assert_identity_transforms(files: Vec<&str>) {
