@@ -1,2 +1,4 @@
-# exclude this in the language stats
-lib/pkg/ linguist-vendored
+# exclude these from the language stats
+lib/pkg/dnt_wasm_bg.ts linguist-vendored
+lib/pkg/dnt_wasm.d.ts linguist-vendored
+lib/pkg/dnt_wasm.js linguist-vendored

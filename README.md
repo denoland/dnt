@@ -16,8 +16,8 @@ There are several steps done in a pipeline:
    - Rewrites Skypack and ESM specifiers to a bare specifier and includes these dependencies in a package.json.
    - When remote modules cannot be resolved to an npm package, it downloads them and rewrites specifiers to make them local.
    - Allows mapping any specifier to an npm package.
+1. Type checks the output.
 1. Emits ESM, CommonJS, and TypeScript declaration files along with a _package.json_ file.
-1. Type checks the final output.
 1. Runs the final output in Node through a test runner running all `Deno.test` calls. Deletes the test files when complete.
 
 ## Setup
