@@ -178,7 +178,7 @@ export async function build(options: BuildOptions): Promise<void> {
     declaration: false,
     esModuleInterop: true,
     outDir: umdOutDir,
-    module: ts.ModuleKind.CommonJS,
+    module: ts.ModuleKind.UMD,
   });
   program = project.createProgram();
   emit({
