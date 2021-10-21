@@ -20,30 +20,24 @@ export const transformImportMeta: ts.TransformerFactory<ts.SourceFile> = (
     return ts.visitEachChild(node, visitNode, context);
   }
 
-  function getReplacementBinaryExpr(): ts.BinaryExpression {
+  function getReplacementBinaryExpr(): ts.PropertyAccessExpression {
     const factory = context.factory;
     // Copy and pasted from ts-ast-viewer.com
-    // document.currentScript && document.currentScript.src || document.baseURI
-    return factory.createBinaryExpression(
-      factory.createBinaryExpression(
+    // require("url").pathToFileURL(__filename).href
+    return factory.createPropertyAccessExpression(
+      factory.createCallExpression(
         factory.createPropertyAccessExpression(
-          factory.createIdentifier("document"),
-          factory.createIdentifier("currentScript"),
-        ),
-        factory.createToken(ts.SyntaxKind.AmpersandAmpersandToken),
-        factory.createPropertyAccessExpression(
-          factory.createPropertyAccessExpression(
-            factory.createIdentifier("document"),
-            factory.createIdentifier("currentScript"),
+          factory.createCallExpression(
+            factory.createIdentifier("require"),
+            undefined,
+            [factory.createStringLiteral("url")]
           ),
-          factory.createIdentifier("src"),
+          factory.createIdentifier("pathToFileURL")
         ),
+        undefined,
+        [factory.createIdentifier("__filename")]
       ),
-      factory.createToken(ts.SyntaxKind.BarBarToken),
-      factory.createPropertyAccessExpression(
-        factory.createIdentifier("document"),
-        factory.createIdentifier("baseURI"),
-      ),
+      factory.createIdentifier("href")
     );
   }
 };
