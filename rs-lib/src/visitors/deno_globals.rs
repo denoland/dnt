@@ -26,8 +26,8 @@ struct Context<'a> {
   ignore_line_indexes: HashSet<usize>,
 }
 
-pub fn get_deno_global_text_changes<'a>(
-  params: &GetDenoGlobalTextChangesParams<'a>,
+pub fn get_deno_global_text_changes(
+  params: &GetDenoGlobalTextChangesParams<'_>,
 ) -> Vec<TextChange> {
   let top_level_decls =
     get_top_level_declarations(params.program, params.top_level_context);

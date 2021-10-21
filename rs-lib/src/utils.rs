@@ -24,7 +24,7 @@ pub fn url_to_file_path(module_specifier: &ModuleSpecifier) -> Result<PathBuf> {
   let mut final_text = String::new();
   for segment in path_segments.iter() {
     if !final_text.is_empty() {
-      final_text.push_str("/");
+      final_text.push('/');
     }
     final_text.push_str(segment);
   }

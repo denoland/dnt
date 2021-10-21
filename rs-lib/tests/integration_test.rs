@@ -660,8 +660,12 @@ async fn transform_specifier_mappings() {
           "import * as myOther from './other.ts';",
         );
     })
-    .add_specifier_mapping("http://localhost/mod.ts", "remote-module")
-    .add_specifier_mapping("file:///file.ts", "local-module")
+    .add_specifier_mapping(
+      "http://localhost/mod.ts",
+      "remote-module",
+      Some("1.0.0"),
+    )
+    .add_specifier_mapping("file:///file.ts", "local-module", None)
     .transform()
     .await
     .unwrap();
@@ -672,6 +676,13 @@ async fn transform_specifier_mappings() {
       ("mod.ts", "import * as remote from 'remote-module';\nimport * as local from 'local-module';\n"),
     ]
   );
+  assert_eq!(
+    result.main.dependencies,
+    &[Dependency {
+      name: "remote-module".to_string(),
+      version: "1.0.0".to_string(),
+    },]
+  );
 }
 
 #[tokio::test]
@@ -680,8 +691,8 @@ async fn transform_not_found_mappings() {
     .with_loader(|loader| {
       loader.add_local_file("/mod.ts", "test");
     })
-    .add_specifier_mapping("http://localhost/mod.ts", "local-module")
-    .add_specifier_mapping("http://localhost/mod2.ts", "local-module2")
+    .add_specifier_mapping("http://localhost/mod.ts", "local-module", None)
+    .add_specifier_mapping("http://localhost/mod2.ts", "local-module2", None)
     .transform()
     .await
     .err()

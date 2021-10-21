@@ -2,7 +2,6 @@
 
 use std::collections::BTreeMap;
 use std::collections::HashMap;
-use std::collections::HashSet;
 use std::pin::Pin;
 use std::sync::Arc;
 
@@ -18,6 +17,8 @@ mod specifier_mappers;
 #[cfg(feature = "tokio-loader")]
 pub use default_loader::*;
 pub use specifier_mappers::*;
+
+use crate::MappedSpecifier;
 
 #[cfg_attr(feature = "serialization", derive(serde::Deserialize))]
 #[cfg_attr(feature = "serialization", serde(rename_all = "camelCase"))]
@@ -36,31 +37,30 @@ pub trait Loader {
 }
 
 pub struct LoaderSpecifiers {
-  pub found_ignored: HashSet<ModuleSpecifier>,
-  pub mapped: BTreeMap<ModuleSpecifier, MappedSpecifierEntry>,
+  pub mapped: BTreeMap<ModuleSpecifier, MappedSpecifier>,
 }
 
 pub struct SourceLoader<'a> {
+  #[allow(clippy::redundant_allocation)]
   loader: Arc<Box<dyn Loader>>,
   specifiers: LoaderSpecifiers,
   specifier_mappers: Vec<Box<dyn SpecifierMapper>>,
-  ignored_specifiers: Option<&'a HashSet<ModuleSpecifier>>,
+  specifier_mappings: Option<&'a HashMap<ModuleSpecifier, MappedSpecifier>>,
 }
 
 impl<'a> SourceLoader<'a> {
   pub fn new(
     loader: Box<dyn Loader>,
     specifier_mappers: Vec<Box<dyn SpecifierMapper>>,
-    ignored_specifiers: Option<&'a HashSet<ModuleSpecifier>>,
+    specifier_mappings: Option<&'a HashMap<ModuleSpecifier, MappedSpecifier>>,
   ) -> Self {
     Self {
       loader: Arc::new(loader),
       specifiers: LoaderSpecifiers {
-        found_ignored: HashSet::new(),
         mapped: BTreeMap::new(),
       },
       specifier_mappers,
-      ignored_specifiers,
+      specifier_mappings,
     }
   }
 
@@ -76,13 +76,16 @@ impl<'a> deno_graph::source::Loader for SourceLoader<'a> {
     // todo: handle dynamic
     _is_dynamic: bool,
   ) -> deno_graph::source::LoadFuture {
-    if self
-      .ignored_specifiers
+    if let Some(mapping) = self
+      .specifier_mappings
       .as_ref()
-      .map(|s| s.contains(specifier))
-      .unwrap_or(false)
+      .map(|m| m.get(specifier))
+      .flatten()
     {
-      self.specifiers.found_ignored.insert(specifier.clone());
+      self
+        .specifiers
+        .mapped
+        .insert(specifier.clone(), mapping.clone());
       // provide a dummy file so that this module can be analyzed later
       return get_dummy_module(specifier);
     }
@@ -97,7 +100,8 @@ impl<'a> deno_graph::source::Loader for SourceLoader<'a> {
 
     let loader = self.loader.clone();
     let specifier = specifier.clone();
-    return Box::pin(async move {
+
+    Box::pin(async move {
       let resp = loader.load(specifier.clone()).await;
       (
         specifier.clone(),
@@ -109,7 +113,7 @@ impl<'a> deno_graph::source::Loader for SourceLoader<'a> {
           })
         }),
       )
-    });
+    })
   }
 }
 

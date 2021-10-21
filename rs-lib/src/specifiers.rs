@@ -12,7 +12,7 @@ use crate::declaration_file_resolution::resolve_declaration_file_mappings;
 use crate::declaration_file_resolution::DeclarationFileResolution;
 use crate::graph::ModuleGraph;
 use crate::loader::LoaderSpecifiers;
-use crate::loader::MappedSpecifierEntry;
+use crate::MappedSpecifier;
 
 pub struct Specifiers {
   pub local: Vec<ModuleSpecifier>,
@@ -24,21 +24,14 @@ pub struct Specifiers {
 }
 
 impl Specifiers {
-  pub fn has_ignored_or_mapped(&self, specifier: &ModuleSpecifier) -> bool {
-    self.main.has_ignored_or_mapped(specifier)
-      || self.test.has_ignored_or_mapped(specifier)
+  pub fn has_mapped(&self, specifier: &ModuleSpecifier) -> bool {
+    self.main.mapped.contains_key(specifier)
+      || self.test.mapped.contains_key(specifier)
   }
 }
 
 pub struct EnvironmentSpecifiers {
-  pub ignored: HashSet<ModuleSpecifier>,
-  pub mapped: BTreeMap<ModuleSpecifier, MappedSpecifierEntry>,
-}
-
-impl EnvironmentSpecifiers {
-  pub fn has_ignored_or_mapped(&self, specifier: &ModuleSpecifier) -> bool {
-    self.ignored.contains(specifier) || self.mapped.contains_key(specifier)
-  }
+  pub mapped: BTreeMap<ModuleSpecifier, MappedSpecifier>,
 }
 
 pub fn get_specifiers(
@@ -55,7 +48,6 @@ pub fn get_specifiers(
 
   let mut found_module_specifiers = Vec::new();
   let mut found_mapped_specifiers = BTreeMap::new();
-  let mut found_ignored_specifiers = HashSet::new();
 
   // search for all the non-test modules
   for entry_point in entry_points.iter() {
@@ -64,17 +56,9 @@ pub fn get_specifiers(
 
     while let Some(module) = pending.pop().map(|s| modules.remove(&s)).flatten()
     {
-      let mut is_ignored = false;
       if let Some(mapped_entry) = specifiers.mapped.remove(&module.specifier) {
         found_mapped_specifiers.insert(module.specifier.clone(), mapped_entry);
-        is_ignored = true;
-      }
-      if specifiers.found_ignored.remove(&module.specifier) {
-        found_ignored_specifiers.insert(module.specifier.clone());
-        is_ignored = true;
-      }
-
-      if !is_ignored {
+      } else {
         found_module_specifiers.push(module.specifier.clone());
 
         for dep in module.dependencies.values() {
@@ -92,12 +76,8 @@ pub fn get_specifiers(
     }
   }
 
-  // clear out all the ignored/mapped test modules
-  for specifier in specifiers
-    .found_ignored
-    .iter()
-    .chain(specifiers.mapped.keys())
-  {
+  // clear out all the mapped test modules
+  for specifier in specifiers.mapped.keys() {
     modules.remove(specifier);
   }
 
@@ -105,7 +85,7 @@ pub fn get_specifiers(
   let test_modules = modules;
   let all_modules = test_modules
     .values()
-    .map(|m| *m)
+    .copied()
     .chain(found_module_specifiers.iter().map(|s| module_graph.get(s)))
     .collect::<Vec<_>>();
 
@@ -142,42 +122,38 @@ pub fn get_specifiers(
     types,
     test_modules: test_modules.keys().map(|k| (*k).clone()).collect(),
     main: EnvironmentSpecifiers {
-      ignored: found_ignored_specifiers,
       mapped: found_mapped_specifiers,
     },
     test: EnvironmentSpecifiers {
-      ignored: specifiers.found_ignored,
       mapped: specifiers.mapped,
     },
   })
 }
 
 fn ensure_mapped_specifiers_valid(
-  mapped_specifiers: &BTreeMap<ModuleSpecifier, MappedSpecifierEntry>,
-  test_mapped_specifiers: &BTreeMap<ModuleSpecifier, MappedSpecifierEntry>,
+  mapped_specifiers: &BTreeMap<ModuleSpecifier, MappedSpecifier>,
+  test_mapped_specifiers: &BTreeMap<ModuleSpecifier, MappedSpecifier>,
 ) -> Result<()> {
   let mut specifier_for_name: HashMap<
     String,
-    (ModuleSpecifier, MappedSpecifierEntry),
+    (ModuleSpecifier, MappedSpecifier),
   > = HashMap::new();
   for (from_specifier, mapped_specifier) in mapped_specifiers
     .iter()
     .chain(test_mapped_specifiers.iter())
   {
-    if let Some(specifier) =
-      specifier_for_name.get(&mapped_specifier.to_specifier)
-    {
+    if let Some(specifier) = specifier_for_name.get(&mapped_specifier.name) {
       if specifier.1.version != mapped_specifier.version {
         anyhow::bail!("Specifier {} with version {} did not match specifier {} with version {}.",
           specifier.0,
-          specifier.1.version.as_ref().map(|v| v.as_str()).unwrap_or("<unknown>"),
+          specifier.1.version.as_deref().unwrap_or("<unknown>"),
           from_specifier,
-          mapped_specifier.version.as_ref().map(|v| v.as_str()).unwrap_or("<unknown>"),
+          mapped_specifier.version.as_deref().unwrap_or("<unknown>"),
         );
       }
     } else {
       specifier_for_name.insert(
-        mapped_specifier.to_specifier.to_string(),
+        mapped_specifier.name.to_string(),
         (from_specifier.clone(), mapped_specifier.clone()),
       );
     }

@@ -32,14 +32,14 @@ export const transformImportMeta: ts.TransformerFactory<ts.SourceFile> = (
           factory.createCallExpression(
             factory.createIdentifier("require"),
             undefined,
-            [factory.createStringLiteral("url")]
+            [factory.createStringLiteral("url")],
           ),
-          factory.createIdentifier("pathToFileURL")
+          factory.createIdentifier("pathToFileURL"),
         ),
         undefined,
-        [factory.createIdentifier("__filename")]
+        [factory.createIdentifier("__filename")],
       ),
-      factory.createIdentifier("href")
+      factory.createIdentifier("href"),
     );
   }
 };

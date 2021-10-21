@@ -9,7 +9,6 @@ use anyhow::Result;
 extern crate lazy_static;
 
 use graph::ModuleGraphOptions;
-use loader::MappedSpecifierEntry;
 use mappings::Mappings;
 use specifiers::Specifiers;
 use text_changes::apply_text_changes;
@@ -71,12 +70,22 @@ pub struct TransformOutputEnvironment {
   pub dependencies: Vec<Dependency>,
 }
 
+#[cfg_attr(feature = "serialization", derive(serde::Deserialize))]
+#[derive(Clone, Debug)]
+pub struct MappedSpecifier {
+  /// Name being mapped to.
+  pub name: String,
+  /// Version of the specifier. Leave this blank to not have a
+  /// dependency (ex. Node modules like "path")
+  pub version: Option<String>,
+}
+
 pub struct TransformOptions {
   pub entry_points: Vec<ModuleSpecifier>,
   pub test_entry_points: Vec<ModuleSpecifier>,
   pub shim_package_name: String,
   pub loader: Option<Box<dyn Loader>>,
-  pub specifier_mappings: Option<HashMap<ModuleSpecifier, String>>,
+  pub specifier_mappings: Option<HashMap<ModuleSpecifier, MappedSpecifier>>,
 }
 
 pub async fn transform(options: TransformOptions) -> Result<TransformOutput> {
@@ -85,30 +94,23 @@ pub async fn transform(options: TransformOptions) -> Result<TransformOutput> {
   }
 
   let shim_package_name = options.shim_package_name;
-  let ignored_specifiers = options
-    .specifier_mappings
-    .as_ref()
-    .map(|t| t.keys().map(ToOwned::to_owned).collect());
-
   let (module_graph, specifiers) =
     crate::graph::ModuleGraph::build_with_specifiers(ModuleGraphOptions {
       entry_points: options.entry_points.clone(),
       test_entry_points: options.test_entry_points.clone(),
-      ignored_specifiers: ignored_specifiers.as_ref(),
+      specifier_mappings: options.specifier_mappings.as_ref(),
       loader: options.loader,
     })
     .await?;
 
   let mappings = Mappings::new(&module_graph, &specifiers)?;
-  let mut specifier_mappings = options.specifier_mappings.unwrap_or_default();
-  for (key, entry) in specifiers
+  let all_specifier_mappings: HashMap<ModuleSpecifier, String> = specifiers
     .main
     .mapped
     .iter()
     .chain(specifiers.test.mapped.iter())
-  {
-    specifier_mappings.insert(key.clone(), entry.to_specifier.clone());
-  }
+    .map(|m| (m.0.clone(), m.1.name.clone()))
+    .collect();
 
   // todo: parallelize
   let warnings = get_declaration_warnings(&specifiers);
@@ -162,7 +164,7 @@ pub async fn transform(options: TransformOptions) -> Result<TransformOutput> {
           module_graph: &module_graph,
           mappings: &mappings,
           program: &program,
-          specifier_mappings: &specifier_mappings,
+          specifier_mappings: &all_specifier_mappings,
         },
       ));
 
@@ -187,14 +189,14 @@ pub async fn transform(options: TransformOptions) -> Result<TransformOutput> {
 }
 
 fn get_dependencies(
-  mappings: BTreeMap<ModuleSpecifier, MappedSpecifierEntry>,
+  mappings: BTreeMap<ModuleSpecifier, MappedSpecifier>,
 ) -> Vec<Dependency> {
   let mut dependencies = mappings
     .into_iter()
     .filter_map(|entry| {
       if let Some(version) = entry.1.version {
         Some(Dependency {
-          name: entry.1.to_specifier,
+          name: entry.1.name,
           version,
         })
       } else {

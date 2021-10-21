@@ -6,6 +6,7 @@ use std::collections::HashMap;
 use std::future::Future;
 
 use anyhow::Result;
+use dnt::MappedSpecifier;
 use dnt::ModuleSpecifier;
 use serde::Deserialize;
 use utils::set_panic_hook;
@@ -48,7 +49,7 @@ pub struct TransformOptions {
   pub entry_points: Vec<String>,
   pub test_entry_points: Vec<String>,
   pub shim_package_name: String,
-  pub specifier_mappings: Option<HashMap<ModuleSpecifier, String>>,
+  pub specifier_mappings: Option<HashMap<ModuleSpecifier, MappedSpecifier>>,
 }
 
 #[wasm_bindgen]

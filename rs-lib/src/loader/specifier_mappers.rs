@@ -3,14 +3,10 @@
 use deno_ast::ModuleSpecifier;
 use regex::Regex;
 
-pub trait SpecifierMapper {
-  fn map(&self, specifier: &ModuleSpecifier) -> Option<MappedSpecifierEntry>;
-}
+use crate::MappedSpecifier;
 
-#[derive(Clone, Debug)]
-pub struct MappedSpecifierEntry {
-  pub to_specifier: String,
-  pub version: Option<String>,
+pub trait SpecifierMapper {
+  fn map(&self, specifier: &ModuleSpecifier) -> Option<MappedSpecifier>;
 }
 
 pub fn get_all_specifier_mappers() -> Vec<Box<dyn SpecifierMapper>> {
@@ -49,11 +45,11 @@ lazy_static! {
 struct SkypackMapper {}
 
 impl SpecifierMapper for SkypackMapper {
-  fn map(&self, specifier: &ModuleSpecifier) -> Option<MappedSpecifierEntry> {
+  fn map(&self, specifier: &ModuleSpecifier) -> Option<MappedSpecifier> {
     SKYPACK_MAPPING_RE
       .captures(specifier.as_str())
-      .map(|captures| MappedSpecifierEntry {
-        to_specifier: captures.get(1).unwrap().as_str().to_string(),
+      .map(|captures| MappedSpecifier {
+        name: captures.get(1).unwrap().as_str().to_string(),
         version: Some(captures.get(2).unwrap().as_str().to_string()),
       })
   }
@@ -62,11 +58,11 @@ impl SpecifierMapper for SkypackMapper {
 struct EsmShMapper {}
 
 impl SpecifierMapper for EsmShMapper {
-  fn map(&self, specifier: &ModuleSpecifier) -> Option<MappedSpecifierEntry> {
+  fn map(&self, specifier: &ModuleSpecifier) -> Option<MappedSpecifier> {
     ESMSH_MAPPING_RE
       .captures(specifier.as_str())
-      .map(|captures| MappedSpecifierEntry {
-        to_specifier: captures.get(1).unwrap().as_str().to_string(),
+      .map(|captures| MappedSpecifier {
+        name: captures.get(1).unwrap().as_str().to_string(),
         version: Some(captures.get(2).unwrap().as_str().to_string()),
       })
   }
@@ -91,10 +87,10 @@ impl NodeSpecifierMapper {
 }
 
 impl SpecifierMapper for NodeSpecifierMapper {
-  fn map(&self, specifier: &ModuleSpecifier) -> Option<MappedSpecifierEntry> {
+  fn map(&self, specifier: &ModuleSpecifier) -> Option<MappedSpecifier> {
     if self.url_re.is_match(specifier.as_str()) {
-      Some(MappedSpecifierEntry {
-        to_specifier: self.to_specifier.clone(),
+      Some(MappedSpecifier {
+        name: self.to_specifier.clone(),
         version: None,
       })
     } else {

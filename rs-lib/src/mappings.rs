@@ -53,7 +53,7 @@ impl Mappings {
       Vec<(ModuleSpecifier, MediaType)>,
     )> = Vec::new();
     for remote_specifier in specifiers.remote.iter() {
-      let media_type = module_graph.get(&remote_specifier).media_type;
+      let media_type = module_graph.get(remote_specifier).media_type;
       let mut found = false;
       for (root_specifier, specifiers) in root_remote_specifiers.iter_mut() {
         if let Some(relative_url) =
@@ -109,7 +109,7 @@ impl Mappings {
 
     for (code_specifier, d) in specifiers.types.iter() {
       let to = &d.selected.specifier;
-      let file_path = mappings.get(&code_specifier).unwrap();
+      let file_path = mappings.get(code_specifier).unwrap();
       let new_file_path = file_path.with_extension("d.ts");
       if let Some(past_path) = mappings.insert(to.clone(), new_file_path) {
         // this would indicate a programming error
@@ -166,18 +166,18 @@ fn make_url_relative(
 fn get_dir_name_for_root(root: &ModuleSpecifier) -> PathBuf {
   let mut result = String::new();
   if let Some(domain) = root.domain() {
-    result.push_str(&sanitize_filepath(&domain));
+    result.push_str(&sanitize_filepath(domain));
   }
   if let Some(port) = root.port() {
     if !result.is_empty() {
-      result.push_str("_");
+      result.push('_');
     }
     result.push_str(&port.to_string());
   }
   if let Some(segments) = root.path_segments() {
     for segment in segments.filter(|s| !s.is_empty()) {
       if !result.is_empty() {
-        result.push_str("_");
+        result.push('_');
       }
       result.push_str(&sanitize_filepath(segment));
     }
@@ -221,7 +221,6 @@ fn get_base_dir(specifiers: &[ModuleSpecifier]) -> Result<PathBuf> {
   // todo(dsherret): should maybe error on windows when the files
   // span different drives...
   let mut base_dir = url_to_file_path(&specifiers[0])?
-    .to_path_buf()
     .parent()
     .unwrap()
     .to_path_buf();

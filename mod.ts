@@ -4,14 +4,22 @@ import { outputDiagnostics } from "./lib/compiler.ts";
 import { colors, createProjectSync, path, ts } from "./lib/mod.deps.ts";
 import { PackageJsonObject } from "./lib/types.ts";
 import { glob } from "./lib/utils.ts";
-import { transform, TransformOutput } from "./transform.ts";
+import { SpecifierMappings, transform, TransformOutput } from "./transform.ts";
 import * as compilerTransforms from "./lib/compiler_transforms.ts";
+import { getPackageJson } from "./lib/package_json.ts";
 
 export * from "./transform.ts";
 
+export interface EntryPoint {
+  /** Name of the entrypoint in the "exports". */
+  name: string;
+  /** Path to the entrypoint. */
+  path: string | URL;
+}
+
 export interface BuildOptions {
   /** Entrypoint(s) to the Deno module. Ex. `./mod.ts` */
-  entryPoints: (string | URL)[];
+  entryPoints: (string | EntryPoint)[];
   /** Directory to output to. */
   outDir: string;
   /** Type check the output (defaults to true). */
@@ -32,17 +40,7 @@ export interface BuildOptions {
     version: string;
   };
   /** Specifiers to map from and to. */
-  mappings?: {
-    [specifier: string]: {
-      /** Name of the specifier to map to. */
-      name: string;
-      /** Version to use in the package.json file.
-       *
-       * Not specifying a version will exclude it from the package.json file.
-       */
-      version?: string;
-    };
-  };
+  mappings?: SpecifierMappings;
   /** Package.json output. You may override dependencies and dev dependencies in here. */
   package: PackageJsonObject;
 }
@@ -56,6 +54,16 @@ export async function build(options: BuildOptions): Promise<void> {
     test: options.test ?? true,
     declaration: options.declaration ?? true,
   };
+  const entryPoints: EntryPoint[] = options.entryPoints.map((e, i) => {
+    if (typeof e === "string") {
+      return {
+        name: i === 0 ? "." : e.replace(/\.tsx?$/i, ".js"),
+        path: e,
+      };
+    } else {
+      return e;
+    }
+  });
 
   await Deno.permissions.request({ name: "write", path: options.outDir });
 
@@ -63,18 +71,6 @@ export async function build(options: BuildOptions): Promise<void> {
     name: "deno.ns",
     version: "0.5.0",
   };
-  const specifierMappings = options.mappings && Object.fromEntries(
-    Object.entries(options.mappings).map(([key, value]) => {
-      const lowerCaseKey = key.toLowerCase();
-      if (
-        !lowerCaseKey.startsWith("http://") &&
-        !lowerCaseKey.startsWith("https://")
-      ) {
-        key = path.toFileUrl(lowerCaseKey).toString();
-      }
-      return [key, value];
-    }),
-  );
 
   log("Transforming...");
   const transformOutput = await transformEntryPoints();
@@ -228,87 +224,13 @@ export async function build(options: BuildOptions): Promise<void> {
   }
 
   function createPackageJson() {
-    const entryPointPath = transformOutput
-      .main.entryPoints[0]
-      .replace(/\.ts$/i, ".js");
-    const entryPointDtsFilePath = transformOutput
-      .main.entryPoints[0]
-      .replace(/\.ts$/i, ".d.ts");
-    const dependencies = {
-      // add dependencies from transform
-      ...Object.fromEntries(
-        transformOutput.main.dependencies.map((d) => [d.name, d.version]),
-      ),
-      // add specifier mappings to dependencies
-      ...(specifierMappings && Object.fromEntries(
-        Object.values(specifierMappings)
-          .filter((v) => v.version)
-          .map((value) => [value.name, value.version]),
-      )) ?? {},
-      // add shim
-      ...(transformOutput.main.shimUsed
-        ? {
-          [shimPackage.name]: shimPackage.version,
-        }
-        : {}),
-      // override with specified dependencies
-      ...(options.package.dependencies ?? {}),
-    };
-    const devDependencies = options.test
-      ? ({
-        ...(!Object.keys(dependencies).includes("chalk")
-          ? {
-            "chalk": "4.1.2",
-          }
-          : {}),
-        ...(!Object.keys(dependencies).includes("@types/node") &&
-            (transformOutput.main.shimUsed || transformOutput.test.shimUsed)
-          ? {
-            "@types/node": "16.11.1",
-          }
-          : {}),
-        // add dependencies from transform
-        ...Object.fromEntries(
-          transformOutput.test.dependencies.map((d) => [d.name, d.version]) ??
-            [],
-        ),
-        // add shim if not in dependencies
-        ...(transformOutput.test.shimUsed &&
-            !Object.keys(dependencies).includes(shimPackage.name)
-          ? {
-            [shimPackage.name]: shimPackage.version,
-          }
-          : {}),
-        // override with specified dependencies
-        ...(options.package.devDependencies ?? {}),
-      })
-      : options.package.devDependencies;
-    const scripts = options.test
-      ? ({
-        test: "node test_runner.js",
-        // override with specified scripts
-        ...(options.package.scripts ?? {}),
-      })
-      : options.package.scripts;
-
-    const packageJsonObj = {
-      module: `./esm/${entryPointPath}`,
-      main: `./umd/${entryPointPath}`,
-      types: `./types/${entryPointDtsFilePath}`,
-      ...options.package,
-      exports: {
-        ...(options.package.exports ?? {}),
-        ".": {
-          import: `./esm/${entryPointPath}`,
-          require: `./umd/${entryPointPath}`,
-          types: options.package.types ?? `./types/${entryPointDtsFilePath}`,
-          ...(options.package.exports?.["."] ?? {}),
-        },
-      },
-      scripts,
-      dependencies,
-      devDependencies,
-    };
+    const packageJsonObj = getPackageJson({
+      entryPoints,
+      shimPackage,
+      transformOutput,
+      package: options.package,
+      testEnabled: options.test,
+    });
     writeFile(
       path.join(options.outDir, "package.json"),
       JSON.stringify(packageJsonObj, undefined, 2),
@@ -344,7 +266,7 @@ export async function build(options: BuildOptions): Promise<void> {
 
   async function transformEntryPoints(): Promise<TransformOutput> {
     return transform({
-      entryPoints: options.entryPoints,
+      entryPoints: entryPoints.map((e) => e.path),
       testEntryPoints: options.test
         ? await glob({
           pattern: getTestPattern(),
@@ -353,11 +275,7 @@ export async function build(options: BuildOptions): Promise<void> {
         })
         : [],
       shimPackageName: shimPackage.name,
-      specifierMappings: specifierMappings && Object.fromEntries(
-        Object.entries(specifierMappings).map(([key, value]) => {
-          return [key, value.name];
-        }),
-      ),
+      mappings: options.mappings,
     });
   }
 

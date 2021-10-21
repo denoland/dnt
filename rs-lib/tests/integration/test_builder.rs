@@ -4,6 +4,7 @@ use std::collections::HashMap;
 
 use anyhow::Result;
 use deno_node_transform::transform;
+use deno_node_transform::MappedSpecifier;
 use deno_node_transform::ModuleSpecifier;
 use deno_node_transform::TransformOptions;
 use deno_node_transform::TransformOutput;
@@ -16,7 +17,7 @@ pub struct TestBuilder {
   additional_entry_points: Vec<String>,
   test_entry_points: Vec<String>,
   shim_package_name: Option<String>,
-  specifier_mappings: Option<HashMap<ModuleSpecifier, String>>,
+  specifier_mappings: Option<HashMap<ModuleSpecifier, MappedSpecifier>>,
 }
 
 impl TestBuilder {
@@ -66,6 +67,7 @@ impl TestBuilder {
     &mut self,
     specifier: impl AsRef<str>,
     bare_specifier: impl AsRef<str>,
+    version: Option<&str>,
   ) -> &mut Self {
     let mappings = if let Some(mappings) = self.specifier_mappings.as_mut() {
       mappings
@@ -75,7 +77,10 @@ impl TestBuilder {
     };
     mappings.insert(
       ModuleSpecifier::parse(specifier.as_ref()).unwrap(),
-      bare_specifier.as_ref().to_string(),
+      MappedSpecifier {
+        name: bare_specifier.as_ref().to_string(),
+        version: version.map(|v| v.to_string()),
+      },
     );
     self
   }

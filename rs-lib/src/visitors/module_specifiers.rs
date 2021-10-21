@@ -31,8 +31,8 @@ struct Context<'a> {
   specifier_mappings: &'a HashMap<ModuleSpecifier, String>,
 }
 
-pub fn get_module_specifier_text_changes<'a>(
-  params: &GetModuleSpecifierTextChangesParams<'a>,
+pub fn get_module_specifier_text_changes(
+  params: &GetModuleSpecifierTextChangesParams<'_>,
 ) -> Vec<TextChange> {
   let mut context = Context {
     specifier: params.specifier,
@@ -47,10 +47,10 @@ pub fn get_module_specifier_text_changes<'a>(
   for child in params.program.children() {
     match child {
       Node::ImportDecl(import_decl) => {
-        visit_module_specifier(&import_decl.src, &mut context);
+        visit_module_specifier(import_decl.src, &mut context);
       }
       Node::ExportAll(export_all) => {
-        visit_module_specifier(&export_all.src, &mut context);
+        visit_module_specifier(export_all.src, &mut context);
       }
       Node::NamedExport(named_export) => {
         if let Some(src) = named_export.src.as_ref() {
@@ -68,7 +68,7 @@ fn visit_module_specifier(str: &Str, context: &mut Context) {
   let value = str.value().to_string();
   let specifier = context
     .module_graph
-    .resolve_dependency(&value, &context.specifier);
+    .resolve_dependency(&value, context.specifier);
   let specifier = match specifier {
     Some(s) => s,
     None => return,

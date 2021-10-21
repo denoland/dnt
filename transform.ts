@@ -10,9 +10,19 @@ export interface TransformOptions {
   entryPoints: (string | URL)[];
   testEntryPoints?: (string | URL)[];
   shimPackageName: string;
-  /** The specifier to bare specifier mappings. */
-  specifierMappings?: {
-    [specifier: string]: string;
+  mappings?: SpecifierMappings;
+}
+
+/** Specifier to bare specifier mappings. */
+export interface SpecifierMappings {
+  [specifier: string]: {
+    /** Name of the specifier to map to. */
+    name: string;
+    /** Version to use in the package.json file.
+     *
+     * Not specifying a version will exclude it from the package.json file.
+     */
+    version?: string;
   };
 }
 
@@ -49,6 +59,18 @@ export function transform(options: TransformOptions): Promise<TransformOutput> {
   }
   const newOptions = {
     ...options,
+    mappings: options.mappings && Object.fromEntries(
+      Object.entries(options.mappings).map(([key, value]) => {
+        const lowerCaseKey = key.toLowerCase();
+        if (
+          !lowerCaseKey.startsWith("http://") &&
+          !lowerCaseKey.startsWith("https://")
+        ) {
+          key = path.toFileUrl(lowerCaseKey).toString();
+        }
+        return [key, value];
+      }),
+    ),
     entryPoints: options.entryPoints.map(stringOrUrlToString),
     testEntryPoints: (options.testEntryPoints ?? []).map(stringOrUrlToString),
   };
