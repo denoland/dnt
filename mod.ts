@@ -106,7 +106,7 @@ export async function build(options: BuildOptions): Promise<void> {
 
   log("Building project...");
   const esmOutDir = path.join(options.outDir, "esm");
-  const cjsOutDir = path.join(options.outDir, "cjs");
+  const umdOutDir = path.join(options.outDir, "umd");
   const typesOutDir = path.join(options.outDir, "types");
   const project = createProjectSync({
     compilerOptions: {
@@ -159,7 +159,7 @@ export async function build(options: BuildOptions): Promise<void> {
   }
 
   // emit the esm files
-  log("Emitting esm module...");
+  log("Emitting ESM package...");
   project.compilerOptions.set({
     declaration: false,
     outDir: esmOutDir,
@@ -171,18 +171,18 @@ export async function build(options: BuildOptions): Promise<void> {
     `{\n  "type": "module"\n}\n`,
   );
 
-  // emit the cjs files
-  log("Emitting cjs module...");
+  // emit the umd files
+  log("Emitting CommonJs package...");
   project.compilerOptions.set({
     declaration: false,
     esModuleInterop: true,
-    outDir: cjsOutDir,
+    outDir: umdOutDir,
     module: ts.ModuleKind.CommonJS,
   });
   program = project.createProgram();
   emit();
   writeFile(
-    path.join(cjsOutDir, "package.json"),
+    path.join(umdOutDir, "package.json"),
     `{\n  "type": "commonjs"\n}\n`,
   );
 
@@ -285,14 +285,14 @@ export async function build(options: BuildOptions): Promise<void> {
 
     const packageJsonObj = {
       module: `./esm/${entryPointPath}`,
-      main: `./cjs/${entryPointPath}`,
+      main: `./umd/${entryPointPath}`,
       types: `./types/${entryPointDtsFilePath}`,
       ...options.package,
       exports: {
         ...(options.package.exports ?? {}),
         ".": {
           import: `./esm/${entryPointPath}`,
-          require: `./cjs/${entryPointPath}`,
+          require: `./umd/${entryPointPath}`,
           types: options.package.types ?? `./types/${entryPointDtsFilePath}`,
           ...(options.package.exports?.["."] ?? {}),
         },
@@ -329,7 +329,7 @@ export async function build(options: BuildOptions): Promise<void> {
     for (const file of transformOutput.test.files) {
       const filePath = file.filePath.replace(/\.ts$/i, ".js");
       yield `./esm/${filePath}`;
-      yield `./cjs/${filePath}`;
+      yield `./umd/${filePath}`;
     }
     yield "./test_runner.js";
   }
@@ -376,12 +376,12 @@ export async function build(options: BuildOptions): Promise<void> {
 
     fileText += `async function main() {
   for (const [i, filePath] of filePaths.entries()) {
-    const cjsPath = "./cjs/" + filePath;
+    const umdPath = "./umd/" + filePath;
     if (i > 0) {
       console.log("");
     }
-    console.log("Running tests in " + chalk.underline(cjsPath) + "...\\n");
-    require(cjsPath);
+    console.log("Running tests in " + chalk.underline(umdPath) + "...\\n");
+    require(umdPath);
     await runTestDefinitions();
     const esmPath = "./esm/" + filePath;
     console.log("\\nRunning tests in " + chalk.underline(esmPath) + "...\\n");
