@@ -2,8 +2,8 @@
 
 import { outputDiagnostics } from "./lib/compiler.ts";
 import { colors, createProjectSync, path, ts } from "./lib/mod.deps.ts";
-import { getTestFilePaths } from "./lib/test_files.ts";
 import { PackageJsonObject } from "./lib/types.ts";
+import { glob } from "./lib/utils.ts";
 import { transform, TransformOutput } from "./transform.ts";
 
 export * from "./transform.ts";
@@ -23,6 +23,9 @@ export interface BuildOptions {
   keepTestFiles?: boolean;
   /** Root directory to find test files in. Defaults to the cwd. */
   rootTestDir?: string;
+  /** Glob pattern to use to find tests files. Defaults to `deno test`'s pattern. */
+  testPattern?: string;
+  /** Package to use for shimming the `Deno` namespace. Defaults to `deno.ns` */
   shimPackage?: {
     name: string;
     version: string;
@@ -281,10 +284,10 @@ export async function build(options: BuildOptions): Promise<void> {
       : options.package.scripts;
 
     const packageJsonObj = {
+      module: `./esm/${entryPointPath}`,
+      main: `./cjs/${entryPointPath}`,
+      types: `./types/${entryPointDtsFilePath}`,
       ...options.package,
-      module: options.package.module ?? `./esm/${entryPointPath}`,
-      main: options.package.main ?? `./cjs/${entryPointPath}`,
-      types: options.package.types ?? `./types/${entryPointDtsFilePath}`,
       exports: {
         ...(options.package.exports ?? {}),
         ".": {
@@ -335,7 +338,8 @@ export async function build(options: BuildOptions): Promise<void> {
     return transform({
       entryPoints: options.entryPoints,
       testEntryPoints: options.test
-        ? await getTestFilePaths({
+        ? await glob({
+          pattern: getTestPattern(),
           rootDir: options.rootTestDir ?? Deno.cwd(),
           excludeDirs: [options.outDir],
         })
@@ -426,6 +430,13 @@ export async function build(options: BuildOptions): Promise<void> {
         return cmd;
       }
     }
+  }
+
+  function getTestPattern() {
+    // * named `test.{ts, tsx, js, mjs, jsx}`,
+    // * or ending with `.test.{ts, tsx, js, mjs, jsx}`,
+    // * or ending with `_test.{ts, tsx, js, mjs, jsx}`
+    return options.testPattern ?? "**/{test.{ts,tsx,js,mjs,jsx},*.test.{ts,tsx,js,mjs,jsx},*_test.{ts,tsx,js,mjs,jsx}}";
   }
 }
 

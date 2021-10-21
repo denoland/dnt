@@ -32,7 +32,9 @@ impl Mappings {
     let mut root_local_dirs = HashSet::new();
     for specifier in specifiers.local.iter() {
       let file_path = url_to_file_path(specifier)?;
-      let relative_file_path = file_path.strip_prefix(&base_dir)?;
+      let relative_file_path = file_path.strip_prefix(&base_dir).map_err(|_| {
+        anyhow::anyhow!("Error stripping prefix of {} with base {}", file_path.display(), base_dir.display())
+      })?;
       mappings.insert(specifier.clone(), relative_file_path.to_path_buf());
       if let Some(Component::Normal(first_dir)) =
         relative_file_path.components().next()
@@ -221,8 +223,20 @@ fn get_base_dir(specifiers: &[ModuleSpecifier]) -> Result<PathBuf> {
   for specifier in specifiers {
     let file_path = url_to_file_path(specifier)?;
     let parent_dir = file_path.parent().unwrap();
-    if base_dir.starts_with(parent_dir) {
-      base_dir = parent_dir.to_path_buf();
+    if base_dir != parent_dir {
+      if base_dir.starts_with(parent_dir) {
+        base_dir = parent_dir.to_path_buf();
+      } else if base_dir.components().count() == parent_dir.components().count() {
+        let mut final_path = PathBuf::new();
+        for (a, b) in base_dir.components().zip(parent_dir.components()) {
+          if a == b {
+            final_path.push(a);
+          } else {
+            break;
+          }
+        }
+        base_dir = final_path;
+      }
     }
   }
   Ok(base_dir)
@@ -248,6 +262,19 @@ mod test {
         get_dir_name_for_root(&ModuleSpecifier::parse(specifier).unwrap()),
         PathBuf::from(expected)
       );
+    }
+  }
+
+  #[test]
+  fn should_get_base_dir() {
+    run_test(vec![
+      "file:///project/b/other.ts",
+      "file:///project/a/other.ts",
+    ], "/project");
+
+    fn run_test(urls: Vec<&str>, expected: &str) {
+      let result = get_base_dir(&urls.into_iter().map(|u| ModuleSpecifier::parse(u).unwrap()).collect::<Vec<_>>()).unwrap();
+      assert_eq!(result, PathBuf::from(expected));
     }
   }
 }

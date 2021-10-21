@@ -130,6 +130,7 @@ pub async fn transform(options: TransformOptions) -> Result<TransformOutput> {
     dependencies: get_dependencies(specifiers.test.mapped),
     ..Default::default()
   };
+
   for specifier in specifiers
     .local
     .iter()

@@ -64,7 +64,7 @@ pub async fn transform(options: JsValue) -> Result<JsValue, JsValue> {
     specifier_mappings: options.specifier_mappings,
   })
   .await
-  .unwrap();
+  .map_err(|err| err.to_string())?;
 
   Ok(JsValue::from_serde(&result).unwrap())
 }
