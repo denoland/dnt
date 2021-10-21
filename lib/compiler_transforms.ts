@@ -1,3 +1,5 @@
+// Copyright 2018-2021 the Deno authors. All rights reserved. MIT license.
+
 import { ts } from "./mod.deps.ts";
 
 // transform `import.meta.url` to a replacement that works in UMD modules

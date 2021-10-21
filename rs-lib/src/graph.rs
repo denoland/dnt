@@ -1,3 +1,5 @@
+// Copyright 2018-2021 the Deno authors. All rights reserved. MIT license.
+
 use std::collections::HashSet;
 
 use crate::loader::get_all_specifier_mappers;

@@ -1,3 +1,5 @@
+// Copyright 2018-2021 the Deno authors. All rights reserved. MIT license.
+
 import * as deps from "./mod.deps.ts";
 
 /** Gets the files found in the provided root dir path based on the glob. */
