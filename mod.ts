@@ -5,6 +5,7 @@ import { colors, createProjectSync, path, ts } from "./lib/mod.deps.ts";
 import { PackageJsonObject } from "./lib/types.ts";
 import { glob } from "./lib/utils.ts";
 import { transform, TransformOutput } from "./transform.ts";
+import * as compilerTransforms from "./lib/compiler_transforms.ts";
 
 export * from "./transform.ts";
 
@@ -180,7 +181,11 @@ export async function build(options: BuildOptions): Promise<void> {
     module: ts.ModuleKind.CommonJS,
   });
   program = project.createProgram();
-  emit();
+  emit({
+    transformers: {
+      before: [compilerTransforms.transformImportMeta],
+    },
+  });
   writeFile(
     path.join(umdOutDir, "package.json"),
     `{\n  "type": "commonjs"\n}\n`,
@@ -200,7 +205,9 @@ export async function build(options: BuildOptions): Promise<void> {
 
   log("Complete!");
 
-  function emit(opts?: { onlyDtsFiles?: boolean }) {
+  function emit(
+    opts?: { onlyDtsFiles?: boolean; transformers?: ts.CustomTransformers },
+  ) {
     const emitResult = program.emit(
       undefined,
       (filePath, data, writeByteOrderMark) => {
@@ -211,6 +218,7 @@ export async function build(options: BuildOptions): Promise<void> {
       },
       undefined,
       opts?.onlyDtsFiles,
+      opts?.transformers,
     );
 
     if (emitResult.diagnostics.length > 0) {
@@ -436,7 +444,8 @@ export async function build(options: BuildOptions): Promise<void> {
     // * named `test.{ts, tsx, js, mjs, jsx}`,
     // * or ending with `.test.{ts, tsx, js, mjs, jsx}`,
     // * or ending with `_test.{ts, tsx, js, mjs, jsx}`
-    return options.testPattern ?? "**/{test.{ts,tsx,js,mjs,jsx},*.test.{ts,tsx,js,mjs,jsx},*_test.{ts,tsx,js,mjs,jsx}}";
+    return options.testPattern ??
+      "**/{test.{ts,tsx,js,mjs,jsx},*.test.{ts,tsx,js,mjs,jsx},*_test.{ts,tsx,js,mjs,jsx}}";
   }
 }
 
