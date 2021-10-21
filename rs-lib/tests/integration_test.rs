@@ -8,6 +8,9 @@ mod integration;
 
 use integration::TestBuilder;
 
+use crate::integration::assert_identity_transforms;
+use crate::integration::assert_transforms;
+
 #[tokio::test]
 async fn transform_standalone_file() {
   let result = TestBuilder::new()
@@ -23,118 +26,106 @@ async fn transform_standalone_file() {
 
 #[tokio::test]
 async fn transform_deno_shim() {
-  let result = TestBuilder::new()
-    .with_loader(|loader| {
-      loader.add_local_file("/mod.ts", r#"Deno.readTextFile();"#);
-    })
-    .transform()
-    .await
-    .unwrap();
-
-  assert_files!(
-    result.main.files,
-    &[(
-      "mod.ts",
+  assert_transforms(vec![
+    (
+      "Deno.readTextFile();",
       concat!(
-        r#"import * as denoShim from "deno.ns";"#,
+        r#"import * as denoShim from "test-shim";"#,
         "\ndenoShim.Deno.readTextFile();"
-      )
-    )]
-  );
+      ),
+    ),
+    (
+      "const [test=Deno] = other;",
+      concat!(
+        r#"import * as denoShim from "test-shim";"#,
+        "\nconst [test=denoShim.Deno] = other;"
+      ),
+    ),
+    (
+      "const obj = { test: Deno };",
+      concat!(
+        r#"import * as denoShim from "test-shim";"#,
+        "\nconst obj = { test: denoShim.Deno };"
+      ),
+    ),
+  ]).await;
 }
 
 #[tokio::test]
 async fn no_transform_deno_ignored() {
-  let result = TestBuilder::new()
-    .with_loader(|loader| {
-      loader
-        .add_local_file("/mod.ts", "// deno-shim-ignore\nDeno.readTextFile();");
-    })
-    .transform()
-    .await
-    .unwrap();
-
-  assert_files!(
-    result.main.files,
-    &[("mod.ts", "// deno-shim-ignore\nDeno.readTextFile();",)]
-  );
+  assert_identity_transforms(vec![
+    "// deno-shim-ignore\nDeno.readTextFile();",
+  ]).await;
 }
 
 #[tokio::test]
 async fn transform_deno_shim_with_name_collision() {
-  let result = TestBuilder::new()
-    .with_loader(|loader| {
-      loader.add_local_file(
-        "/mod.ts",
-        r#"Deno.readTextFile(); const denoShim = {};"#,
-      );
-    })
-    .shim_package_name("test-shim")
-    .transform()
-    .await
-    .unwrap();
-
-  assert_files!(
-    result.main.files,
-    &[(
-      "mod.ts",
+  assert_transforms(vec![
+    (
+      "Deno.readTextFile(); const denoShim = {};",
       concat!(
         r#"import * as denoShim1 from "test-shim";"#,
         "\ndenoShim1.Deno.readTextFile(); const denoShim = {};"
       )
-    )]
-  );
+    ),
+  ]).await;
 }
 
 #[tokio::test]
 async fn transform_global_this_deno() {
-  let result = TestBuilder::new()
-    .with_loader(|loader| {
-      loader.add_local_file(
-        "/mod.ts",
-        r#"globalThis.Deno.readTextFile(); globalThis.test = 5;"#,
-      );
-    })
-    .shim_package_name("test-shim")
-    .transform()
-    .await
-    .unwrap();
-
-  assert_files!(
-    result.main.files,
-    &[(
-      "mod.ts",
+  assert_transforms(vec![
+    (
+      "globalThis.Deno.readTextFile(); globalThis.test = 5;",
       concat!(
         r#"import * as denoShim from "test-shim";"#,
         "\n({ Deno: denoShim.Deno, ...globalThis }).Deno.readTextFile(); globalThis.test = 5;"
       )
-    )]
-  );
+    ),
+  ]).await;
+}
+
+#[tokio::test]
+async fn no_shim_for_declarations() {
+  assert_identity_transforms(vec![
+    "const { Deno } = test;",
+    "const { asdf, ...Deno } = test;",
+    "const { Deno: test } = test;",
+    "const { test: Deno } = test;",
+    "const [Deno] = test;",
+    "const [test, ...Deno] = test;",
+    "const obj = { Deno: test };",
+    "interface Deno {}",
+    "interface Test { Deno: string; }",
+    "interface Test { Deno(): string; }",
+    "class Deno {}",
+    "class Test { Deno: string; }",
+    "class Test { Deno() {} }",
+    "const t = class Deno {};",
+    "function Deno() {}",
+    "const t = function Deno() {};",
+    "import { Deno } from 'test';",
+    "import * as Deno from 'test';",
+    "import { test as Deno } from 'test';",
+    "import { Deno as test } from 'test';",
+    "export { Deno } from 'test';",
+    "export * as Deno from 'test';",
+    "export { test as Deno } from 'test';",
+    "export { Deno as test } from 'test';",
+    "try {} catch (Deno) {}",
+    "function test(Deno) {}",
+  ]).await;
 }
 
 #[tokio::test]
 async fn transform_deno_collision() {
-  let result = TestBuilder::new()
-    .with_loader(|loader| {
-      loader.add_local_file(
-        "/mod.ts",
-        concat!(
-          "const Deno = {};",
-          "const { Deno: Deno2 } = globalThis;",
-          "Deno2.readTextFile();",
-          "Deno.test;"
-        ),
-      );
-    })
-    .shim_package_name("test-shim")
-    .transform()
-    .await
-    .unwrap();
-
-  assert_files!(
-    result.main.files,
-    &[(
-      "mod.ts",
+  assert_transforms(vec![
+    (
+      concat!(
+        "const Deno = {};",
+        "const { Deno: Deno2 } = globalThis;",
+        "Deno2.readTextFile();",
+        "Deno.test;"
+      ),
       concat!(
         r#"import * as denoShim from "test-shim";"#,
         "\nconst Deno = {};",
@@ -142,8 +133,8 @@ async fn transform_deno_collision() {
         "Deno2.readTextFile();",
         "Deno.test;"
       )
-    )]
-  );
+    ),
+  ]).await;
 }
 
 #[tokio::test]

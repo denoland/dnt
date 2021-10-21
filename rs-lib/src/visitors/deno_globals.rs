@@ -102,6 +102,37 @@ fn should_ignore(node: Node, context: &Context) -> bool {
     .ignore_line_indexes
     .contains(&node.span().start_line_fast(context.program))
     || in_left_hand_assignment(node)
+    || is_declaration_ident(node)
+}
+
+fn is_declaration_ident(node: Node) -> bool {
+  if let Some(parent) = node.parent() {
+    let span = match parent {
+      Node::BindingIdent(decl) => Some(decl.id.span()),
+      Node::ClassDecl(decl) => Some(decl.ident.span()),
+      Node::ClassExpr(decl) => Some(decl.ident.span()),
+      Node::TsInterfaceDecl(decl) => Some(decl.id.span()),
+      Node::FnDecl(decl) => Some(decl.ident.span()),
+      Node::FnExpr(decl) => Some(decl.ident.span()),
+      Node::TsModuleDecl(decl) => Some(decl.id.span()),
+      Node::TsNamespaceDecl(decl) => Some(decl.id.span()),
+      Node::VarDeclarator(decl) => Some(decl.name.span()),
+      Node::ImportNamedSpecifier(decl) => Some(decl.span()),
+      Node::ExportNamedSpecifier(decl) => Some(decl.span()),
+      Node::ExportNamespaceSpecifier(decl) => Some(decl.span()),
+      Node::ImportDefaultSpecifier(decl) => Some(decl.span()),
+      Node::ExportDefaultSpecifier(decl) => Some(decl.span()),
+      Node::KeyValuePatProp(decl) => Some(decl.key.span()),
+      Node::AssignPatProp(decl) => Some(decl.key.span()),
+      _ => None,
+    };
+    match span {
+      Some(span) => span.contains(node.span()),
+      None => false,
+    }
+  } else {
+    false
+  }
 }
 
 fn in_left_hand_assignment(node: Node) -> bool {
