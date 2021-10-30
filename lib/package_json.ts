@@ -29,6 +29,8 @@ export function getPackageJson({
       types: e.replace(/\.tsx?$/i, ".d.ts"),
     }));
   const dependencies = {
+    // typescript helpers library (https://www.npmjs.com/package/tslib)
+    tslib: "2.3.1",
     // add dependencies from transform
     ...Object.fromEntries(
       transformOutput.main.dependencies.map((d) => [d.name, d.version]),

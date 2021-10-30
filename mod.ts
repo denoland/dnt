@@ -123,6 +123,7 @@ export async function build(options: BuildOptions): Promise<void> {
       moduleResolution: ts.ModuleResolutionKind.NodeJs,
       target: ts.ScriptTarget.ES2015,
       allowSyntheticDefaultImports: true,
+      importHelpers: true,
     },
   });
 
@@ -288,10 +289,10 @@ export async function build(options: BuildOptions): Promise<void> {
   }
 
   async function createTestLauncherScript() {
-    let fileText = `const chalk = require("chalk");\n`;
+    let fileText = `const chalk = require("chalk");\n` +
+      `const process = require("process");\n`;
     if (transformOutput.test.shimUsed) {
-      fileText += `const denoShim = require("${shimPackage.name}");\n` +
-        `const { testDefinitions } = require("${shimPackage.name}/test-internals");\n\n`;
+      fileText += `const { testDefinitions } = require("${shimPackage.name}/test-internals");\n\n`;
     }
 
     fileText += "const filePaths = [\n";
@@ -302,14 +303,16 @@ export async function build(options: BuildOptions): Promise<void> {
 
     fileText += `async function main() {
   for (const [i, filePath] of filePaths.entries()) {
-    const umdPath = "./umd/" + filePath;
     if (i > 0) {
       console.log("");
     }
+    const umdPath = "./umd/" + filePath;
     console.log("Running tests in " + chalk.underline(umdPath) + "...\\n");
+    process.chdir(__dirname + "/umd");
     require(umdPath);
     await runTestDefinitions();
     const esmPath = "./esm/" + filePath;
+    process.chdir(__dirname + "/esm");
     console.log("\\nRunning tests in " + chalk.underline(esmPath) + "...\\n");
     await import(esmPath);
     await runTestDefinitions();
@@ -405,7 +408,7 @@ async function runTestDefinitions() {
     console.log("\\nFAILURES\\n");
     for (const failure of testFailures) {
       console.log(failure.name);
-      console.log(indentText(failure.err, 1));
+      console.log(indentText((failure.err?.stack ?? err).toString(), 1));
       console.log("");
     }
     process.exit(1);
@@ -434,7 +437,7 @@ function getTestContext() {
         output += "\\n";
       }
       if (this.err) {
-        output += indentText(this.err.toString(), 1);
+        output += indentText((this.err?.stack ?? this.err).toString(), 1);
         if (this.name) {
           output += "\\n";
         }

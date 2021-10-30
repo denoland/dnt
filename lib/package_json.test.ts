@@ -48,6 +48,7 @@ Deno.test("single entrypoint", () => {
     module: "./esm/mod.js",
     types: "./types/mod.d.ts",
     dependencies: {
+      tslib: "2.3.1",
       dep: "^1.0.0",
     },
     devDependencies: {
@@ -87,6 +88,7 @@ Deno.test("single entrypoint", () => {
       module: "./esm/mod.js",
       types: "./types/mod.d.ts",
       dependencies: {
+        tslib: "2.3.1",
         dep: "^1.0.0",
       },
       devDependencies: {},
@@ -144,6 +146,7 @@ Deno.test("multiple entrypoints", () => {
     module: "./esm/mod.js",
     types: "./types/mod.d.ts",
     dependencies: {
+      tslib: "2.3.1",
       "deno.ns": "0.0.0",
     },
     devDependencies: {
