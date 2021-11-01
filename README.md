@@ -58,7 +58,7 @@ await build({
 
 ```bash
 # run script
-deno run --allow-read --allow-write --allow-net --allow-run scripts/build_npm.ts 0.1.0
+deno run -A scripts/build_npm.ts 0.1.0
 
 # go to output directory and publish
 cd npm

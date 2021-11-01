@@ -2,7 +2,7 @@
 name = "deno_node_transform"
 version = "0.1.0"
 authors = ["the Deno authors"]
-edition = "2018"
+edition = "2021"
 license = "MIT"
 repository = "https://github.com/dsherret/dnt"
 description = "Deno to Node/canonical TypeScript transform."
@@ -15,8 +15,8 @@ serialization = ["serde"]
 [dependencies]
 anyhow = "1.0.44"
 base64 = "0.13.0"
-deno_ast = { version = "0.4.1", features = ["module_specifier", "transforms", "view", "visit", "utils"] }
-deno_graph = { version = "0.8.2", features = [] }
+deno_ast = { version = "0.5.0", features = ["module_specifier", "transforms", "view", "visit", "utils"] }
+deno_graph = { version = "0.10.0", features = [] }
 futures = "0.3.17"
 lazy_static = "1.4.0"
 pathdiff = "0.2.0"

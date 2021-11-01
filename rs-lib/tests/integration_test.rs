@@ -50,6 +50,35 @@ async fn transform_deno_shim() {
         "\nconst obj = { test: denoShim.Deno };"
       ),
     ),
+    (
+      concat!(
+        "const decl01 = Blob;\n",
+        "const decl02 = crypto;\n",
+        "const decl03 = fetch;\n",
+        "const decl04 = File;\n",
+        "const decl05 = FormData;\n",
+        "const decl06 = Headers;\n",
+        "const decl07 = Request;\n",
+        "const decl08 = Response;\n",
+        "const decl09 = alert;\n",
+        "const decl10 = confirm;\n",
+        "const decl11: typeof prompt = prompt;\n",
+      ),
+      concat!(
+        r#"import * as denoShim from "test-shim";"#,
+        "\nconst decl01 = denoShim.Blob;\n",
+        "const decl02 = denoShim.crypto;\n",
+        "const decl03 = denoShim.fetch;\n",
+        "const decl04 = denoShim.File;\n",
+        "const decl05 = denoShim.FormData;\n",
+        "const decl06 = denoShim.Headers;\n",
+        "const decl07 = denoShim.Request;\n",
+        "const decl08 = denoShim.Response;\n",
+        "const decl09 = denoShim.alert;\n",
+        "const decl10 = denoShim.confirm;\n",
+        "const decl11: typeof denoShim.prompt = denoShim.prompt;\n",
+      ),
+    ),
   ])
   .await;
 }
@@ -79,7 +108,7 @@ async fn transform_global_this_deno() {
       "globalThis.Deno.readTextFile(); globalThis.test = 5;",
       concat!(
         r#"import * as denoShim from "test-shim";"#,
-        "\n({ Deno: denoShim.Deno, ...globalThis }).Deno.readTextFile(); globalThis.test = 5;"
+        "\n({ ...denoShim, ...globalThis }).Deno.readTextFile(); globalThis.test = 5;"
       )
     ),
   ]).await;
@@ -130,7 +159,7 @@ async fn transform_deno_collision() {
     concat!(
       r#"import * as denoShim from "test-shim";"#,
       "\nconst Deno = {};",
-      "const { Deno: Deno2 } = ({ Deno: denoShim.Deno, ...globalThis });",
+      "const { Deno: Deno2 } = ({ ...denoShim, ...globalThis });",
       "Deno2.readTextFile();",
       "Deno.test;"
     ),

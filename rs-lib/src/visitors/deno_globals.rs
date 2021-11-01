@@ -11,6 +11,21 @@ use deno_ast::view::*;
 
 use crate::text_changes::TextChange;
 
+const DENO_SHIM_GLOBAL_NAMES: [&'static str; 12] = [
+  "Blob",
+  "crypto",
+  "Deno",
+  "fetch",
+  "File",
+  "FormData",
+  "Headers",
+  "Request",
+  "Response",
+  "alert",
+  "confirm",
+  "prompt",
+];
+
 pub struct GetDenoGlobalTextChangesParams<'a> {
   pub program: &'a Program<'a>,
   pub top_level_context: SyntaxContext,
@@ -20,7 +35,7 @@ pub struct GetDenoGlobalTextChangesParams<'a> {
 struct Context<'a> {
   program: &'a Program<'a>,
   top_level_context: SyntaxContext,
-  has_top_level_deno_decl: bool,
+  top_level_decls: &'a HashSet<String>,
   import_shim: bool,
   text_changes: Vec<TextChange>,
   ignore_line_indexes: HashSet<usize>,
@@ -35,7 +50,7 @@ pub fn get_deno_global_text_changes(
   let mut context = Context {
     program: params.program,
     top_level_context: params.top_level_context,
-    has_top_level_deno_decl: top_level_decls.contains("Deno"),
+    top_level_decls: &top_level_decls,
     import_shim: false,
     text_changes: Vec::new(),
     ignore_line_indexes,
@@ -77,22 +92,25 @@ fn visit_children(node: Node, import_name: &str, context: &mut Context) {
     {
       context.text_changes.push(TextChange {
         span: ident.span(),
-        new_text: format!("({{ Deno: {}.Deno, ...globalThis }})", import_name),
+        new_text: format!("({{ ...{}, ...globalThis }})", import_name),
       });
       context.import_shim = true;
     }
 
     // check if Deno should be imported
-    if is_top_level_context
-      && !context.has_top_level_deno_decl
-      && ident_text == "Deno"
-      && !should_ignore(ident.into(), context)
-    {
-      context.text_changes.push(TextChange {
-        span: ident.span(),
-        new_text: format!("{}.Deno", import_name),
-      });
-      context.import_shim = true;
+    if is_top_level_context {
+      for name in DENO_SHIM_GLOBAL_NAMES {
+        if ident_text == name
+          && !context.top_level_decls.contains(name)
+          && !should_ignore(ident.into(), context)
+        {
+          context.text_changes.push(TextChange {
+            span: ident.span(),
+            new_text: format!("{}.{}", import_name, ident_text),
+          });
+          context.import_shim = true;
+        }
+      }
     }
   }
 }
