@@ -243,7 +243,7 @@ export async function build(options: BuildOptions): Promise<void> {
       return;
     }
 
-    const fileText = Array.from(getTestFileNames()).join("\n");
+    const fileText = Array.from(getTestFileNames()).join("\n") + "\n";
     writeFile(
       path.join(options.outDir, ".npmignore"),
       fileText,
