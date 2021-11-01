@@ -6,7 +6,7 @@ Prototype for a Deno to npm package build tool.
 
 ## What does this do?
 
-It takes a Deno module and creates an npm package for use on Node.
+It takes a Deno module and creates an npm package for use in Node.js.
 
 There are several steps done in a pipeline:
 
@@ -21,6 +21,8 @@ There are several steps done in a pipeline:
 1. Runs the final output in Node through a test runner running all `Deno.test` calls. Deletes the test files when complete.
 
 ## Setup
+
+1. Create a build script file:
 
 ```ts
 // ex. scripts/build_npm.ts
@@ -54,7 +56,13 @@ await build({
     },
   },
 });
+
+// post build steps
+Deno.copyFileSync("LICENSE", "npm/LICENSE");
+Deno.copyFileSync("README.md", "npm/README.md");
 ```
+
+2. Run it and `npm publish`:
 
 ```bash
 # run script
