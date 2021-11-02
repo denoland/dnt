@@ -22,11 +22,23 @@ export interface BuildOptions {
   entryPoints: (string | EntryPoint)[];
   /** Directory to output to. */
   outDir: string;
-  /** Type check the output (defaults to true). */
+  /** Type check the output.
+   * @default true
+   */
   typeCheck?: boolean;
-  /** Collect and run test files (defaults to true). */
+  /** Collect and run test files.
+   * @default true
+   */
   test?: boolean;
-  /** Create declaration files (defaults to true). */
+  /** Output the canonical TypeScript in the output directory before type checking.
+   *
+   * This may be useful when debugging issues.
+   * @default false
+   */
+  outputSource?: boolean;
+  /** Create declaration files.
+   * @default true
+   */
   declaration?: boolean;
   /** Keep the test files after tests run. */
   keepTestFiles?: boolean;
@@ -133,10 +145,18 @@ export async function build(options: BuildOptions): Promise<void> {
       ...transformOutput.test.files,
     ]
   ) {
+    const outputFilePath = path.join(
+      options.outDir,
+      "src",
+      outputFile.filePath,
+    );
     project.createSourceFile(
-      path.join(options.outDir, "src", outputFile.filePath),
+      outputFilePath,
       outputFile.fileText,
     );
+    if (options.outputSource) {
+      writeFile(outputFilePath, outputFile.fileText);
+    }
   }
 
   let program = project.createProgram();
@@ -239,15 +259,23 @@ export async function build(options: BuildOptions): Promise<void> {
   }
 
   function createNpmIgnore() {
-    if (!options.test) {
-      return;
+    const lines = [];
+    if (options.outputSource) {
+      lines.push("src/");
+    }
+    if (options.test) {
+      for (const fileName of getTestFileNames()) {
+        lines.push(fileName.replace(/^\.\//, ""));
+      }
     }
 
-    const fileText = Array.from(getTestFileNames()).join("\n") + "\n";
-    writeFile(
-      path.join(options.outDir, ".npmignore"),
-      fileText,
-    );
+    if (lines.length > 0) {
+      const fileText = Array.from(lines).join("\n") + "\n";
+      writeFile(
+        path.join(options.outDir, ".npmignore"),
+        fileText,
+      );
+    }
   }
 
   async function deleteTestFiles() {
@@ -297,7 +325,8 @@ export async function build(options: BuildOptions): Promise<void> {
     let fileText = `const chalk = require("chalk");\n` +
       `const process = require("process");\n`;
     if (transformOutput.test.shimUsed) {
-      fileText += `const { testDefinitions } = require("${shimPackage.name}/test-internals");\n\n`;
+      fileText +=
+        `const { testDefinitions } = require("${shimPackage.name}/test-internals");\n\n`;
     }
 
     fileText += "const filePaths = [\n";
