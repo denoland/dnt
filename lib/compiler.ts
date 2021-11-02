@@ -9,3 +9,33 @@ export function outputDiagnostics(diagnostics: readonly ts.Diagnostic[]) {
     getNewLine: () => "\n",
   }));
 }
+
+export type ScriptTarget = "ES3" | "ES5" | "ES2015" | "ES2016" | "ES2017" | "ES2018" | "ES2019" | "ES2020" | "ES2021" | "Latest";
+
+export function getCompilerScriptTarget(target: ScriptTarget | undefined) {
+  switch (target) {
+    case "ES3":
+      return ts.ScriptTarget.ES3;
+    case "ES5":
+      return ts.ScriptTarget.ES5;
+    case null:
+    case undefined:
+    case "ES2015":
+      return ts.ScriptTarget.ES2015;
+    case "ES2016":
+      return ts.ScriptTarget.ES2016;
+    case "ES2017":
+      return ts.ScriptTarget.ES2017;
+    case "ES2018":
+      return ts.ScriptTarget.ES2018;
+    case "ES2019":
+      return ts.ScriptTarget.ES2019;
+    case "ES2020":
+      return ts.ScriptTarget.ES2020;
+    case "ES2021":
+    case "Latest":
+      return ts.ScriptTarget.ES2021;
+    default:
+      throw new Error(`Unknown target compiler option: ${target}`);
+  }
+}

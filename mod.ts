@@ -1,12 +1,13 @@
 // Copyright 2018-2021 the Deno authors. All rights reserved. MIT license.
 
-import { outputDiagnostics } from "./lib/compiler.ts";
+import { getCompilerScriptTarget, outputDiagnostics } from "./lib/compiler.ts";
 import { colors, createProjectSync, path, ts, CodeBlockWriter } from "./lib/mod.deps.ts";
 import { PackageJsonObject } from "./lib/types.ts";
 import { glob } from "./lib/utils.ts";
 import { SpecifierMappings, transform, TransformOutput } from "./transform.ts";
 import * as compilerTransforms from "./lib/compiler_transforms.ts";
 import { getPackageJson } from "./lib/package_json.ts";
+import { ScriptTarget } from "./lib/compiler.ts";
 
 export * from "./transform.ts";
 
@@ -55,6 +56,10 @@ export interface BuildOptions {
   mappings?: SpecifierMappings;
   /** Package.json output. You may override dependencies and dev dependencies in here. */
   package: PackageJsonObject;
+  /** Optional compiler options. */
+  compilerOptions?: {
+    target?: ScriptTarget;
+  }
 }
 
 /** Emits the specified Deno module to an npm package using the TypeScript compiler. */
@@ -134,7 +139,7 @@ export async function build(options: BuildOptions): Promise<void> {
       importsNotUsedAsValues: ts.ImportsNotUsedAsValues.Remove,
       module: ts.ModuleKind.ES2015,
       moduleResolution: ts.ModuleResolutionKind.NodeJs,
-      target: ts.ScriptTarget.ES2015,
+      target: getCompilerScriptTarget(options.compilerOptions?.target),
       allowSyntheticDefaultImports: true,
       importHelpers: true,
     },
