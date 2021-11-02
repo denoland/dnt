@@ -1,7 +1,7 @@
 // Copyright 2018-2021 the Deno authors. All rights reserved. MIT license.
 
 import { outputDiagnostics } from "./lib/compiler.ts";
-import { colors, createProjectSync, path, ts } from "./lib/mod.deps.ts";
+import { colors, createProjectSync, path, ts, CodeBlockWriter } from "./lib/mod.deps.ts";
 import { PackageJsonObject } from "./lib/types.ts";
 import { glob } from "./lib/utils.ts";
 import { SpecifierMappings, transform, TransformOutput } from "./transform.ts";
@@ -30,16 +30,16 @@ export interface BuildOptions {
    * @default true
    */
   test?: boolean;
+  /** Create declaration files.
+   * @default true
+   */
+  declaration?: boolean;
   /** Output the canonical TypeScript in the output directory before type checking.
    *
    * This may be useful when debugging issues.
    * @default false
    */
-  outputSource?: boolean;
-  /** Create declaration files.
-   * @default true
-   */
-  declaration?: boolean;
+  keepSourceFiles?: boolean;
   /** Keep the test files after tests run. */
   keepTestFiles?: boolean;
   /** Root directory to find test files in. Defaults to the cwd. */
@@ -155,7 +155,7 @@ export async function build(options: BuildOptions): Promise<void> {
       outputFilePath,
       outputFile.fileText,
     );
-    if (options.outputSource) {
+    if (options.keepSourceFiles) {
       writeFile(outputFilePath, outputFile.fileText);
     }
   }
@@ -261,7 +261,7 @@ export async function build(options: BuildOptions): Promise<void> {
 
   function createNpmIgnore() {
     const lines = [];
-    if (options.outputSource) {
+    if (options.keepSourceFiles) {
       lines.push("src/");
     }
     if (options.test) {
@@ -323,44 +323,58 @@ export async function build(options: BuildOptions): Promise<void> {
   }
 
   async function createTestLauncherScript() {
-    let fileText = `const chalk = require("chalk");\n` +
-      `const process = require("process");\n`;
+    const writer = createWriter();
+    writer.writeLine(`const chalk = require("chalk");`)
+      .writeLine(`const process = require("process");`);
     if (transformOutput.test.shimUsed) {
-      fileText +=
-        `const { testDefinitions } = require("${shimPackage.name}/test-internals");\n\n`;
+      writer.writeLine(`const { testDefinitions } = require("${shimPackage.name}/test-internals");`);
+    }
+    writer.blankLine();
+
+    writer.writeLine("const filePaths = [");
+    writer.indent(() => {
+      for (const entryPoint of transformOutput.test.entryPoints) {
+        writer.writeLine(`"${entryPoint.replace(/\.ts$/, ".js")}",`);
+      }
+    });
+    writer.writeLine("];").newLine();
+
+    writer.write("async function main()").block(() => {
+      writer.write("for (const [i, filePath] of filePaths.entries())").block(() => {
+        writer.write("if (i > 0)").block(() => {
+          writer.writeLine(`console.log("");`);
+        }).blankLine();
+
+        writer.writeLine(`const umdPath = "./umd/" + filePath;`);
+        writer.writeLine(`console.log("Running tests in " + chalk.underline(umdPath) + "...\\n");`);
+        writer.writeLine(`process.chdir(__dirname + "/umd");`);
+        writer.writeLine(`require(umdPath);`);
+        if (transformOutput.test.shimUsed) {
+          writer.writeLine("await runTestDefinitions();");
+        }
+        writer.blankLine();
+
+        writer.writeLine(`const esmPath = "./esm/" + filePath;`);
+        writer.writeLine(`process.chdir(__dirname + "/esm");`);
+        writer.writeLine(`console.log("\\nRunning tests in " + chalk.underline(esmPath) + "...\\n");`);
+        writer.writeLine(`await import(esmPath);`);
+        if (transformOutput.test.shimUsed) {
+          writer.writeLine("await runTestDefinitions();");
+        }
+      });
+    });
+    writer.blankLine();
+
+    if (transformOutput.test.shimUsed) {
+      writer.writeLine(`${getRunTestDefinitionsCode()}`);
+      writer.blankLine();
     }
 
-    fileText += "const filePaths = [\n";
-    for (const entryPoint of transformOutput.test.entryPoints) {
-      fileText += `  "${entryPoint.replace(/\.ts$/, ".js")}",\n`;
-    }
-    fileText += "];\n\n";
-
-    fileText += `async function main() {
-  for (const [i, filePath] of filePaths.entries()) {
-    if (i > 0) {
-      console.log("");
-    }
-    const umdPath = "./umd/" + filePath;
-    console.log("Running tests in " + chalk.underline(umdPath) + "...\\n");
-    process.chdir(__dirname + "/umd");
-    require(umdPath);
-    await runTestDefinitions();
-    const esmPath = "./esm/" + filePath;
-    process.chdir(__dirname + "/esm");
-    console.log("\\nRunning tests in " + chalk.underline(esmPath) + "...\\n");
-    await import(esmPath);
-    await runTestDefinitions();
-  }
-}\n\n`;
-    if (transformOutput.test.shimUsed) {
-      fileText += `${getRunTestDefinitionsCode()}\n\n`;
-    }
-    fileText += "main();\n";
+    writer.writeLine("main();");
 
     writeFile(
       path.join(options.outDir, "test_runner.js"),
-      fileText,
+      writer.toString(),
     );
   }
 
@@ -556,4 +570,10 @@ function indentText(text, indentLevel) {
   return text.split(/\\r?\\n/).map(line => "  ".repeat(indentLevel) + line).join("\\n");
 }
 `.trim();
+}
+
+function createWriter() {
+  return new CodeBlockWriter({
+    indentNumberOfSpaces: 2,
+  });
 }
