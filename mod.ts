@@ -122,6 +122,7 @@ export async function build(options: BuildOptions): Promise<void> {
       outDir: typesOutDir,
       allowJs: true,
       stripInternal: true,
+      strictNullChecks: true,
       declaration: options.declaration,
       esModuleInterop: false,
       isolatedModules: true,
