@@ -1,13 +1,14 @@
 // Copyright 2018-2021 the Deno authors. All rights reserved. MIT license.
 
 import { getCompilerScriptTarget, outputDiagnostics } from "./lib/compiler.ts";
-import { colors, createProjectSync, path, ts, CodeBlockWriter } from "./lib/mod.deps.ts";
+import { colors, createProjectSync, path, ts } from "./lib/mod.deps.ts";
 import { PackageJsonObject } from "./lib/types.ts";
 import { glob } from "./lib/utils.ts";
 import { SpecifierMappings, transform, TransformOutput } from "./transform.ts";
 import * as compilerTransforms from "./lib/compiler_transforms.ts";
 import { getPackageJson } from "./lib/package_json.ts";
 import { ScriptTarget } from "./lib/compiler.ts";
+import { getTestRunnerCode } from "./lib/test_runner/get_test_runner_code.ts";
 
 export * from "./transform.ts";
 
@@ -59,7 +60,7 @@ export interface BuildOptions {
   /** Optional compiler options. */
   compilerOptions?: {
     target?: ScriptTarget;
-  }
+  };
 }
 
 /** Emits the specified Deno module to an npm package using the TypeScript compiler. */
@@ -230,7 +231,7 @@ export async function build(options: BuildOptions): Promise<void> {
 
   if (options.test) {
     log("Running tests...");
-    await createTestLauncherScript();
+    createTestLauncherScript();
     await runNpmCommand(["run", "test"]);
     if (!options.keepTestFiles) {
       await deleteTestFiles();
@@ -338,59 +339,14 @@ export async function build(options: BuildOptions): Promise<void> {
     console.warn(colors.yellow(`[dnt] ${message}`));
   }
 
-  async function createTestLauncherScript() {
-    const writer = createWriter();
-    writer.writeLine(`const chalk = require("chalk");`)
-      .writeLine(`const process = require("process");`);
-    if (transformOutput.test.shimUsed) {
-      writer.writeLine(`const { testDefinitions } = require("${shimPackage.name}/test-internals");`);
-    }
-    writer.blankLine();
-
-    writer.writeLine("const filePaths = [");
-    writer.indent(() => {
-      for (const entryPoint of transformOutput.test.entryPoints) {
-        writer.writeLine(`"${entryPoint.replace(/\.ts$/, ".js")}",`);
-      }
-    });
-    writer.writeLine("];").newLine();
-
-    writer.write("async function main()").block(() => {
-      writer.write("for (const [i, filePath] of filePaths.entries())").block(() => {
-        writer.write("if (i > 0)").block(() => {
-          writer.writeLine(`console.log("");`);
-        }).blankLine();
-
-        writer.writeLine(`const umdPath = "./umd/" + filePath;`);
-        writer.writeLine(`console.log("Running tests in " + chalk.underline(umdPath) + "...\\n");`);
-        writer.writeLine(`process.chdir(__dirname + "/umd");`);
-        writer.writeLine(`require(umdPath);`);
-        if (transformOutput.test.shimUsed) {
-          writer.writeLine("await runTestDefinitions();");
-        }
-        writer.blankLine();
-
-        writer.writeLine(`const esmPath = "./esm/" + filePath;`);
-        writer.writeLine(`process.chdir(__dirname + "/esm");`);
-        writer.writeLine(`console.log("\\nRunning tests in " + chalk.underline(esmPath) + "...\\n");`);
-        writer.writeLine(`await import(esmPath);`);
-        if (transformOutput.test.shimUsed) {
-          writer.writeLine("await runTestDefinitions();");
-        }
-      });
-    });
-    writer.blankLine();
-
-    if (transformOutput.test.shimUsed) {
-      writer.writeLine(`${getRunTestDefinitionsCode()}`);
-      writer.blankLine();
-    }
-
-    writer.writeLine("main();");
-
+  function createTestLauncherScript() {
     writeFile(
       path.join(options.outDir, "test_runner.js"),
-      writer.toString(),
+      getTestRunnerCode({
+        shimPackageName: shimPackage.name,
+        testEntryPoints: transformOutput.test.entryPoints,
+        testShimUsed: transformOutput.test.shimUsed,
+      }),
     );
   }
 
@@ -433,163 +389,4 @@ export async function build(options: BuildOptions): Promise<void> {
     return options.testPattern ??
       "**/{test.{ts,tsx,js,mjs,jsx},*.test.{ts,tsx,js,mjs,jsx},*_test.{ts,tsx,js,mjs,jsx}}";
   }
-}
-
-function getRunTestDefinitionsCode() {
-  // todo: extract out for unit testing
-  return `
-async function runTestDefinitions() {
-  const currentDefinitions = testDefinitions.splice(0, testDefinitions.length);
-  const testFailures = [];
-  for (const definition of currentDefinitions) {
-    process.stdout.write("test " + definition.name + " ...");
-    if (definition.ignored) {
-     process.stdout.write(" ignored\\n");
-     continue;
-    }
-    const context = getTestContext();
-    let pass = false;
-    try {
-      await definition.fn(context);
-      if (context.hasFailingChild) {
-        testFailures.push({ name: definition.name, err: new Error("Had failing test step.") });
-      } else {
-        pass = true;
-      }
-    } catch (err) {
-      testFailures.push({ name: definition.name, err });
-    }
-    const testStepOutput = context.getOutput();
-    if (testStepOutput.length > 0) {
-      process.stdout.write(testStepOutput);
-    } else {
-      process.stdout.write(" ");
-    }
-    process.stdout.write(getStatusText(pass ? "ok" : "fail"));
-    process.stdout.write("\\n");
-  }
-
-  if (testFailures.length > 0) {
-    console.log("\\nFAILURES\\n");
-    for (const failure of testFailures) {
-      console.log(failure.name);
-      console.log(indentText((failure.err?.stack ?? err).toString(), 1));
-      console.log("");
-    }
-    process.exit(1);
-  }
-}
-
-function getTestContext() {
-  return {
-    name: undefined,
-    status: "ok",
-    children: [],
-    get hasFailingChild() {
-      return this.children.some(c => c.status === "fail" || c.status === "pending");
-    },
-    getOutput() {
-      let output = "";
-      if (this.name) {
-        output += "test " + this.name + " ...";
-      }
-      if (this.children.length > 0) {
-        output += "\\n" + this.children.map(c => indentText(c.getOutput(), 1)).join("\\n") + "\\n";
-      } else if (!this.err) {
-        output += " ";
-      }
-      if (this.name && this.err) {
-        output += "\\n";
-      }
-      if (this.err) {
-        output += indentText((this.err?.stack ?? this.err).toString(), 1);
-        if (this.name) {
-          output += "\\n";
-        }
-      }
-      if (this.name) {
-        output += getStatusText(this.status);
-      }
-      return output;
-    },
-    async step(nameOrTestDefinition, fn) {
-      const definition = getDefinition();
-
-      const context = getTestContext();
-      context.status = "pending";
-      context.name = definition.name;
-      context.status = "pending";
-      this.children.push(context);
-
-      if (definition.ignored) {
-        context.status = "ignored";
-        return false;
-      }
-
-      try {
-        await definition.fn(context);
-        context.status = "ok";
-        if (context.hasFailingChild) {
-          context.status = "fail";
-          return false;
-        }
-        return true;
-      } catch (err) {
-        context.status = "fail";
-        context.err = err;
-        return false;
-      }
-
-      function getDefinition() {
-        if (typeof nameOrTestDefinition === "string") {
-          if (!(fn instanceof Function)) {
-            throw new TypeError("Expected function for second argument.");
-          }
-          return {
-            name: nameOrTestDefinition,
-            fn,
-          };
-        } else if (typeof nameOrTestDefinition === "object") {
-          return nameOrTestDefinition;
-        } else {
-          throw new TypeError(
-            "Expected a test definition or name and function.",
-          );
-        }
-      }
-    }
-  };
-}
-
-function getStatusText(status) {
-  switch (status) {
-    case "ok":
-      return chalk.green(status);
-    case "fail":
-    case "pending":
-      return chalk.red(status);
-    case "ignore":
-      return chalk.gray(status);
-    default:
-      return status;
-  }
-}
-
-function indentText(text, indentLevel) {
-  if (text === undefined) {
-    text = "[undefined]";
-  } else if (text === null) {
-    text = "[null]";
-  } else {
-    text = text.toString();
-  }
-  return text.split(/\\r?\\n/).map(line => "  ".repeat(indentLevel) + line).join("\\n");
-}
-`.trim();
-}
-
-function createWriter() {
-  return new CodeBlockWriter({
-    indentNumberOfSpaces: 2,
-  });
 }

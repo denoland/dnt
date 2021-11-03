@@ -4,7 +4,20 @@
       "proseWrap": "never"
     },
     "files": {
-      "exclude": ["target/", "wasm/target/", "lib/pkg/"]
+      "exclude": [
+        "target/",
+        "wasm/target/",
+        "lib/pkg/"
+      ]
+    }
+  },
+  "lint": {
+    "files": {
+      "exclude": [
+        "target/",
+        "wasm/target/",
+        "lib/pkg/"
+      ]
     }
   }
 }

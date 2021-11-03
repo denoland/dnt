@@ -10,7 +10,17 @@ export function outputDiagnostics(diagnostics: readonly ts.Diagnostic[]) {
   }));
 }
 
-export type ScriptTarget = "ES3" | "ES5" | "ES2015" | "ES2016" | "ES2017" | "ES2018" | "ES2019" | "ES2020" | "ES2021" | "Latest";
+export type ScriptTarget =
+  | "ES3"
+  | "ES5"
+  | "ES2015"
+  | "ES2016"
+  | "ES2017"
+  | "ES2018"
+  | "ES2019"
+  | "ES2020"
+  | "ES2021"
+  | "Latest";
 
 export function getCompilerScriptTarget(target: ScriptTarget | undefined) {
   switch (target) {

@@ -4,7 +4,7 @@ import { assertEquals, assertThrows } from "./test.deps.ts";
 
 Deno.test("script target should have expected outputs", () => {
   const cases: {
-    [k in ScriptTarget]: ts.ScriptTarget
+    [k in ScriptTarget]: ts.ScriptTarget;
   } = {
     "ES3": ts.ScriptTarget.ES3,
     "ES5": ts.ScriptTarget.ES5,
