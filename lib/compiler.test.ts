@@ -15,7 +15,7 @@ Deno.test("script target should have expected outputs", () => {
     "ES2019": ts.ScriptTarget.ES2019,
     "ES2020": ts.ScriptTarget.ES2020,
     "ES2021": ts.ScriptTarget.ES2021,
-    "Latest": ts.ScriptTarget.ES2021,
+    "Latest": ts.ScriptTarget.Latest,
   };
 
   for (const key in cases) {
@@ -23,6 +23,6 @@ Deno.test("script target should have expected outputs", () => {
     assertEquals(getCompilerScriptTarget(scriptTarget), cases[scriptTarget]);
   }
 
-  assertEquals(getCompilerScriptTarget(undefined), ts.ScriptTarget.ES2015);
+  assertEquals(getCompilerScriptTarget(undefined), ts.ScriptTarget.ES2021);
   assertThrows(() => getCompilerScriptTarget("invalid" as any));
 });

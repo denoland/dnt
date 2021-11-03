@@ -18,8 +18,6 @@ export function getCompilerScriptTarget(target: ScriptTarget | undefined) {
       return ts.ScriptTarget.ES3;
     case "ES5":
       return ts.ScriptTarget.ES5;
-    case null:
-    case undefined:
     case "ES2015":
       return ts.ScriptTarget.ES2015;
     case "ES2016":
@@ -32,9 +30,12 @@ export function getCompilerScriptTarget(target: ScriptTarget | undefined) {
       return ts.ScriptTarget.ES2019;
     case "ES2020":
       return ts.ScriptTarget.ES2020;
+    case null:
+    case undefined:
     case "ES2021":
-    case "Latest":
       return ts.ScriptTarget.ES2021;
+    case "Latest":
+      return ts.ScriptTarget.Latest;
     default:
       throw new Error(`Unknown target compiler option: ${target}`);
   }

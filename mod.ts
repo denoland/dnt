@@ -86,7 +86,7 @@ export async function build(options: BuildOptions): Promise<void> {
 
   const shimPackage = options.shimPackage ?? {
     name: "deno.ns",
-    version: "0.6.1",
+    version: "0.6.3",
   };
 
   log("Transforming...");
@@ -127,7 +127,18 @@ export async function build(options: BuildOptions): Promise<void> {
       outDir: typesOutDir,
       allowJs: true,
       stripInternal: true,
+      strictBindCallApply: true,
+      strictFunctionTypes: true,
       strictNullChecks: true,
+      strictPropertyInitialization: true,
+      suppressExcessPropertyErrors: false,
+      suppressImplicitAnyIndexErrors: false,
+      noImplicitAny: true,
+      noImplicitReturns: false,
+      noImplicitThis: true,
+      noImplicitUseStrict: true,
+      noStrictGenericChecks: false,
+      noUncheckedIndexedAccess: false,
       declaration: options.declaration,
       esModuleInterop: false,
       isolatedModules: true,
