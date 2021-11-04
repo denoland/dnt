@@ -13,13 +13,14 @@ use deno_node_transform::LoadResponse;
 use deno_node_transform::Loader;
 use deno_node_transform::ModuleSpecifier;
 
+type RemoteFileText = String;
+type RemoteFileHeaders = Option<HashMap<String, String>>;
+type RemoteFileResult = Result<(RemoteFileText, RemoteFileHeaders), String>;
+
 #[derive(Clone)]
 pub struct InMemoryLoader {
   local_files: HashMap<PathBuf, String>,
-  remote_files: HashMap<
-    ModuleSpecifier,
-    Result<(String, Option<HashMap<String, String>>), String>,
-  >,
+  remote_files: HashMap<ModuleSpecifier, RemoteFileResult>,
 }
 
 impl InMemoryLoader {
@@ -96,11 +97,11 @@ impl Loader for InMemoryLoader {
         .map(ToOwned::to_owned)
         .ok_or_else(|| anyhow::anyhow!("file not found"));
       return Box::pin(async move {
-        return Ok(LoadResponse {
+        Ok(LoadResponse {
           content: result?,
           headers: None,
           specifier,
-        });
+        })
       });
     }
     let result = self
