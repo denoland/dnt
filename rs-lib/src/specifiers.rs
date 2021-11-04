@@ -54,23 +54,28 @@ pub fn get_specifiers(
     let module = module_graph.get(entry_point);
     let mut pending = vec![&module.specifier];
 
-    while let Some(module) = pending.pop().map(|s| modules.remove(&s)).flatten()
-    {
-      if let Some(mapped_entry) = specifiers.mapped.remove(&module.specifier) {
-        found_mapped_specifiers.insert(module.specifier.clone(), mapped_entry);
-      } else {
-        found_module_specifiers.push(module.specifier.clone());
+    while !pending.is_empty() {
+      if let Some(module) = pending.pop().map(|s| modules.remove(&s)).flatten()
+      {
+        if let Some(mapped_entry) = specifiers.mapped.remove(&module.specifier)
+        {
+          found_mapped_specifiers
+            .insert(module.specifier.clone(), mapped_entry);
+        } else {
+          found_module_specifiers.push(module.specifier.clone());
 
-        for dep in module.dependencies.values() {
-          if let Some(specifier) = dep.get_code() {
-            pending.push(specifier);
+          for dep in module.dependencies.values() {
+            if let Some(specifier) = dep.get_code() {
+              pending.push(specifier);
+            }
+            if let Some(specifier) = dep.get_type() {
+              pending.push(specifier);
+            }
           }
-          if let Some(specifier) = dep.get_type() {
-            pending.push(specifier);
+          if let Some((_, Some(Ok(resolved)))) = &module.maybe_types_dependency
+          {
+            pending.push(&resolved.0);
           }
-        }
-        if let Some((_, Some(Ok(resolved)))) = &module.maybe_types_dependency {
-          pending.push(&resolved.0);
         }
       }
     }

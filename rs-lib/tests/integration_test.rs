@@ -195,7 +195,10 @@ async fn transform_remote_files() {
       loader
         .add_local_file(
           "/mod.ts",
-          "import * as other from 'http://localhost/mod.ts';",
+          concat!(
+            "import * as other from 'http://localhost/mod.ts';\n",
+            "import 'https://deno.land/std@0.102.0/mod.ts';",
+          ),
         )
         .add_remote_file(
           "http://localhost/mod.ts",
@@ -228,6 +231,10 @@ async fn transform_remote_files() {
           "import * as localhost2 from 'http://localhost2';",
           &[("content-type", "application/javascript")],
         )
+        .add_remote_file(
+          "https://deno.land/std@0.102.0/mod.ts",
+          "console.log(5);",
+        )
         .add_remote_file_with_headers(
           "http://localhost2",
           "import * as localhost3Mod from 'https://localhost3/mod.ts';",
@@ -252,7 +259,10 @@ async fn transform_remote_files() {
     &[
       (
         "mod.ts",
-        "import * as other from './deps/localhost/mod.js';"
+        concat!(
+          "import * as other from './deps/localhost/mod.js';\n",
+          "import './deps/deno_land/std_0.102.0/mod.js';",
+        )
       ),
       (
         "deps/localhost/mod.ts",
@@ -282,6 +292,7 @@ async fn transform_remote_files() {
         "deps/localhost/sub/subfolder.js",
         "import * as localhost2 from '../../localhost2.js';"
       ),
+      ("deps/deno_land/std_0.102.0/mod.ts", "console.log(5);"),
       (
         "deps/localhost2.js",
         "import * as localhost3Mod from './localhost3/mod.js';"
@@ -935,4 +946,75 @@ async fn test_entry_points() {
   );
   assert_eq!(result.test.entry_points, &["mod.test.ts"]);
   assert_eq!(result.test.shim_used, true);
+}
+
+#[tokio::test]
+async fn test_entry_points_same_module_multiple_places() {
+  let result = TestBuilder::new()
+    .with_loader(|loader| {
+      loader
+        .add_local_file(
+          "/mod.ts",
+          concat!(
+            "export * from 'https://deno.land/std@0.102.0/path.ts';\n",
+            "import * as deps from './deps.ts';",
+          ),
+        )
+        // ensure that the path.ts in this file being already analyzed
+        // doesn't cause flags.ts to not be analyzed
+        .add_local_file(
+          "/deps.ts",
+          concat!(
+            "export * from 'https://deno.land/std@0.102.0/path.ts';\n",
+            "export * from 'https://deno.land/std@0.102.0/flags.ts';",
+          ),
+        )
+        .add_remote_file(
+          "https://deno.land/std@0.102.0/flags.ts",
+          "export class Flags {}",
+        )
+        .add_remote_file(
+          "https://deno.land/std@0.102.0/path.ts",
+          "export class Path {}",
+        )
+        .add_local_file("/mod.test.ts", "import * as deps from './deps.ts';");
+    })
+    .add_test_entry_point("file:///mod.test.ts")
+    .transform()
+    .await
+    .unwrap();
+
+  assert_files!(
+    result.main.files,
+    &[
+      (
+        "mod.ts",
+        concat!(
+          "export * from './deps/deno_land/std_0.102.0/path.js';\n",
+          "import * as deps from './deps.js';",
+        )
+      ),
+      (
+        "deps.ts",
+        concat!(
+          "export * from './deps/deno_land/std_0.102.0/path.js';\n",
+          "export * from './deps/deno_land/std_0.102.0/flags.js';",
+        )
+      ),
+      (
+        "deps/deno_land/std_0.102.0/flags.ts",
+        "export class Flags {}"
+      ),
+      ("deps/deno_land/std_0.102.0/path.ts", "export class Path {}")
+    ]
+  );
+  assert_eq!(result.main.entry_points, &["mod.ts"]);
+  assert_eq!(result.main.shim_used, false);
+
+  assert_files!(
+    result.test.files,
+    &[("mod.test.ts", "import * as deps from './deps.js';",)]
+  );
+  assert_eq!(result.test.entry_points, &["mod.test.ts"]);
+  assert_eq!(result.test.shim_used, false);
 }

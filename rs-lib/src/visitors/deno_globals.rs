@@ -12,18 +12,8 @@ use deno_ast::view::*;
 use crate::text_changes::TextChange;
 
 const DENO_SHIM_GLOBAL_NAMES: [&'static str; 12] = [
-  "Blob",
-  "crypto",
-  "Deno",
-  "fetch",
-  "File",
-  "FormData",
-  "Headers",
-  "Request",
-  "Response",
-  "alert",
-  "confirm",
-  "prompt",
+  "Blob", "crypto", "Deno", "fetch", "File", "FormData", "Headers", "Request",
+  "Response", "alert", "confirm", "prompt",
 ];
 
 pub struct GetDenoGlobalTextChangesParams<'a> {
