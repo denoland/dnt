@@ -182,9 +182,10 @@ export async function runTestDefinitions(
         return options.chalk.red(status);
       case "ignored":
         return options.chalk.gray(status);
-      default:
+      default: {
         const _assertNever: never = status;
         return status;
+      }
     }
   }
 

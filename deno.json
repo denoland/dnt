@@ -12,6 +12,13 @@
     }
   },
   "lint": {
+    "rules": {
+      "tags": ["recommended"],
+      "exclude": [
+        "no-explicit-any",
+        "camelcase"
+      ]
+    },
     "files": {
       "exclude": [
         "target/",
