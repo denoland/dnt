@@ -167,3 +167,66 @@ Deno.test("multiple entrypoints", () => {
     scripts: undefined,
   });
 });
+
+Deno.test("binary entrypoints", () => {
+  const props: GetPackageJsonOptions = {
+    transformOutput: {
+      main: {
+        files: [],
+        dependencies: [],
+        shimUsed: true,
+        entryPoints: ["mod.ts", "bin.ts"],
+      },
+      test: {
+        entryPoints: [],
+        files: [],
+        dependencies: [],
+        shimUsed: false,
+      },
+      warnings: [],
+    },
+    entryPoints: [{
+      name: ".",
+      path: "./mod.ts",
+    }, {
+      kind: "bin",
+      name: "my_bin",
+      path: "./bin.ts",
+    }],
+    package: {
+      name: "package",
+      version: "0.1.0",
+    },
+    shimPackage: {
+      name: "deno.ns",
+      version: "0.0.0",
+    },
+    testEnabled: false,
+  };
+
+  assertEquals(getPackageJson(props), {
+    name: "package",
+    version: "0.1.0",
+    main: "./umd/mod.js",
+    module: "./esm/mod.js",
+    types: "./types/mod.d.ts",
+    bin: {
+      my_bin: "./umd/bin.js",
+    },
+    dependencies: {
+      tslib: "2.3.1",
+      "deno.ns": "0.0.0",
+    },
+    devDependencies: {
+      "@types/node": "16.11.1",
+    },
+    exports: {
+      ".": {
+        import: "./esm/mod.js",
+        require: "./umd/mod.js",
+        types: "./types/mod.d.ts",
+      },
+    },
+    scripts: undefined,
+  });
+});

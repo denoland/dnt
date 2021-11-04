@@ -25,9 +25,12 @@ export function getPackageJson({
   const finalEntryPoints = transformOutput
     .main.entryPoints.map((e, i) => ({
       name: entryPoints[i].name,
+      kind: entryPoints[i].kind ?? "export",
       path: e.replace(/\.tsx?$/i, ".js"),
       types: e.replace(/\.tsx?$/i, ".d.ts"),
     }));
+  const exports = finalEntryPoints.filter(e => e.kind === "export");
+  const binaries = finalEntryPoints.filter(e => e.kind === "bin");
   const dependencies = {
     // typescript helpers library (https://www.npmjs.com/package/tslib)
     tslib: "2.3.1",
@@ -83,15 +86,22 @@ export function getPackageJson({
       ...(packageJsonObj.scripts ?? {}),
     })
     : packageJsonObj.scripts;
+  const mainExport = exports.length > 0 ? {
+    module: `./esm/${exports[0].path}`,
+    main: `./umd/${exports[0].path}`,
+    types: `./types/${exports[0].types}`,
+  } : {};
+  const binaryExport = binaries.length > 0 ? {
+    bin: Object.fromEntries(binaries.map(b => [b.name, `./umd/${b.path}`])),
+  } : {};
 
   return {
-    module: `./esm/${finalEntryPoints[0].path}`,
-    main: `./umd/${finalEntryPoints[0].path}`,
-    types: `./types/${finalEntryPoints[0].types}`,
+    ...mainExport,
+    ...binaryExport,
     ...packageJsonObj,
     exports: {
       ...(packageJsonObj.exports ?? {}),
-      ...(Object.fromEntries(finalEntryPoints.map((e) => [e.name, {
+      ...(Object.fromEntries(exports.map((e) => [e.name, {
         import: `./esm/${e.path}`,
         require: `./umd/${e.path}`,
         types: (e.name === "." ? packageJsonObj.types : undefined) ??

@@ -34,7 +34,7 @@ Deno.test("should build", async () => {
       devDependencies: {
         "@types/node": "16.11.1",
         chalk: "4.1.2",
-        "deno.ns": "0.6.3",
+        "deno.ns": "0.6.4",
       },
     });
     assertEquals(
@@ -53,9 +53,54 @@ test_runner.js
   });
 });
 
+Deno.test("should build bin project", async () => {
+  await runTest({
+    entryPoints: [{
+      kind: "bin",
+      name: "add",
+      path: "./mod.ts",
+    }],
+    outDir: "./npm",
+    package: {
+      name: "add",
+      version: "1.0.0",
+    },
+  }, (output) => {
+    assertEquals(output.packageJson, {
+      name: "add",
+      version: "1.0.0",
+      bin: {
+        add: "./umd/mod.js",
+      },
+      scripts: {
+        test: "node test_runner.js",
+      },
+      dependencies: {
+        tslib: "2.3.1",
+      },
+      devDependencies: {
+        "@types/node": "16.11.1",
+        chalk: "4.1.2",
+        "deno.ns": "0.6.4",
+      },
+      exports: {},
+    });
+    const expectedText = "#!/usr/bin/env node\n";
+    assertEquals(
+      output.getFileText("umd/mod.js").substring(0, expectedText.length),
+      expectedText,
+    );
+    assertEquals(
+      output.getFileText("esm/mod.js").substring(0, expectedText.length),
+      expectedText,
+    );
+  });
+});
+
 export interface Output {
   packageJson: any;
   npmIgnore: string;
+  getFileText(filePath: string): string;
 }
 
 async function runTest(
@@ -66,13 +111,15 @@ async function runTest(
   Deno.chdir("./tests/test_project");
   try {
     await build(options);
-    const packageJson = JSON.parse(
-      Deno.readTextFileSync(options.outDir + "/package.json"),
-    );
-    const npmIgnore = Deno.readTextFileSync(options.outDir + "/.npmignore");
+    const getFileText = (filePath: string) => {
+      return Deno.readTextFileSync(options.outDir + "/" + filePath);
+    };
+    const packageJson = JSON.parse(getFileText("package.json"));
+    const npmIgnore = getFileText(".npmignore");
     await checkOutput({
       packageJson,
       npmIgnore,
+      getFileText,
     });
   } finally {
     Deno.removeSync(options.outDir, { recursive: true });

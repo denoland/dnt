@@ -13,7 +13,12 @@ import { getTestRunnerCode } from "./lib/test_runner/get_test_runner_code.ts";
 export * from "./transform.ts";
 
 export interface EntryPoint {
-  /** Name of the entrypoint in the "exports". */
+  /**
+   * If the entrypoint is for an npm binary or export.
+   * @default "export"
+   */
+  kind?: "bin" | "export";
+  /** Name of the entrypoint in the "binary" or "exports". */
   name: string;
   /** Path to the entrypoint. */
   path: string | URL;
@@ -157,6 +162,13 @@ export async function build(options: BuildOptions): Promise<void> {
     },
   });
 
+  const binaryEntryPointPaths = new Set(
+    entryPoints.map((e, i) => ({
+      kind: e.kind,
+      path: transformOutput.main.entryPoints[i],
+    })).filter(p => p.kind === "bin").map(p => p.path)
+  );
+
   for (
     const outputFile of [
       ...transformOutput.main.files,
@@ -168,12 +180,15 @@ export async function build(options: BuildOptions): Promise<void> {
       "src",
       outputFile.filePath,
     );
+    const outputFileText = binaryEntryPointPaths.has(outputFile.filePath)
+      ? `#!/usr/bin/env node\n${outputFile.fileText}`
+      : outputFile.fileText;
     project.createSourceFile(
       outputFilePath,
-      outputFile.fileText,
+      outputFileText,
     );
     if (options.keepSourceFiles) {
-      writeFile(outputFilePath, outputFile.fileText);
+      writeFile(outputFilePath, outputFileText);
     }
   }
 
