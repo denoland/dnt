@@ -105,7 +105,7 @@ impl TestBuilder {
         .shim_package_name
         .as_ref()
         .map(ToOwned::to_owned)
-        .unwrap_or("deno.ns".to_string()),
+        .unwrap_or_else(|| "deno.ns".to_string()),
       loader: Some(Box::new(self.loader.clone())),
       specifier_mappings: self.specifier_mappings.clone(),
     })
