@@ -3,7 +3,7 @@
 import { getCompilerScriptTarget, outputDiagnostics } from "./lib/compiler.ts";
 import { colors, createProjectSync, path, ts } from "./lib/mod.deps.ts";
 import { PackageJsonObject } from "./lib/types.ts";
-import { glob } from "./lib/utils.ts";
+import { glob, runNpmCommand } from "./lib/utils.ts";
 import { SpecifierMappings, transform, TransformOutput } from "./transform.ts";
 import * as compilerTransforms from "./lib/compiler_transforms.ts";
 import { getPackageJson } from "./lib/package_json.ts";
@@ -41,14 +41,10 @@ export interface BuildOptions {
    * @default true
    */
   declaration?: boolean;
-  /** Output the canonical TypeScript in the output directory before type checking.
-   *
-   * This may be useful when debugging issues.
+  /** Skip outputting the canonical TypeScript in the output directory before emitting.
    * @default false
    */
-  keepSourceFiles?: boolean;
-  /** Keep the test files after tests run. */
-  keepTestFiles?: boolean;
+  skipSourceOutput?: boolean;
   /** Root directory to find test files in. Defaults to the cwd. */
   rootTestDir?: string;
   /** Glob pattern to use to find tests files. Defaults to `deno test`'s pattern. */
@@ -116,7 +112,10 @@ export async function build(options: BuildOptions): Promise<void> {
 
   // npm install in order to prepare for checking TS diagnostics
   log("Running npm install...");
-  const npmInstallPromise = runNpmCommand(["install"]);
+  const npmInstallPromise = runNpmCommand({
+    args: ["install"],
+    cwd: options.outDir,
+  });
   if (options.typeCheck || options.declaration) {
     // Unfortunately this can't be run in parallel to building the project
     // in this case because TypeScript will resolve the npm packages when
@@ -166,7 +165,7 @@ export async function build(options: BuildOptions): Promise<void> {
     entryPoints.map((e, i) => ({
       kind: e.kind,
       path: transformOutput.main.entryPoints[i],
-    })).filter(p => p.kind === "bin").map(p => p.path)
+    })).filter((p) => p.kind === "bin").map((p) => p.path),
   );
 
   for (
@@ -187,7 +186,8 @@ export async function build(options: BuildOptions): Promise<void> {
       outputFilePath,
       outputFileText,
     );
-    if (options.keepSourceFiles) {
+
+    if (!options.skipSourceOutput) {
       writeFile(outputFilePath, outputFileText);
     }
   }
@@ -247,10 +247,10 @@ export async function build(options: BuildOptions): Promise<void> {
   if (options.test) {
     log("Running tests...");
     createTestLauncherScript();
-    await runNpmCommand(["run", "test"]);
-    if (!options.keepTestFiles) {
-      await deleteTestFiles();
-    }
+    await runNpmCommand({
+      args: ["run", "test"],
+      cwd: options.outDir,
+    });
   }
 
   log("Complete!");
@@ -292,29 +292,18 @@ export async function build(options: BuildOptions): Promise<void> {
   }
 
   function createNpmIgnore() {
+    // Do not make any of this conditional in case a user edits settings
+    // to exclude something, but then the output directory still has that file
     const lines = [];
-    if (options.keepSourceFiles) {
-      lines.push("src/");
+    lines.push("src/");
+    for (const fileName of getTestFileNames()) {
+      lines.push(fileName.replace(/^\.\//, ""));
     }
-    if (options.test) {
-      for (const fileName of getTestFileNames()) {
-        lines.push(fileName.replace(/^\.\//, ""));
-      }
-    }
-
-    if (lines.length > 0) {
-      const fileText = Array.from(lines).join("\n") + "\n";
-      writeFile(
-        path.join(options.outDir, ".npmignore"),
-        fileText,
-      );
-    }
-  }
-
-  async function deleteTestFiles() {
-    for (const file of getTestFileNames()) {
-      await Deno.remove(path.join(options.outDir, file));
-    }
+    const fileText = Array.from(lines).join("\n") + "\n";
+    writeFile(
+      path.join(options.outDir, ".npmignore"),
+      fileText,
+    );
   }
 
   function* getTestFileNames() {
@@ -363,38 +352,6 @@ export async function build(options: BuildOptions): Promise<void> {
         testShimUsed: transformOutput.test.shimUsed,
       }),
     );
-  }
-
-  async function runNpmCommand(args: string[]) {
-    const cmd = getCmd();
-    await Deno.permissions.request({ name: "run", command: cmd[0] });
-    const process = Deno.run({
-      cmd,
-      cwd: options.outDir,
-      stderr: "inherit",
-      stdout: "inherit",
-      stdin: "inherit",
-    });
-
-    try {
-      const status = await process.status();
-      if (!status.success) {
-        throw new Error(
-          `npm ${args.join(" ")} failed with exit code ${status.code}`,
-        );
-      }
-    } finally {
-      process.close();
-    }
-
-    function getCmd() {
-      const cmd = ["npm", ...args];
-      if (Deno.build.os === "windows") {
-        return ["cmd", "/c", ...cmd];
-      } else {
-        return cmd;
-      }
-    }
   }
 
   function getTestPattern() {

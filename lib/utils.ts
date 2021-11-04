@@ -22,3 +22,38 @@ export async function glob(options: {
   }
   return paths;
 }
+
+export async function runNpmCommand({ args, cwd }: {
+  args: string[];
+  cwd: string;
+}) {
+  const cmd = getCmd();
+  await Deno.permissions.request({ name: "run", command: cmd[0] });
+  const process = Deno.run({
+    cmd,
+    cwd,
+    stderr: "inherit",
+    stdout: "inherit",
+    stdin: "inherit",
+  });
+
+  try {
+    const status = await process.status();
+    if (!status.success) {
+      throw new Error(
+        `npm ${args.join(" ")} failed with exit code ${status.code}`,
+      );
+    }
+  } finally {
+    process.close();
+  }
+
+  function getCmd() {
+    const cmd = ["npm", ...args];
+    if (Deno.build.os === "windows") {
+      return ["cmd", "/c", ...cmd];
+    } else {
+      return cmd;
+    }
+  }
+}

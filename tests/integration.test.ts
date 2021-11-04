@@ -39,7 +39,8 @@ Deno.test("should build", async () => {
     });
     assertEquals(
       output.npmIgnore,
-      `esm/mod.test.js
+      `src/
+esm/mod.test.js
 umd/mod.test.js
 esm/deps/deno_land_std_0_109_0/fmt/colors.js
 umd/deps/deno_land_std_0_109_0/fmt/colors.js
