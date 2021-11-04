@@ -87,7 +87,7 @@ export async function build(options: BuildOptions): Promise<void> {
 
   const shimPackage = options.shimPackage ?? {
     name: "deno.ns",
-    version: "0.6.3",
+    version: "0.6.4",
   };
 
   log("Transforming...");
