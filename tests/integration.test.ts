@@ -57,6 +57,47 @@ test_runner.js
   });
 });
 
+Deno.test("should build with all options off", async () => {
+  await runTest("test_project", {
+    entryPoints: ["mod.ts"],
+    outDir: "./npm",
+    typeCheck: false,
+    cjs: false,
+    declaration: false,
+    test: false,
+    package: {
+      name: "add",
+      version: "1.0.0",
+    },
+  }, (output) => {
+    assertEquals(output.packageJson, {
+      name: "add",
+      version: "1.0.0",
+      module: "./esm/mod.js",
+      exports: {
+        ".": {
+          import: "./esm/mod.js",
+        },
+      },
+      dependencies: {
+        tslib: "2.3.1",
+      },
+      devDependencies: {},
+    });
+
+    output.assertNotExists("./umd/mod.js");
+    output.assertNotExists("./types/mod.js");
+
+    // This doesn't include the test files because they're not analyzed for in this scenario.
+    assertEquals(
+      output.npmIgnore,
+      `src/
+test_runner.js
+`,
+    );
+  });
+});
+
 Deno.test("should build bin project", async () => {
   await runTest("test_project", {
     entryPoints: [{
@@ -154,6 +195,7 @@ export interface Output {
   packageJson: any;
   npmIgnore: string;
   getFileText(filePath: string): string;
+  assertNotExists(filePath: string): void;
 }
 
 async function runTest(
@@ -175,6 +217,16 @@ async function runTest(
         packageJson,
         npmIgnore,
         getFileText,
+        assertNotExists(filePath) {
+          try {
+            Deno.statSync(filePath);
+            throw new Error(`Found file at ${filePath}`);
+          } catch (err) {
+            if (!(err instanceof Deno.errors.NotFound)) {
+              throw err;
+            }
+          }
+        },
       });
     }
   } finally {

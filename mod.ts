@@ -311,6 +311,7 @@ export async function build(options: BuildOptions): Promise<void> {
       package: options.package,
       testEnabled: options.test,
       includeCjs: options.cjs,
+      includeDeclarations: options.declaration,
     });
     writeFile(
       path.join(options.outDir, "package.json"),

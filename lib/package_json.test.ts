@@ -40,6 +40,7 @@ Deno.test("single entrypoint", () => {
     },
     testEnabled: true,
     includeCjs: true,
+    includeDeclarations: true,
   };
 
   assertEquals(getPackageJson(props), {
@@ -134,6 +135,38 @@ Deno.test("single entrypoint", () => {
       },
     },
   );
+
+  assertEquals(
+    getPackageJson({
+      ...props,
+      testEnabled: false,
+      includeCjs: false,
+      includeDeclarations: false,
+    }),
+    {
+      name: "package",
+      version: "0.1.0",
+      main: undefined,
+      module: "./esm/mod.js",
+      types: undefined,
+      dependencies: {
+        tslib: "2.3.1",
+        dep: "^1.0.0",
+      },
+      devDependencies: {
+        "deno.ns": "0.0.0",
+        "@types/node": "16.11.1",
+      },
+      scripts: undefined,
+      exports: {
+        ".": {
+          import: "./esm/mod.js",
+          require: undefined,
+          types: undefined,
+        },
+      },
+    },
+  );
 });
 
 Deno.test("multiple entrypoints", () => {
@@ -170,6 +203,7 @@ Deno.test("multiple entrypoints", () => {
     },
     testEnabled: false,
     includeCjs: true,
+    includeDeclarations: true,
   };
 
   assertEquals(getPackageJson(props), {
@@ -236,6 +270,7 @@ Deno.test("binary entrypoints", () => {
     },
     testEnabled: false,
     includeCjs: true,
+    includeDeclarations: true,
   };
 
   assertEquals(getPackageJson(props), {

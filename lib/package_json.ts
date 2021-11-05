@@ -13,6 +13,7 @@ export interface GetPackageJsonOptions {
   };
   package: PackageJsonObject;
   includeCjs: boolean | undefined;
+  includeDeclarations: boolean | undefined;
   testEnabled: boolean | undefined;
 }
 
@@ -22,6 +23,7 @@ export function getPackageJson({
   shimPackage,
   package: packageJsonObj,
   includeCjs,
+  includeDeclarations,
   testEnabled,
 }: GetPackageJsonOptions) {
   const finalEntryPoints = transformOutput
@@ -92,7 +94,7 @@ export function getPackageJson({
     ? {
       module: `./esm/${exports[0].path}`,
       main: includeCjs ? `./umd/${exports[0].path}` : undefined,
-      types: `./types/${exports[0].types}`,
+      types: includeDeclarations ? `./types/${exports[0].types}` : undefined,
     }
     : {};
   const binaryExport = binaries.length > 0
@@ -110,8 +112,10 @@ export function getPackageJson({
       ...(Object.fromEntries(exports.map((e) => [e.name, {
         import: `./esm/${e.path}`,
         require: includeCjs ? `./umd/${e.path}` : undefined,
-        types: (e.name === "." ? packageJsonObj.types : undefined) ??
-          `./types/${e.types}`,
+        types: includeDeclarations
+          ? (e.name === "." ? packageJsonObj.types : undefined) ??
+            `./types/${e.types}`
+          : undefined,
         ...(packageJsonObj.exports?.[e.name] ?? {}),
       }]))),
     },
