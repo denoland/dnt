@@ -1,4 +1,3 @@
-- tests for `build`
 - Handle deno-types when it specifies a declaration for a `.ts` file (maybe transform the .ts file to .js?)
 - Handle dynamic imports (at least ones that are statically analyzable and maybe warn on others)
 - Support lockfile

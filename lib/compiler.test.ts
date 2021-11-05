@@ -1,4 +1,8 @@
-import { getCompilerScriptTarget, ScriptTarget } from "./compiler.ts";
+import {
+  getCompilerScriptTarget,
+  getTopLevelAwait,
+  ScriptTarget,
+} from "./compiler.ts";
 import { ts } from "./mod.deps.ts";
 import { assertEquals, assertThrows } from "./test.deps.ts";
 
@@ -25,4 +29,22 @@ Deno.test("script target should have expected outputs", () => {
 
   assertEquals(getCompilerScriptTarget(undefined), ts.ScriptTarget.ES2021);
   assertThrows(() => getCompilerScriptTarget("invalid" as any));
+});
+
+Deno.test("get has top level await", () => {
+  runTest("const some = code;class SomeOtherCode {}", undefined);
+  runTest("async function test() { await 5; }", undefined);
+  runTest("await test();", {
+    line: 0,
+    character: 0,
+  });
+
+  function runTest(code: string, expected: ts.LineAndCharacter | undefined) {
+    const sourceFile = ts.createSourceFile(
+      "file.ts",
+      code,
+      ts.ScriptTarget.Latest,
+    );
+    assertEquals(getTopLevelAwait(sourceFile), expected);
+  }
 });

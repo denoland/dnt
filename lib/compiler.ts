@@ -50,3 +50,17 @@ export function getCompilerScriptTarget(target: ScriptTarget | undefined) {
       throw new Error(`Unknown target compiler option: ${target}`);
   }
 }
+
+export function getTopLevelAwait(sourceFile: ts.SourceFile) {
+  for (const statement of sourceFile.statements) {
+    if (
+      ts.isExpressionStatement(statement) &&
+      ts.isAwaitExpression(statement.expression)
+    ) {
+      return sourceFile.getLineAndCharacterOfPosition(
+        statement.expression.getStart(sourceFile),
+      );
+    }
+  }
+  return undefined;
+}

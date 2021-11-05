@@ -1,6 +1,10 @@
 // Copyright 2018-2021 the Deno authors. All rights reserved. MIT license.
 
-import { getCompilerScriptTarget, outputDiagnostics } from "./lib/compiler.ts";
+import {
+  getCompilerScriptTarget,
+  getTopLevelAwait,
+  outputDiagnostics,
+} from "./lib/compiler.ts";
 import { colors, createProjectSync, path, ts } from "./lib/mod.deps.ts";
 import { PackageJsonObject } from "./lib/types.ts";
 import { glob, runNpmCommand } from "./lib/utils.ts";
@@ -153,7 +157,7 @@ export async function build(options: BuildOptions): Promise<void> {
       jsxFactory: "React.createElement",
       jsxFragmentFactory: "React.Fragment",
       importsNotUsedAsValues: ts.ImportsNotUsedAsValues.Remove,
-      module: ts.ModuleKind.ES2015,
+      module: ts.ModuleKind.ESNext,
       moduleResolution: ts.ModuleResolutionKind.NodeJs,
       target: getCompilerScriptTarget(options.compilerOptions?.target),
       allowSyntheticDefaultImports: true,
@@ -182,10 +186,24 @@ export async function build(options: BuildOptions): Promise<void> {
     const outputFileText = binaryEntryPointPaths.has(outputFile.filePath)
       ? `#!/usr/bin/env node\n${outputFile.fileText}`
       : outputFile.fileText;
-    project.createSourceFile(
+    const sourceFile = project.createSourceFile(
       outputFilePath,
       outputFileText,
     );
+
+    const tlaLocation = getTopLevelAwait(sourceFile);
+    if (tlaLocation) {
+      warn(
+        `Top level await cannot be used when targeting CommonJS ` +
+          `(See ${outputFile.filePath} ${tlaLocation.line + 1}:${
+            tlaLocation.character + 1
+          }). ` +
+          `Please re-organize your code to not use a top level await or only distribute an ESM module.`,
+      );
+      throw new Error(
+        "Build failed due to top level await when creating CommonJS module.",
+      );
+    }
 
     if (!options.skipSourceOutput) {
       writeFile(outputFilePath, outputFileText);
