@@ -45,6 +45,10 @@ export interface BuildOptions {
    * @default true
    */
   declaration?: boolean;
+  /** Include a CommonJS module.
+   * @default true
+   */
+  cjs?: boolean;
   /** Skip outputting the canonical TypeScript in the output directory before emitting.
    * @default false
    */
@@ -73,6 +77,7 @@ export async function build(options: BuildOptions): Promise<void> {
   // set defaults
   options = {
     ...options,
+    cjs: options.cjs ?? true,
     typeCheck: options.typeCheck ?? true,
     test: options.test ?? true,
     declaration: options.declaration ?? true,
@@ -191,18 +196,21 @@ export async function build(options: BuildOptions): Promise<void> {
       outputFileText,
     );
 
-    const tlaLocation = getTopLevelAwait(sourceFile);
-    if (tlaLocation) {
-      warn(
-        `Top level await cannot be used when targeting CommonJS ` +
-          `(See ${outputFile.filePath} ${tlaLocation.line + 1}:${
-            tlaLocation.character + 1
-          }). ` +
-          `Please re-organize your code to not use a top level await or only distribute an ESM module.`,
-      );
-      throw new Error(
-        "Build failed due to top level await when creating CommonJS module.",
-      );
+    if (options.cjs) {
+      // cjs does not support TLA so error fast if we find one
+      const tlaLocation = getTopLevelAwait(sourceFile);
+      if (tlaLocation) {
+        warn(
+          `Top level await cannot be used when distributing CommonJS ` +
+            `(See ${outputFile.filePath} ${tlaLocation.line + 1}:${
+              tlaLocation.character + 1
+            }). ` +
+            `Please re-organize your code to not use a top level await or only distribute an ESM module by setting the 'cjs' build option to false.`,
+        );
+        throw new Error(
+          "Build failed due to top level await when creating CommonJS package.",
+        );
+      }
     }
 
     if (!options.skipSourceOutput) {
@@ -241,23 +249,25 @@ export async function build(options: BuildOptions): Promise<void> {
   );
 
   // emit the umd files
-  log("Emitting CommonJs package...");
-  project.compilerOptions.set({
-    declaration: false,
-    esModuleInterop: true,
-    outDir: umdOutDir,
-    module: ts.ModuleKind.UMD,
-  });
-  program = project.createProgram();
-  emit({
-    transformers: {
-      before: [compilerTransforms.transformImportMeta],
-    },
-  });
-  writeFile(
-    path.join(umdOutDir, "package.json"),
-    `{\n  "type": "commonjs"\n}\n`,
-  );
+  if (options.cjs) {
+    log("Emitting CommonJS package...");
+    project.compilerOptions.set({
+      declaration: false,
+      esModuleInterop: true,
+      outDir: umdOutDir,
+      module: ts.ModuleKind.UMD,
+    });
+    program = project.createProgram();
+    emit({
+      transformers: {
+        before: [compilerTransforms.transformImportMeta],
+      },
+    });
+    writeFile(
+      path.join(umdOutDir, "package.json"),
+      `{\n  "type": "commonjs"\n}\n`,
+    );
+  }
 
   // ensure this is done before running tests
   await npmInstallPromise;
@@ -302,6 +312,7 @@ export async function build(options: BuildOptions): Promise<void> {
       transformOutput,
       package: options.package,
       testEnabled: options.test,
+      includeCjs: options.cjs,
     });
     writeFile(
       path.join(options.outDir, "package.json"),
@@ -322,20 +333,20 @@ export async function build(options: BuildOptions): Promise<void> {
       path.join(options.outDir, ".npmignore"),
       fileText,
     );
-  }
 
-  function* getTestFileNames() {
-    for (const file of transformOutput.test.files) {
-      // ignore test declaration files as they won't show up in the emit
-      if (/\.d\.ts$/i.test(file.filePath)) {
-        continue;
+    function* getTestFileNames() {
+      for (const file of transformOutput.test.files) {
+        // ignore test declaration files as they won't show up in the emit
+        if (/\.d\.ts$/i.test(file.filePath)) {
+          continue;
+        }
+
+        const filePath = file.filePath.replace(/\.ts$/i, ".js");
+        yield `./esm/${filePath}`;
+        yield `./umd/${filePath}`;
       }
-
-      const filePath = file.filePath.replace(/\.ts$/i, ".js");
-      yield `./esm/${filePath}`;
-      yield `./umd/${filePath}`;
+      yield "./test_runner.js";
     }
-    yield "./test_runner.js";
   }
 
   async function transformEntryPoints(): Promise<TransformOutput> {
@@ -368,6 +379,7 @@ export async function build(options: BuildOptions): Promise<void> {
         shimPackageName: shimPackage.name,
         testEntryPoints: transformOutput.test.entryPoints,
         testShimUsed: transformOutput.test.shimUsed,
+        includeCjs: options.cjs,
       }),
     );
   }

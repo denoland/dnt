@@ -7,6 +7,7 @@ export function getTestRunnerCode(options: {
   testEntryPoints: string[];
   testShimUsed: boolean;
   shimPackageName: string;
+  includeCjs: boolean | undefined;
 }) {
   const writer = createWriter();
   writer.writeLine(`const chalk = require("chalk");`)
@@ -37,18 +38,20 @@ export function getTestRunnerCode(options: {
           writer.writeLine(`console.log("");`);
         }).blankLine();
 
-        writer.writeLine(`const umdPath = "./umd/" + filePath;`);
-        writer.writeLine(
-          `console.log("Running tests in " + chalk.underline(umdPath) + "...\\n");`,
-        );
-        writer.writeLine(`process.chdir(__dirname + "/umd");`);
-        writer.writeLine(`require(umdPath);`);
-        if (options.testShimUsed) {
+        if (options.includeCjs) {
+          writer.writeLine(`const umdPath = "./umd/" + filePath;`);
           writer.writeLine(
-            "await runTestDefinitions(testDefinitions.splice(0, testDefinitions.length), testContext);",
+            `console.log("Running tests in " + chalk.underline(umdPath) + "...\\n");`,
           );
+          writer.writeLine(`process.chdir(__dirname + "/umd");`);
+          writer.writeLine(`require(umdPath);`);
+          if (options.testShimUsed) {
+            writer.writeLine(
+              "await runTestDefinitions(testDefinitions.splice(0, testDefinitions.length), testContext);",
+            );
+          }
+          writer.blankLine();
         }
-        writer.blankLine();
 
         writer.writeLine(`const esmPath = "./esm/" + filePath;`);
         writer.writeLine(`process.chdir(__dirname + "/esm");`);

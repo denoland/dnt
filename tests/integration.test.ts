@@ -74,7 +74,7 @@ Deno.test("should build bin project", async () => {
       name: "add",
       version: "1.0.0",
       bin: {
-        add: "./umd/mod.js",
+        add: "./esm/mod.js",
       },
       scripts: {
         test: "node test_runner.js",
@@ -101,7 +101,7 @@ Deno.test("should build bin project", async () => {
   });
 });
 
-Deno.test("error for project with TLA and creating a CommonJS", async () => {
+Deno.test("error for TLA when emitting CommonJS", async () => {
   await assertRejects(() =>
     runTest("tla_project", {
       entryPoints: ["mod.ts"],
@@ -112,6 +112,42 @@ Deno.test("error for project with TLA and creating a CommonJS", async () => {
       },
     })
   );
+});
+
+Deno.test("not error for TLA when not using CommonJS", async () => {
+  await runTest("tla_project", {
+    entryPoints: ["mod.ts"],
+    outDir: "./npm",
+    cjs: false, // ok, because cjs is disabled now
+    package: {
+      name: "add",
+      version: "1.0.0",
+    },
+  }, (output) => {
+    assertEquals(output.packageJson, {
+      name: "add",
+      version: "1.0.0",
+      module: "./esm/mod.js",
+      exports: {
+        ".": {
+          import: "./esm/mod.js",
+          types: "./types/mod.d.ts",
+        },
+      },
+      scripts: {
+        test: "node test_runner.js",
+      },
+      types: "./types/mod.d.ts",
+      dependencies: {
+        tslib: "2.3.1",
+      },
+      devDependencies: {
+        "@types/node": "16.11.1",
+        chalk: "4.1.2",
+        "deno.ns": "0.6.4",
+      },
+    });
+  });
 });
 
 export interface Output {

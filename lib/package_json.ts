@@ -12,6 +12,7 @@ export interface GetPackageJsonOptions {
     version: string;
   };
   package: PackageJsonObject;
+  includeCjs: boolean | undefined;
   testEnabled: boolean | undefined;
 }
 
@@ -20,6 +21,7 @@ export function getPackageJson({
   entryPoints,
   shimPackage,
   package: packageJsonObj,
+  includeCjs,
   testEnabled,
 }: GetPackageJsonOptions) {
   const finalEntryPoints = transformOutput
@@ -89,13 +91,13 @@ export function getPackageJson({
   const mainExport = exports.length > 0
     ? {
       module: `./esm/${exports[0].path}`,
-      main: `./umd/${exports[0].path}`,
+      main: includeCjs ? `./umd/${exports[0].path}` : undefined,
       types: `./types/${exports[0].types}`,
     }
     : {};
   const binaryExport = binaries.length > 0
     ? {
-      bin: Object.fromEntries(binaries.map((b) => [b.name, `./umd/${b.path}`])),
+      bin: Object.fromEntries(binaries.map((b) => [b.name, `./esm/${b.path}`])),
     }
     : {};
 
@@ -107,7 +109,7 @@ export function getPackageJson({
       ...(packageJsonObj.exports ?? {}),
       ...(Object.fromEntries(exports.map((e) => [e.name, {
         import: `./esm/${e.path}`,
-        require: `./umd/${e.path}`,
+        require: includeCjs ? `./umd/${e.path}` : undefined,
         types: (e.name === "." ? packageJsonObj.types : undefined) ??
           `./types/${e.types}`,
         ...(packageJsonObj.exports?.[e.name] ?? {}),

@@ -12,6 +12,7 @@ Deno.test("gets code when no shim used", () => {
     testEntryPoints: ["./test.ts"],
     shimPackageName: "test-shim-package",
     testShimUsed: false,
+    includeCjs: true,
   });
   assertEquals(
     code,
@@ -54,6 +55,7 @@ Deno.test("gets code when shim used", () => {
     testEntryPoints: ["./1.test.ts", "./2.test.ts"],
     shimPackageName: "test-shim-package",
     testShimUsed: true,
+    includeCjs: true,
   });
   assertEquals(
     code,
@@ -91,6 +93,44 @@ async function main() {
 }
 
 ${runTestDefinitionsCode}
+
+main();
+`,
+  );
+});
+
+Deno.test("gets code when cjs is not used", () => {
+  const code = getTestRunnerCode({
+    testEntryPoints: ["./test.ts"],
+    shimPackageName: "test-shim-package",
+    testShimUsed: false,
+    includeCjs: false,
+  });
+  assertEquals(
+    code,
+    `const chalk = require("chalk");
+const process = require("process");
+
+const filePaths = [
+  "./test.js",
+];
+
+async function main() {
+  const testContext = {
+    process,
+    chalk,
+  };
+  for (const [i, filePath] of filePaths.entries()) {
+    if (i > 0) {
+      console.log("");
+    }
+
+    const esmPath = "./esm/" + filePath;
+    process.chdir(__dirname + "/esm");
+    console.log("\\nRunning tests in " + chalk.underline(esmPath) + "...\\n");
+    await import(esmPath);
+  }
+}
 
 main();
 `,

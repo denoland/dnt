@@ -39,6 +39,7 @@ Deno.test("single entrypoint", () => {
       version: "0.0.0",
     },
     testEnabled: true,
+    includeCjs: true,
   };
 
   assertEquals(getPackageJson(props), {
@@ -102,6 +103,37 @@ Deno.test("single entrypoint", () => {
       },
     },
   );
+
+  assertEquals(
+    getPackageJson({
+      ...props,
+      testEnabled: false,
+      includeCjs: false,
+    }),
+    {
+      name: "package",
+      version: "0.1.0",
+      main: undefined,
+      module: "./esm/mod.js",
+      types: "./types/mod.d.ts",
+      dependencies: {
+        tslib: "2.3.1",
+        dep: "^1.0.0",
+      },
+      devDependencies: {
+        "deno.ns": "0.0.0",
+        "@types/node": "16.11.1",
+      },
+      scripts: undefined,
+      exports: {
+        ".": {
+          import: "./esm/mod.js",
+          require: undefined,
+          types: "./types/mod.d.ts",
+        },
+      },
+    },
+  );
 });
 
 Deno.test("multiple entrypoints", () => {
@@ -137,6 +169,7 @@ Deno.test("multiple entrypoints", () => {
       version: "0.0.0",
     },
     testEnabled: false,
+    includeCjs: true,
   };
 
   assertEquals(getPackageJson(props), {
@@ -202,6 +235,7 @@ Deno.test("binary entrypoints", () => {
       version: "0.0.0",
     },
     testEnabled: false,
+    includeCjs: true,
   };
 
   assertEquals(getPackageJson(props), {
@@ -211,7 +245,7 @@ Deno.test("binary entrypoints", () => {
     module: "./esm/mod.js",
     types: "./types/mod.d.ts",
     bin: {
-      my_bin: "./umd/bin.js",
+      my_bin: "./esm/bin.js",
     },
     dependencies: {
       tslib: "2.3.1",
