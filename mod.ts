@@ -14,8 +14,6 @@ import { getPackageJson } from "./lib/package_json.ts";
 import { ScriptTarget } from "./lib/compiler.ts";
 import { getTestRunnerCode } from "./lib/test_runner/get_test_runner_code.ts";
 
-export * from "./transform.ts";
-
 export interface EntryPoint {
   /**
    * If the entrypoint is for an npm binary or export.
