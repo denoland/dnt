@@ -2,11 +2,13 @@
 
 [![deno doc](https://doc.deno.land/badge.svg)](https://doc.deno.land/https/deno.land/x/dnt/mod.ts)
 
-Prototype for a Deno to npm package build tool.
+Deno to npm package build tool.
+
+This tool is under active early development and hasn't been tested in a lot of scenarios. Please try it out, examine its output thoroughly before publishing, and open an [issue](https://github.com/denoland/dnt/issues) if you encounter any problems or challenges in order to help us improve it.
 
 ## What does this do?
 
-It takes a Deno module and creates an npm package for use in Node.js.
+Takes a Deno module and creates an npm package for use in Node.js.
 
 There are several steps done in a pipeline:
 
@@ -18,7 +20,7 @@ There are several steps done in a pipeline:
    - Allows mapping any specifier to an npm package.
 1. Type checks the output.
 1. Emits ESM, CommonJS, and TypeScript declaration files along with a _package.json_ file.
-1. Runs the final output in Node through a test runner calling all `Deno.test` calls.
+1. Runs the final output in Node.js through a test runner calling all `Deno.test` calls.
 
 ## Setup
 
@@ -33,16 +35,16 @@ await build({
   outDir: "./npm",
   package: {
     // package.json properties
-    name: "my-package",
+    name: "your-package",
     version: Deno.args[0],
-    description: "My package.",
+    description: "Your package.",
     license: "MIT",
     repository: {
       type: "git",
-      url: "git+https://github.com/dsherret/my-package.git",
+      url: "git+https://github.com/username/package.git",
     },
     bugs: {
-      url: "https://github.com/dsherret/my-package/issues",
+      url: "https://github.com/username/package/issues",
     },
   },
 });
@@ -80,12 +82,12 @@ npm publish
 
 Running tests in ./umd/mod.test.js...
 
-test escapeForWithinString ... ok
+test escapeWithinString ... ok
 test escapeChar ... ok
 
 Running tests in ./esm/mod.test.js...
 
-test escapeForWithinString ... ok
+test escapeWithinString ... ok
 test escapeChar ... ok
 [dnt] Complete!
 ```
@@ -94,7 +96,7 @@ test escapeChar ... ok
 
 ### Disabling Type Checking, Testing, Declaration Emit, or CommonJS Output
 
-Use the following self-explanatory options to disable any one of these, which are enabled by default:
+Use the following options to disable any one of these, which are enabled by default:
 
 ```ts
 await build({
@@ -108,7 +110,7 @@ await build({
 
 ### Top Level Await
 
-Top level await doesn't work in CommonJS. If you want to target CommonJS then you'll have to restructure your code to not use any top level awaits. Otherwise, set the `cjs` build options to `false`:
+Top level await doesn't work in CommonJS and dnt will error if a top level await is used and you are outputting CommonJS code. If you want to output a CommonJS package then you'll have to restructure your code to not use any top level awaits. Otherwise, set the `cjs` build option to `false`:
 
 ```ts
 await build({
@@ -119,7 +121,7 @@ await build({
 
 ### Specifier to Npm Package Mappings
 
-By default, dnt will include the remote modules as if they were local in your npm package except in some cases for [skypack](https://www.skypack.dev/) or [esm.sh](https://esm.sh/) remote modules. There are scenarios though where an npm package may exist for one of your dependencies. To use this instead and include it in your package.json file, specify a specifier to npm package mapping.
+In most cases, dnt won't know about an npm package being available for one of your dependencies and will download remote modules to include in your package. There are scenarios though where an npm package may exist and you want to use it instead. This can be done by providing a specifier to npm package mapping.
 
 For example:
 
@@ -140,7 +142,7 @@ This will:
 1. Change all `"https://deno.land/x/code_block_writer@10.1.1/mod.ts"` specifiers to `"code-block-writer"`
 2. Add a package.json dependency for `"code-block-writer": "^10.1.1"`.
 
-Note that if you specify a mapping and it is not found in the code, dnt will error. This is done to prevent the scenario where a remote specifier's version is bumped and the mapping isn't updated.
+Note that dnt will error if you specify a mapping and it is not found in the code. This is done to prevent the scenario where a remote specifier's version is bumped and the mapping isn't updated.
 
 ### Multiple Entry Points
 
@@ -162,7 +164,7 @@ This will create a package.json with these as exports:
 
 ```jsonc
 {
-  "name": "my-package",
+  "name": "your-package",
   // etc...
   "main": "./umd/mod.js",
   "module": "./esm/mod.js",
@@ -182,7 +184,7 @@ This will create a package.json with these as exports:
 }
 ```
 
-Now these entry points could be imported like `import * as main from "my-package"` and `import * as internal from "my-package/internal";`.
+Now these entry points could be imported like `import * as main from "your-package"` and `import * as internal from "your-package/internal";`.
 
 ### Bin/CLI Packages
 
@@ -201,11 +203,36 @@ await build({
 
 This will add a `"bin"` entry to the package.json and add `#!/usr/bin/env node` to the top of the specified entry point.
 
+### Preventing Shimming
+
+Dnt shims calls to Deno globals like so...
+
+```ts
+Deno.readTextFileSync(...);
+```
+
+...by adding an import statement to a [shim library](https://github.com/denoland/deno.ns) and changing the Deno global to reference to point at it.
+
+```ts
+import * as denoShim from "deno.ns";
+
+denoShim.Deno.readTextFileSync(...);
+```
+
+Maybe there are scenarios where you don't want that to happen though. To prevent it, add a `// deno-shim-ignore` comment:
+
+```ts
+// deno-shim-ignore
+Deno.readTextFileSync(...);
+```
+
+...which will now output that code as-is.
+
 ### Node and Deno Specific Code
 
 You may find yourself in a scenario where you want to run certain code based on whether someone is in Deno or if someone is in Node and feature testing is not possible. For example, say you want to run the `deno` executable when the code is running in Deno and the `node` executable when it's running in Node.
 
-To do this, it is recommended to use the [`which_runtime`](https://deno.land/x/which_runtime@0.1.0) module. Essentially, import it and then check its exports for if you're in Node or Deno then run specific code based on those scenarios.
+To do this, you may use the [`which_runtime`](https://deno.land/x/which_runtime@0.1.0) module which provides some exports saying if the code is running in Deno or Node.
 
 ### Pre & Post Build Steps
 
@@ -270,7 +297,7 @@ Alternatively, you could also use the [`which_runtime`](https://deno.land/x/whic
 
    You may wish to removing the leading `v` if it exists (ex. `Deno.args[0]?.replace(/^v/, "")`)
 
-1. In your GitHub Actions workflow, get the tag name, setup node, run your build scripts, then publish to npm.
+1. In your GitHub Actions workflow, get the tag name, setup node, run your build script, then publish to npm.
 
    ```yml
    # ...setup deno and run `deno test` here as you normally would...
