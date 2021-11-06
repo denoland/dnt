@@ -4,7 +4,7 @@
 
 Deno to npm package build tool.
 
-This tool is under active early development and hasn't been tested in a lot of scenarios. Please try it out, examine its output thoroughly before publishing, and open an [issue](https://github.com/denoland/dnt/issues) if you encounter any problems or challenges in order to help us improve it.
+This tool is under active early development and hasn't been tested in a lot of scenarios. Examine its output thoroughly before publishing. If you encounter any problems or challenges, please open an [issue](https://github.com/denoland/dnt/issues) to help us improve it.
 
 ## What does this do?
 
@@ -14,8 +14,8 @@ There are several steps done in a pipeline:
 
 1. Transforms Deno code to Node/canonical TypeScript including files found by `deno test`.
    - Rewrites module specifiers.
-   - Injects a [Deno shim](https://github.com/denoland/deno.ns) for any `Deno` namespace usages.
-   - Rewrites Skypack and ESM specifiers to a bare specifier and includes these dependencies in a package.json.
+   - Injects a [Deno shim](https://github.com/denoland/deno.ns) for any `Deno` namespace or other global name usages.
+   - Rewrites [Skypack](https://www.skypack.dev/) and [esm.sh](https://esm.sh/) specifiers to a bare specifier and includes these dependencies in a package.json.
    - When remote modules cannot be resolved to an npm package, it downloads them and rewrites specifiers to make them local.
    - Allows mapping any specifier to an npm package.
 1. Type checks the output.
@@ -280,6 +280,20 @@ await Deno.writeTextFile(
 ```
 
 Alternatively, you could also use the [`which_runtime`](https://deno.land/x/which_runtime@0.1.0) module and use a different directory path when the tests are running in Node. This is probably more ideal if you have a lot of test data.
+
+### Test File Matching
+
+By default, dnt uses the same search [pattern](https://deno.land/manual/testing) that `deno test` uses to find test files. To override this, provide a `testPattern` and/or `rootTestDir` option:
+
+```ts
+await build({
+  // ...etc...
+  testPattern: "**/*.test.{ts,tsx,js,mjs,jsx}",
+  // and/or provide a directory to start searching for test
+  // files from, which defaults to the current working directory
+  rootTestDir: "./tests",
+});
+```
 
 ### GitHub Actions - Npm Publish on Tag
 
