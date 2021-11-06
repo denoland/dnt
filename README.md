@@ -15,7 +15,7 @@ There are several steps done in a pipeline:
 1. Transforms Deno code to Node/canonical TypeScript including files found by `deno test`.
    - Rewrites module specifiers.
    - Injects a [Deno shim](https://github.com/denoland/deno.ns) for any `Deno` namespace or other global name usages.
-   - Rewrites [Skypack](https://www.skypack.dev/) and [esm.sh](https://esm.sh/) specifiers to a bare specifier and includes these dependencies in a package.json.
+   - Rewrites [Skypack](https://www.skypack.dev/) and [esm.sh](https://esm.sh/) specifiers to bare specifiers and includes these dependencies in a package.json.
    - When remote modules cannot be resolved to an npm package, it downloads them and rewrites specifiers to make them local.
    - Allows mapping any specifier to an npm package.
 1. Type checks the output.
@@ -146,9 +146,7 @@ Note that dnt will error if you specify a mapping and it is not found in the cod
 
 ### Multiple Entry Points
 
-You may wish to distribute a package with multiple entry points. For example, an entry point at `.` and another at `./internal`.
-
-To do this, specify multiple entry points like so:
+To do this, specify multiple entry points like so (ex. an entry point at `.` and another at `./internal`):
 
 ```ts
 await build({
@@ -232,7 +230,7 @@ Deno.readTextFileSync(...);
 
 You may find yourself in a scenario where you want to run certain code based on whether someone is in Deno or if someone is in Node and feature testing is not possible. For example, say you want to run the `deno` executable when the code is running in Deno and the `node` executable when it's running in Node.
 
-To do this, you may use the [`which_runtime`](https://deno.land/x/which_runtime@0.1.0) module which provides some exports saying if the code is running in Deno or Node.
+One option to handle this, is to use the [`which_runtime`](https://deno.land/x/which_runtime@0.1.0) deno.land/x module which provides some exports saying if the code is running in Deno or Node.
 
 ### Pre & Post Build Steps
 
@@ -309,7 +307,7 @@ await build({
    });
    ```
 
-   You may wish to removing the leading `v` if it exists (ex. `Deno.args[0]?.replace(/^v/, "")`)
+   Note: You may wish to remove the leading `v` in the tag name if it exists (ex. `Deno.args[0]?.replace(/^v/, "")`)
 
 1. In your GitHub Actions workflow, get the tag name, setup node, run your build script, then publish to npm.
 
