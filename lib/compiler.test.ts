@@ -1,7 +1,9 @@
 import {
+  getCompilerSourceMapOptions,
   getCompilerScriptTarget,
   getTopLevelAwait,
   ScriptTarget,
+  SourceMapOptions,
 } from "./compiler.ts";
 import { ts } from "./mod.deps.ts";
 import { assertEquals, assertThrows } from "./test.deps.ts";
@@ -46,5 +48,19 @@ Deno.test("get has top level await", () => {
       ts.ScriptTarget.Latest,
     );
     assertEquals(getTopLevelAwait(sourceFile), expected);
+  }
+});
+
+Deno.test("get compiler options for source map option", () => {
+  runTest("inline", { inlineSourceMap: true });
+  runTest(true, { sourceMap: true });
+  runTest(false, {});
+  runTest(undefined, {});
+
+  function runTest(
+    useSourceMaps: SourceMapOptions | undefined,
+    expected: { sourceMap?: boolean; inlineSourceMap?: boolean },
+  ) {
+    assertEquals(getCompilerSourceMapOptions(useSourceMaps), expected);
   }
 });
