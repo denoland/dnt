@@ -2,8 +2,10 @@
 
 import {
   getCompilerScriptTarget,
+  getCompilerSourceMapOptions,
   getTopLevelAwait,
   outputDiagnostics,
+  SourceMapOptions,
 } from "./lib/compiler.ts";
 import { colors, createProjectSync, path, ts } from "./lib/mod.deps.ts";
 import { PackageJsonObject } from "./lib/types.ts";
@@ -67,6 +69,14 @@ export interface BuildOptions {
   /** Optional compiler options. */
   compilerOptions?: {
     target?: ScriptTarget;
+    /**
+     * Use source maps from the canonical typescript to ESM/CommonJS emit.
+     *
+     * Specify `true` to include separate files or `"inline"` to inline the source map in the same file.
+     * @remarks Using this option will cause your sources to be included in the npm package.
+     * @default false
+     */
+    sourceMap?: SourceMapOptions;
   };
 }
 
@@ -165,6 +175,7 @@ export async function build(options: BuildOptions): Promise<void> {
       target: getCompilerScriptTarget(options.compilerOptions?.target),
       allowSyntheticDefaultImports: true,
       importHelpers: true,
+      ...getCompilerSourceMapOptions(options.compilerOptions?.sourceMap),
     },
   });
 
@@ -320,10 +331,12 @@ export async function build(options: BuildOptions): Promise<void> {
   }
 
   function createNpmIgnore() {
-    // Do not make any of this conditional in case a user edits settings
+    // Try to make as little of this conditional in case a user edits settings
     // to exclude something, but then the output directory still has that file
     const lines = [];
-    lines.push("src/");
+    if (!isUsingSourceMaps()) {
+      lines.push("src/");
+    }
     for (const fileName of getTestFileNames()) {
       lines.push(fileName.replace(/^\.\//, ""));
     }
@@ -346,6 +359,12 @@ export async function build(options: BuildOptions): Promise<void> {
       }
       yield "./test_runner.js";
     }
+  }
+
+  function isUsingSourceMaps() {
+    const compilerOptions = options.compilerOptions;
+    return compilerOptions?.sourceMap === "inline" ||
+      compilerOptions?.sourceMap === true;
   }
 
   async function transformEntryPoints(): Promise<TransformOutput> {

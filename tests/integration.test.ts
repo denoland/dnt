@@ -15,6 +15,8 @@ Deno.test("should build", async () => {
       version: "1.0.0",
     },
   }, (output) => {
+    output.assertNotExists("umd/mod.js.map");
+    output.assertNotExists("esm/mod.js.map");
     assertEquals(output.packageJson, {
       name: "add",
       version: "1.0.0",
@@ -85,8 +87,8 @@ Deno.test("should build with all options off", async () => {
       devDependencies: {},
     });
 
-    output.assertNotExists("./umd/mod.js");
-    output.assertNotExists("./types/mod.js");
+    output.assertNotExists("umd/mod.js");
+    output.assertNotExists("types/mod.js");
 
     // This doesn't include the test files because they're not analyzed for in this scenario.
     assertEquals(
@@ -191,10 +193,41 @@ Deno.test("not error for TLA when not using CommonJS", async () => {
   });
 });
 
+Deno.test("should build with source maps", async () => {
+  await runTest("test_project", {
+    entryPoints: ["mod.ts"],
+    outDir: "./npm",
+    package: {
+      name: "add",
+      version: "1.0.0",
+    },
+    compilerOptions: {
+      sourceMap: true,
+    },
+  }, (output) => {
+    output.assertExists("umd/mod.js.map");
+    output.assertExists("esm/mod.js.map");
+    assertEquals(
+      output.npmIgnore,
+      `esm/mod.test.js
+umd/mod.test.js
+esm/deps/deno_land_std_0_109_0/fmt/colors.js
+umd/deps/deno_land_std_0_109_0/fmt/colors.js
+esm/deps/deno_land_std_0_109_0/testing/_diff.js
+umd/deps/deno_land_std_0_109_0/testing/_diff.js
+esm/deps/deno_land_std_0_109_0/testing/asserts.js
+umd/deps/deno_land_std_0_109_0/testing/asserts.js
+test_runner.js
+`,
+    );
+  });
+});
+
 export interface Output {
   packageJson: any;
   npmIgnore: string;
   getFileText(filePath: string): string;
+  assertExists(filePath: string): void;
   assertNotExists(filePath: string): void;
 }
 
@@ -217,9 +250,12 @@ async function runTest(
         packageJson,
         npmIgnore,
         getFileText,
+        assertExists(filePath) {
+          Deno.statSync("npm/" + filePath);
+        },
         assertNotExists(filePath) {
           try {
-            Deno.statSync(filePath);
+            Deno.statSync("npm/" + filePath);
             throw new Error(`Found file at ${filePath}`);
           } catch (err) {
             if (!(err instanceof Deno.errors.NotFound)) {

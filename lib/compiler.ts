@@ -51,6 +51,21 @@ export function getCompilerScriptTarget(target: ScriptTarget | undefined) {
   }
 }
 
+export type SourceMapOptions = "inline" | boolean;
+
+export function getCompilerSourceMapOptions(
+  sourceMaps: SourceMapOptions | undefined,
+): { inlineSourceMap?: boolean; sourceMap?: boolean } {
+  switch (sourceMaps) {
+    case "inline":
+      return { inlineSourceMap: true };
+    case true:
+      return { sourceMap: true };
+    default:
+      return {};
+  }
+}
+
 export function getTopLevelAwait(sourceFile: ts.SourceFile) {
   for (const statement of sourceFile.statements) {
     if (
