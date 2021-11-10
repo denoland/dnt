@@ -15,6 +15,8 @@ Deno.test("should build", async () => {
       version: "1.0.0",
     },
   }, (output) => {
+    output.assertNotExists("umd/mod.js.map");
+    output.assertNotExists("esm/mod.js.map");
     assertEquals(output.packageJson, {
       name: "add",
       version: "1.0.0",
