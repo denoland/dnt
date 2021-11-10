@@ -1,6 +1,6 @@
 import {
-  getCompilerSourceMapOptions,
   getCompilerScriptTarget,
+  getCompilerSourceMapOptions,
   getTopLevelAwait,
   ScriptTarget,
   SourceMapOptions,

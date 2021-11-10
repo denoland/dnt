@@ -55,7 +55,7 @@ export type SourceMapOptions = "inline" | boolean;
 
 export function getCompilerSourceMapOptions(
   sourceMaps: SourceMapOptions | undefined,
-) : { inlineSourceMap?: boolean; sourceMap?: boolean; } {
+): { inlineSourceMap?: boolean; sourceMap?: boolean } {
   switch (sourceMaps) {
     case "inline":
       return { inlineSourceMap: true };

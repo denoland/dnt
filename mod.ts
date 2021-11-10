@@ -363,7 +363,8 @@ export async function build(options: BuildOptions): Promise<void> {
 
   function isUsingSourceMaps() {
     const compilerOptions = options.compilerOptions;
-    return compilerOptions?.sourceMap === "inline" || compilerOptions?.sourceMap === true;
+    return compilerOptions?.sourceMap === "inline" ||
+      compilerOptions?.sourceMap === true;
   }
 
   async function transformEntryPoints(): Promise<TransformOutput> {
