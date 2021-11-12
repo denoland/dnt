@@ -8,6 +8,7 @@ import {
   SourceMapOptions,
 } from "./lib/compiler.ts";
 import { colors, createProjectSync, path, ts } from "./lib/mod.deps.ts";
+import { getNpmIgnoreText } from "./lib/npm_ignore.ts";
 import { PackageJsonObject } from "./lib/types.ts";
 import { glob, runNpmCommand } from "./lib/utils.ts";
 import { SpecifierMappings, transform, TransformOutput } from "./transform.ts";
@@ -77,6 +78,12 @@ export interface BuildOptions {
      * @default false
      */
     sourceMap?: SourceMapOptions;
+    /**
+     * Whether to include the source file text in the source map when using source maps.
+     * @remarks It's not recommended to do this if you are distributing both ESM and CommonJS
+     * sources as then it will duplicate the the source data being published.
+     */
+    inlineSources?: boolean;
   };
 }
 
@@ -176,6 +183,7 @@ export async function build(options: BuildOptions): Promise<void> {
       allowSyntheticDefaultImports: true,
       importHelpers: true,
       ...getCompilerSourceMapOptions(options.compilerOptions?.sourceMap),
+      inlineSources: options.compilerOptions?.inlineSources,
     },
   });
 
@@ -331,40 +339,15 @@ export async function build(options: BuildOptions): Promise<void> {
   }
 
   function createNpmIgnore() {
-    // Try to make as little of this conditional in case a user edits settings
-    // to exclude something, but then the output directory still has that file
-    const lines = [];
-    if (!isUsingSourceMaps()) {
-      lines.push("src/");
-    }
-    for (const fileName of getTestFileNames()) {
-      lines.push(fileName.replace(/^\.\//, ""));
-    }
-    const fileText = Array.from(lines).join("\n") + "\n";
+    const fileText = getNpmIgnoreText({
+      sourceMap: options.compilerOptions?.sourceMap,
+      inlineSources: options.compilerOptions?.inlineSources,
+      testFiles: transformOutput.test.files,
+    });
     writeFile(
       path.join(options.outDir, ".npmignore"),
       fileText,
     );
-
-    function* getTestFileNames() {
-      for (const file of transformOutput.test.files) {
-        // ignore test declaration files as they won't show up in the emit
-        if (/\.d\.ts$/i.test(file.filePath)) {
-          continue;
-        }
-
-        const filePath = file.filePath.replace(/\.ts$/i, ".js");
-        yield `./esm/${filePath}`;
-        yield `./umd/${filePath}`;
-      }
-      yield "./test_runner.js";
-    }
-  }
-
-  function isUsingSourceMaps() {
-    const compilerOptions = options.compilerOptions;
-    return compilerOptions?.sourceMap === "inline" ||
-      compilerOptions?.sourceMap === true;
   }
 
   async function transformEntryPoints(): Promise<TransformOutput> {
