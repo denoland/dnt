@@ -169,7 +169,7 @@ export async function build(options: BuildOptions): Promise<void> {
       noStrictGenericChecks: false,
       noUncheckedIndexedAccess: false,
       declaration: options.declaration,
-      esModuleInterop: false,
+      esModuleInterop: true,
       isolatedModules: true,
       useDefineForClassFields: true,
       experimentalDecorators: true,
