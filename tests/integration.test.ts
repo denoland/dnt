@@ -223,6 +223,58 @@ test_runner.js
   });
 });
 
+Deno.test("should build with mappings", async () => {
+  await runTest("mappings_project", {
+    entryPoints: ["mod.ts"],
+    outDir: "./npm",
+    package: {
+      name: "mappings",
+      version: "1.2.3",
+    },
+    mappings: {
+      "https://deno.land/x/code_block_writer@11.0.0/mod.ts": {
+        name: "code-block-writer",
+        version: "^11.0.0",
+      },
+    },
+  }, (output) => {
+    assertEquals(output.packageJson, {
+      name: "mappings",
+      version: "1.2.3",
+      main: "./umd/mod.js",
+      module: "./esm/mod.js",
+      exports: {
+        ".": {
+          import: "./esm/mod.js",
+          require: "./umd/mod.js",
+          types: "./types/mod.d.ts",
+        },
+      },
+      scripts: {
+        test: "node test_runner.js",
+      },
+      types: "./types/mod.d.ts",
+      dependencies: {
+        tslib: "2.3.1",
+        "code-block-writer": "^11.0.0",
+      },
+      devDependencies: {
+        "@types/node": "16.11.1",
+        chalk: "4.1.2",
+        "deno.ns": "0.6.4",
+      },
+    });
+    assertEquals(
+      output.npmIgnore,
+      `src/
+esm/mod.test.js
+umd/mod.test.js
+test_runner.js
+`,
+    );
+  });
+});
+
 export interface Output {
   packageJson: any;
   npmIgnore: string;
@@ -232,7 +284,7 @@ export interface Output {
 }
 
 async function runTest(
-  project: "test_project" | "tla_project",
+  project: "test_project" | "tla_project" | "mappings_project",
   options: BuildOptions,
   checkOutput?: (output: Output) => (Promise<void> | void),
 ) {
