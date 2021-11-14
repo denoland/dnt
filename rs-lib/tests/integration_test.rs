@@ -105,17 +105,20 @@ async fn transform_deno_shim_with_name_collision() {
 async fn transform_global_this_deno() {
   assert_transforms(vec![
     (
-      "globalThis.Deno.readTextFile(); globalThis.test = 5;",
+      "globalThis.Deno.readTextFile(); globalThis.test = 5; true ? globalThis : globalThis; typeof globalThis.test;",
       concat!(
         r#"import * as denoShim from "test-shim";"#,
-        "\n({ ...denoShim, ...globalThis }).Deno.readTextFile(); globalThis.test = 5;"
+        "\n({ ...denoShim, ...globalThis }).Deno.readTextFile(); ",
+        "globalThis.test = 5; ",
+        "true ? ({ ...denoShim, ...globalThis }) : ({ ...denoShim, ...globalThis }); ",
+        "typeof ({ ...denoShim, ...globalThis }).test;"
       )
     ),
   ]).await;
 }
 
 #[tokio::test]
-async fn no_shim_for_declarations() {
+async fn no_shim_situations() {
   assert_identity_transforms(vec![
     "const { Deno } = test;",
     "const { asdf, ...Deno } = test;",
@@ -143,6 +146,10 @@ async fn no_shim_for_declarations() {
     "export { Deno as test } from 'test';",
     "try {} catch (Deno) {}",
     "function test(Deno) {}",
+    "typeof globalThis;",
+    "globalThis == null;",
+    "globalThis ? true : false;",
+    "type Test = typeof globalThis;",
   ])
   .await;
 }
