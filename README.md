@@ -26,44 +26,46 @@ There are several steps done in a pipeline:
 
 1. Create a build script file:
 
-```ts
-// ex. scripts/build_npm.ts
-import { build } from "https://deno.land/x/dnt/mod.ts";
+   ```ts
+   // ex. scripts/build_npm.ts
+   import { build } from "https://deno.land/x/dnt/mod.ts";
 
-await build({
-  entryPoints: ["./mod.ts"],
-  outDir: "./npm",
-  package: {
-    // package.json properties
-    name: "your-package",
-    version: Deno.args[0],
-    description: "Your package.",
-    license: "MIT",
-    repository: {
-      type: "git",
-      url: "git+https://github.com/username/package.git",
-    },
-    bugs: {
-      url: "https://github.com/username/package/issues",
-    },
-  },
-});
+   await build({
+     entryPoints: ["./mod.ts"],
+     outDir: "./npm",
+     package: {
+       // package.json properties
+       name: "your-package",
+       version: Deno.args[0],
+       description: "Your package.",
+       license: "MIT",
+       repository: {
+         type: "git",
+         url: "git+https://github.com/username/package.git",
+       },
+       bugs: {
+         url: "https://github.com/username/package/issues",
+       },
+     },
+   });
 
-// post build steps
-Deno.copyFileSync("LICENSE", "npm/LICENSE");
-Deno.copyFileSync("README.md", "npm/README.md");
-```
+   // post build steps
+   Deno.copyFileSync("LICENSE", "npm/LICENSE");
+   Deno.copyFileSync("README.md", "npm/README.md");
+   ```
 
-2. Run it and `npm publish`:
+1. Add the output directory to be ignored by your source control if you desire (ex. add `npm/` to `.gitignore`).
 
-```bash
-# run script
-deno run -A scripts/build_npm.ts 0.1.0
+1. Run it and `npm publish`:
 
-# go to output directory and publish
-cd npm
-npm publish
-```
+   ```bash
+   # run script
+   deno run -A scripts/build_npm.ts 0.1.0
+
+   # go to output directory and publish
+   cd npm
+   npm publish
+   ```
 
 ### Example Build Logs
 
