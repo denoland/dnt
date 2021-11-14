@@ -69,6 +69,10 @@ export interface BuildOptions {
   package: PackageJsonObject;
   /** Optional compiler options. */
   compilerOptions?: {
+    /** Uses tslib to import helper functions once per project instead of including them per-file if necessary.
+     * @default false
+     */
+    importHelpers?: boolean;
     target?: ScriptTarget;
     /**
      * Use source maps from the canonical typescript to ESM/CommonJS emit.
@@ -181,7 +185,7 @@ export async function build(options: BuildOptions): Promise<void> {
       moduleResolution: ts.ModuleResolutionKind.NodeJs,
       target: getCompilerScriptTarget(options.compilerOptions?.target),
       allowSyntheticDefaultImports: true,
-      importHelpers: true,
+      importHelpers: options.compilerOptions?.importHelpers,
       ...getCompilerSourceMapOptions(options.compilerOptions?.sourceMap),
       inlineSources: options.compilerOptions?.inlineSources,
     },
@@ -331,6 +335,7 @@ export async function build(options: BuildOptions): Promise<void> {
       testEnabled: options.test,
       includeCjs: options.cjs,
       includeDeclarations: options.declaration,
+      includeTsLib: options.compilerOptions?.importHelpers,
     });
     writeFile(
       path.join(options.outDir, "package.json"),

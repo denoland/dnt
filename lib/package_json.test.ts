@@ -41,6 +41,7 @@ Deno.test("single entrypoint", () => {
     testEnabled: true,
     includeCjs: true,
     includeDeclarations: true,
+    includeTsLib: false,
   };
 
   assertEquals(getPackageJson(props), {
@@ -50,7 +51,6 @@ Deno.test("single entrypoint", () => {
     module: "./esm/mod.js",
     types: "./types/mod.d.ts",
     dependencies: {
-      tslib: "2.3.1",
       dep: "^1.0.0",
     },
     devDependencies: {
@@ -90,7 +90,6 @@ Deno.test("single entrypoint", () => {
       module: "./esm/mod.js",
       types: "./types/mod.d.ts",
       dependencies: {
-        tslib: "2.3.1",
         dep: "^1.0.0",
       },
       devDependencies: {},
@@ -118,7 +117,6 @@ Deno.test("single entrypoint", () => {
       module: "./esm/mod.js",
       types: "./types/mod.d.ts",
       dependencies: {
-        tslib: "2.3.1",
         dep: "^1.0.0",
       },
       devDependencies: {
@@ -142,6 +140,39 @@ Deno.test("single entrypoint", () => {
       testEnabled: false,
       includeCjs: false,
       includeDeclarations: false,
+    }),
+    {
+      name: "package",
+      version: "0.1.0",
+      main: undefined,
+      module: "./esm/mod.js",
+      types: undefined,
+      dependencies: {
+        dep: "^1.0.0",
+      },
+      devDependencies: {
+        "deno.ns": "0.0.0",
+        "@types/node": "16.11.1",
+      },
+      scripts: undefined,
+      exports: {
+        ".": {
+          import: "./esm/mod.js",
+          require: undefined,
+          types: undefined,
+        },
+      },
+    },
+  );
+
+  // tslib
+  assertEquals(
+    getPackageJson({
+      ...props,
+      testEnabled: false,
+      includeCjs: false,
+      includeDeclarations: false,
+      includeTsLib: true,
     }),
     {
       name: "package",
@@ -204,6 +235,7 @@ Deno.test("multiple entrypoints", () => {
     testEnabled: false,
     includeCjs: true,
     includeDeclarations: true,
+    includeTsLib: false,
   };
 
   assertEquals(getPackageJson(props), {
@@ -213,7 +245,6 @@ Deno.test("multiple entrypoints", () => {
     module: "./esm/mod.js",
     types: "./types/mod.d.ts",
     dependencies: {
-      tslib: "2.3.1",
       "deno.ns": "0.0.0",
     },
     devDependencies: {
@@ -271,6 +302,7 @@ Deno.test("binary entrypoints", () => {
     testEnabled: false,
     includeCjs: true,
     includeDeclarations: true,
+    includeTsLib: false,
   };
 
   assertEquals(getPackageJson(props), {
@@ -283,7 +315,6 @@ Deno.test("binary entrypoints", () => {
       my_bin: "./esm/bin.js",
     },
     dependencies: {
-      tslib: "2.3.1",
       "deno.ns": "0.0.0",
     },
     devDependencies: {

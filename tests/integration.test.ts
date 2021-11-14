@@ -14,6 +14,9 @@ Deno.test("should build", async () => {
       name: "add",
       version: "1.0.0",
     },
+    compilerOptions: {
+      importHelpers: true,
+    },
   }, (output) => {
     output.assertNotExists("umd/mod.js.map");
     output.assertNotExists("esm/mod.js.map");
@@ -81,9 +84,7 @@ Deno.test("should build with all options off", async () => {
           import: "./esm/mod.js",
         },
       },
-      dependencies: {
-        tslib: "2.3.1",
-      },
+      dependencies: {},
       devDependencies: {},
     });
 
@@ -122,9 +123,7 @@ Deno.test("should build bin project", async () => {
       scripts: {
         test: "node test_runner.js",
       },
-      dependencies: {
-        tslib: "2.3.1",
-      },
+      dependencies: {},
       devDependencies: {
         "@types/node": "16.11.1",
         chalk: "4.1.2",
@@ -181,9 +180,7 @@ Deno.test("not error for TLA when not using CommonJS", async () => {
         test: "node test_runner.js",
       },
       types: "./types/mod.d.ts",
-      dependencies: {
-        tslib: "2.3.1",
-      },
+      dependencies: {},
       devDependencies: {
         "@types/node": "16.11.1",
         chalk: "4.1.2",
@@ -255,7 +252,6 @@ Deno.test("should build with mappings", async () => {
       },
       types: "./types/mod.d.ts",
       dependencies: {
-        tslib: "2.3.1",
         "code-block-writer": "^11.0.0",
       },
       devDependencies: {
