@@ -3,6 +3,12 @@
 import { assertEquals } from "./test.deps.ts";
 import { getPackageJson, GetPackageJsonOptions } from "./package_json.ts";
 
+const versions = {
+  chalk: "4.1.2",
+  nodeTypes: "16.11.1",
+  tsLib: "2.3.1",
+};
+
 Deno.test("single entrypoint", () => {
   const props: GetPackageJsonOptions = {
     transformOutput: {
@@ -54,8 +60,8 @@ Deno.test("single entrypoint", () => {
       dep: "^1.0.0",
     },
     devDependencies: {
-      "@types/node": "16.11.1",
-      "chalk": "4.1.2",
+      "@types/node": versions.nodeTypes,
+      "chalk": versions.chalk,
       "deno.ns": "0.0.0",
       "test-dep": "0.1.0",
     },
@@ -121,7 +127,7 @@ Deno.test("single entrypoint", () => {
       },
       devDependencies: {
         "deno.ns": "0.0.0",
-        "@types/node": "16.11.1",
+        "@types/node": versions.nodeTypes,
       },
       scripts: undefined,
       exports: {
@@ -152,7 +158,7 @@ Deno.test("single entrypoint", () => {
       },
       devDependencies: {
         "deno.ns": "0.0.0",
-        "@types/node": "16.11.1",
+        "@types/node": versions.nodeTypes,
       },
       scripts: undefined,
       exports: {
@@ -181,12 +187,12 @@ Deno.test("single entrypoint", () => {
       module: "./esm/mod.js",
       types: undefined,
       dependencies: {
-        tslib: "2.3.1",
+        tslib: versions.tsLib,
         dep: "^1.0.0",
       },
       devDependencies: {
         "deno.ns": "0.0.0",
-        "@types/node": "16.11.1",
+        "@types/node": versions.nodeTypes,
       },
       scripts: undefined,
       exports: {
@@ -248,7 +254,7 @@ Deno.test("multiple entrypoints", () => {
       "deno.ns": "0.0.0",
     },
     devDependencies: {
-      "@types/node": "16.11.1",
+      "@types/node": versions.nodeTypes,
     },
     exports: {
       ".": {
@@ -318,7 +324,7 @@ Deno.test("binary entrypoints", () => {
       "deno.ns": "0.0.0",
     },
     devDependencies: {
-      "@types/node": "16.11.1",
+      "@types/node": versions.nodeTypes,
     },
     exports: {
       ".": {
