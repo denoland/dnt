@@ -14,6 +14,7 @@ export interface GetPackageJsonOptions {
   package: PackageJsonObject;
   includeCjs: boolean | undefined;
   includeDeclarations: boolean | undefined;
+  includeTsLib: boolean | undefined;
   testEnabled: boolean | undefined;
 }
 
@@ -24,6 +25,7 @@ export function getPackageJson({
   package: packageJsonObj,
   includeCjs,
   includeDeclarations,
+  includeTsLib,
   testEnabled,
 }: GetPackageJsonOptions) {
   const finalEntryPoints = transformOutput
@@ -37,7 +39,11 @@ export function getPackageJson({
   const binaries = finalEntryPoints.filter((e) => e.kind === "bin");
   const dependencies = {
     // typescript helpers library (https://www.npmjs.com/package/tslib)
-    tslib: "2.3.1",
+    ...(includeTsLib
+      ? {
+        tslib: "2.3.1",
+      }
+      : {}),
     // add dependencies from transform
     ...Object.fromEntries(
       transformOutput.main.dependencies.map((d) => [d.name, d.version]),
