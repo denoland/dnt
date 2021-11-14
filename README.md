@@ -54,7 +54,7 @@ There are several steps done in a pipeline:
    Deno.copyFileSync("README.md", "npm/README.md");
    ```
 
-1. Add the output directory to be ignored by your source control if you desire (ex. add `npm/` to `.gitignore`).
+1. Ignore the output directory with your source control if you desire (ex. add `npm/` to `.gitignore`).
 
 1. Run it and `npm publish`:
 
