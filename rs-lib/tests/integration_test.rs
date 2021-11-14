@@ -63,6 +63,8 @@ async fn transform_deno_shim() {
         "const decl09 = alert;\n",
         "const decl10 = confirm;\n",
         "const decl11: typeof prompt = prompt;\n",
+        "setTimeout(() => {}, 100);\n",
+        "setInterval(() => {}, 100);\n",
       ),
       concat!(
         r#"import * as denoShim from "test-shim";"#,
@@ -77,6 +79,8 @@ async fn transform_deno_shim() {
         "const decl09 = denoShim.alert;\n",
         "const decl10 = denoShim.confirm;\n",
         "const decl11: typeof denoShim.prompt = denoShim.prompt;\n",
+        "denoShim.setTimeout(() => {}, 100);\n",
+        "denoShim.setInterval(() => {}, 100);\n",
       ),
     ),
   ])

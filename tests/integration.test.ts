@@ -6,6 +6,13 @@ import {
 } from "https://deno.land/std@0.109.0/testing/asserts.ts";
 import { build, BuildOptions } from "../mod.ts";
 
+const versions = {
+  denoNs: "0.7.0",
+  chalk: "4.1.2",
+  nodeTypes: "16.11.1",
+  tsLib: "2.3.1",
+};
+
 Deno.test("should build", async () => {
   await runTest("test_project", {
     entryPoints: ["mod.ts"],
@@ -37,12 +44,12 @@ Deno.test("should build", async () => {
       },
       types: "./types/mod.d.ts",
       dependencies: {
-        tslib: "2.3.1",
+        tslib: versions.tsLib,
       },
       devDependencies: {
-        "@types/node": "16.11.1",
-        chalk: "4.1.2",
-        "deno.ns": "0.6.4",
+        "@types/node": versions.nodeTypes,
+        chalk: versions.chalk,
+        "deno.ns": versions.denoNs,
       },
     });
     assertEquals(
@@ -125,9 +132,9 @@ Deno.test("should build bin project", async () => {
       },
       dependencies: {},
       devDependencies: {
-        "@types/node": "16.11.1",
-        chalk: "4.1.2",
-        "deno.ns": "0.6.4",
+        "@types/node": versions.nodeTypes,
+        chalk: versions.chalk,
+        "deno.ns": versions.denoNs,
       },
       exports: {},
     });
@@ -182,9 +189,9 @@ Deno.test("not error for TLA when not using CommonJS", async () => {
       types: "./types/mod.d.ts",
       dependencies: {},
       devDependencies: {
-        "@types/node": "16.11.1",
-        chalk: "4.1.2",
-        "deno.ns": "0.6.4",
+        "@types/node": versions.nodeTypes,
+        chalk: versions.chalk,
+        "deno.ns": versions.denoNs,
       },
     });
   });
@@ -255,9 +262,9 @@ Deno.test("should build with mappings", async () => {
         "code-block-writer": "^11.0.0",
       },
       devDependencies: {
-        "@types/node": "16.11.1",
-        chalk: "4.1.2",
-        "deno.ns": "0.6.4",
+        "@types/node": versions.nodeTypes,
+        chalk: versions.chalk,
+        "deno.ns": versions.denoNs,
       },
     });
     assertEquals(
@@ -271,6 +278,21 @@ test_runner.js
   });
 });
 
+Deno.test("should build", async () => {
+  await runTest("shim_project", {
+    entryPoints: ["mod.ts"],
+    outDir: "./npm",
+    package: {
+      name: "shim-package",
+      version: "1.0.0",
+    },
+  }, (output) => {
+    assertEquals(output.packageJson.dependencies, {
+      "deno.ns": versions.denoNs,
+    });
+  });
+});
+
 export interface Output {
   packageJson: any;
   npmIgnore: string;
@@ -280,7 +302,7 @@ export interface Output {
 }
 
 async function runTest(
-  project: "test_project" | "tla_project" | "mappings_project",
+  project: "test_project" | "tla_project" | "mappings_project" | "shim_project",
   options: BuildOptions,
   checkOutput?: (output: Output) => (Promise<void> | void),
 ) {
