@@ -7,13 +7,13 @@ import {
 import { build, BuildOptions } from "../mod.ts";
 
 const versions = {
-  denoNs: "0.7.0",
+  denoNs: "0.7.2",
   chalk: "4.1.2",
   nodeTypes: "16.11.1",
   tsLib: "2.3.1",
 };
 
-Deno.test("should build", async () => {
+Deno.test("should build test project", async () => {
   await runTest("test_project", {
     entryPoints: ["mod.ts"],
     outDir: "./npm",
@@ -278,7 +278,7 @@ test_runner.js
   });
 });
 
-Deno.test("should build", async () => {
+Deno.test("should build shim project", async () => {
   await runTest("shim_project", {
     entryPoints: ["mod.ts"],
     outDir: "./npm",
