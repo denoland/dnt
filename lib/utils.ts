@@ -23,35 +23,61 @@ export async function glob(options: {
   return paths;
 }
 
-export async function runNpmCommand({ args, cwd }: {
+export function runNpmCommand({ args, cwd }: {
   args: string[];
+  cwd: string;
+}) {
+  return runCommand({
+    cmd: ["npm", ...args],
+    cwd,
+  });
+}
+
+export async function runCommand(opts: {
+  cmd: string[];
   cwd: string;
 }) {
   const cmd = getCmd();
   await Deno.permissions.request({ name: "run", command: cmd[0] });
-  const process = Deno.run({
-    cmd,
-    cwd,
-    stderr: "inherit",
-    stdout: "inherit",
-    stdin: "inherit",
-  });
 
   try {
-    const status = await process.status();
-    if (!status.success) {
-      throw new Error(
-        `npm ${args.join(" ")} failed with exit code ${status.code}`,
-      );
+    const process = Deno.run({
+      cmd,
+      cwd: opts.cwd,
+      stderr: "inherit",
+      stdout: "inherit",
+      stdin: "inherit",
+    });
+
+    try {
+      const status = await process.status();
+      if (!status.success) {
+        throw new Error(
+          `${opts.cmd.join(" ")} failed with exit code ${status.code}`,
+        );
+      }
+    } finally {
+      process.close();
     }
-  } finally {
-    process.close();
+  } catch (err) {
+    // won't happen on Windows, but that's ok because cmd outputs
+    // a message saying that the command doesn't exist
+    if (err instanceof Deno.errors.NotFound) {
+      throw new Error(
+        `Could not find command '${
+          opts.cmd[0]
+        }'. Ensure it is available on the path.`,
+        { cause: err },
+      );
+    } else {
+      throw err;
+    }
   }
 
   function getCmd() {
-    const cmd = ["npm", ...args];
+    const cmd = [...opts.cmd];
     if (Deno.build.os === "windows") {
-      return ["cmd", "/c", ...cmd];
+      return ["cmd", "/c", ...opts.cmd];
     } else {
       return cmd;
     }
