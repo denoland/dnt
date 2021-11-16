@@ -311,6 +311,10 @@ await build({
 
    Note: You may wish to remove the leading `v` in the tag name if it exists (ex. `Deno.args[0]?.replace(/^v/, "")`)
 
+1. In your npm settings, create an _automation_ access token (See [Creating and Viewing Access Tokens](https://docs.npmjs.com/creating-and-viewing-access-tokens)).
+
+1. In your GitHub repo or organization, add a secret for `NPM_TOKEN` with the value created in the previous step (See [Creating Encrypted Secrets for a Repository](https://docs.github.com/en/actions/security-guides/encrypted-secrets#creating-encrypted-secrets-for-a-repository)).
+
 1. In your GitHub Actions workflow, get the tag name, setup node, run your build script, then publish to npm.
 
    ```yml
