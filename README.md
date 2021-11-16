@@ -341,6 +341,8 @@ await build({
 
    Note that the build script always runs even when not publishing. This is to ensure your build and tests pass on each commit.
 
+1. Ensure the workflow will run on tag creation. For example, see [Trigger GitHub Action Only on New Tags](https://stackoverflow.com/q/61891328/188246)).
+
 ## JS API Example
 
 For only the Deno to canonical TypeScript transform which may be useful for bundlers, use the following:
