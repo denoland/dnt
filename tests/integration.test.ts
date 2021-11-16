@@ -7,7 +7,7 @@ import {
 import { build, BuildOptions } from "../mod.ts";
 
 const versions = {
-  denoNs: "0.7.2",
+  denoNs: "0.7.3",
   chalk: "4.1.2",
   nodeTypes: "16.11.1",
   tsLib: "2.3.1",
