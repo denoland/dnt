@@ -311,6 +311,10 @@ await build({
 
    Note: You may wish to remove the leading `v` in the tag name if it exists (ex. `Deno.args[0]?.replace(/^v/, "")`)
 
+1. In your npm settings, create an _automation_ access token (see [Creating and Viewing Access Tokens](https://docs.npmjs.com/creating-and-viewing-access-tokens)).
+
+1. In your GitHub repo or organization, add a secret for `NPM_TOKEN` with the value created in the previous step (see [Creating Encrypted Secrets for a Repository](https://docs.github.com/en/actions/security-guides/encrypted-secrets#creating-encrypted-secrets-for-a-repository)).
+
 1. In your GitHub Actions workflow, get the tag name, setup node, run your build script, then publish to npm.
 
    ```yml
@@ -336,6 +340,8 @@ await build({
    ```
 
    Note that the build script always runs even when not publishing. This is to ensure your build and tests pass on each commit.
+
+1. Ensure the workflow will run on tag creation. For example, see [Trigger GitHub Action Only on New Tags](https://stackoverflow.com/q/61891328/188246)).
 
 ## JS API Example
 
