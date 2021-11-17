@@ -109,13 +109,26 @@ async fn transform_deno_shim_with_name_collision() {
 async fn transform_global_this_deno() {
   assert_transforms(vec![
     (
-      "globalThis.Deno.readTextFile(); globalThis.test = 5; true ? globalThis : globalThis; typeof globalThis.test;",
+      concat!(
+        "globalThis.Deno.readTextFile();",
+        "globalThis.test();",
+        "globalThis.test.test();",
+        "globalThis['test']();",
+        r#"globalThis["test"]();"#,
+        "globalThis.Deno = 5;",
+        "true ? globalThis : globalThis;",
+        "typeof globalThis.Deno;",
+      ),
       concat!(
         r#"import * as denoShim from "test-shim";"#,
-        "\n({ ...denoShim, ...globalThis }).Deno.readTextFile(); ",
-        "globalThis.test = 5; ",
-        "true ? ({ ...denoShim, ...globalThis }) : ({ ...denoShim, ...globalThis }); ",
-        "typeof ({ ...denoShim, ...globalThis }).test;"
+        "\n({ ...denoShim, ...globalThis }).Deno.readTextFile();",
+        "globalThis.test();",
+        "globalThis.test.test();",
+        "globalThis['test']();",
+        r#"globalThis["test"]();"#,
+        "globalThis.Deno = 5;",
+        "true ? ({ ...denoShim, ...globalThis }) : ({ ...denoShim, ...globalThis });",
+        "typeof ({ ...denoShim, ...globalThis }).Deno;"
       )
     ),
   ]).await;
