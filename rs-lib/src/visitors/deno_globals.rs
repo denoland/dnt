@@ -136,7 +136,7 @@ fn should_ignore_global_this(ident: &Ident, context: &Context) -> bool {
             return true;
           }
         }
-        _ => {},
+        _ => {}
       }
     }
   }
