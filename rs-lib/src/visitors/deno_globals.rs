@@ -90,8 +90,7 @@ fn visit_children(node: Node, import_name: &str, context: &mut Context) {
     let ident_text = ident.text_fast(context.program);
     if is_top_level_context
       && ident_text == "globalThis"
-      && !should_ignore(ident.into(), context)
-      && !is_in_type(ident.into())
+      && !should_ignore_global_this(ident, context)
     {
       context.text_changes.push(TextChange {
         span: ident.span(),
@@ -116,6 +115,34 @@ fn visit_children(node: Node, import_name: &str, context: &mut Context) {
       }
     }
   }
+}
+
+fn should_ignore_global_this(ident: &Ident, context: &Context) -> bool {
+  if should_ignore(ident.into(), context) || is_in_type(ident.into()) {
+    return true;
+  }
+
+  // don't inject the Deno namespace when it's a member expression
+  // not like `globalThis.Deno`
+  if let Some(parent_member_expr) = ident.parent().to::<MemberExpr>() {
+    if parent_member_expr.obj.span().contains(ident.span()) {
+      match parent_member_expr.prop.into() {
+        Node::Ident(prop_ident) => {
+          if prop_ident.sym().as_ref() != "Deno" {
+            return true;
+          }
+        }
+        Node::Str(str) => {
+          if str.value().as_ref() != "Deno" {
+            return true;
+          }
+        }
+        _ => {}
+      }
+    }
+  }
+
+  false
 }
 
 fn should_ignore(node: Node, context: &Context) -> bool {
