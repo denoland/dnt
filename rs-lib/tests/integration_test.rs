@@ -137,14 +137,15 @@ async fn transform_global_this_deno() {
 #[tokio::test]
 async fn no_shim_situations() {
   assert_identity_transforms(vec![
-    "const { Deno } = test;",
+    "const { Deno } = test; Deno.test;",
+    "const [ Deno ] = test; Deno.test;",
     "const { asdf, ...Deno } = test;",
     "const { Deno: test } = test;",
     "const { test: Deno } = test;",
     "const [Deno] = test;",
     "const [test, ...Deno] = test;",
     "const obj = { Deno: test };",
-    "interface Deno {}",
+    "interface Deno {} function test(d: Deno) {}",
     "interface Test { Deno: string; }",
     "interface Test { Deno(): string; }",
     "class Deno {}",
@@ -167,6 +168,7 @@ async fn no_shim_situations() {
     "globalThis == null;",
     "globalThis ? true : false;",
     "type Test = typeof globalThis;",
+    "interface Response {} function test(r: Response) {}",
   ])
   .await;
 }

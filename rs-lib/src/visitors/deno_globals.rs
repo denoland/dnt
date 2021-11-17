@@ -9,6 +9,10 @@ use deno_ast::swc::common::SyntaxContext;
 use deno_ast::swc::utils::ident::IdentLike;
 use deno_ast::view::*;
 
+use super::analyze::get_top_level_decls;
+use super::analyze::is_directly_in_condition;
+use super::analyze::is_in_left_hand_assignment;
+use super::analyze::is_in_type;
 use crate::text_changes::TextChange;
 
 const DENO_SHIM_GLOBAL_NAMES: [&str; 14] = [
@@ -47,7 +51,7 @@ pub fn get_deno_global_text_changes(
   params: &GetDenoGlobalTextChangesParams<'_>,
 ) -> Vec<TextChange> {
   let top_level_decls =
-    get_top_level_declarations(params.program, params.top_level_context);
+    get_top_level_decls(params.program, params.top_level_context);
   let ignore_line_indexes = get_ignore_line_indexes(params.program);
   let mut context = Context {
     program: params.program,
@@ -149,244 +153,36 @@ fn should_ignore(node: Node, context: &Context) -> bool {
   context
     .ignore_line_indexes
     .contains(&node.span().start_line_fast(context.program))
-    || in_left_hand_assignment(node)
+    || is_in_left_hand_assignment(node)
     || is_declaration_ident(node)
     || is_directly_in_condition(node)
 }
 
-fn is_directly_in_condition(node: Node) -> bool {
-  match node.parent() {
-    Some(Node::BinExpr(_)) => true,
-    Some(Node::IfStmt(_)) => true,
-    Some(Node::UnaryExpr(expr)) => expr.op() == UnaryOp::TypeOf,
-    Some(Node::CondExpr(cond_expr)) => {
-      cond_expr.test.span().contains(node.span())
-    }
-    _ => false,
-  }
-}
-
 fn is_declaration_ident(node: Node) -> bool {
   if let Some(parent) = node.parent() {
-    let span = match parent {
-      Node::BindingIdent(decl) => Some(decl.id.span()),
-      Node::ClassDecl(decl) => Some(decl.ident.span()),
-      Node::ClassExpr(decl) => Some(decl.ident.span()),
-      Node::TsInterfaceDecl(decl) => Some(decl.id.span()),
-      Node::FnDecl(decl) => Some(decl.ident.span()),
-      Node::FnExpr(decl) => Some(decl.ident.span()),
-      Node::TsModuleDecl(decl) => Some(decl.id.span()),
-      Node::TsNamespaceDecl(decl) => Some(decl.id.span()),
-      Node::VarDeclarator(decl) => Some(decl.name.span()),
-      Node::ImportNamedSpecifier(decl) => Some(decl.span()),
-      Node::ExportNamedSpecifier(decl) => Some(decl.span()),
-      Node::ExportNamespaceSpecifier(decl) => Some(decl.span()),
-      Node::ImportDefaultSpecifier(decl) => Some(decl.span()),
-      Node::ExportDefaultSpecifier(decl) => Some(decl.span()),
-      Node::KeyValuePatProp(decl) => Some(decl.key.span()),
-      Node::AssignPatProp(decl) => Some(decl.key.span()),
-      _ => None,
-    };
-    match span {
-      Some(span) => span.contains(node.span()),
-      None => false,
+    match parent {
+      Node::BindingIdent(decl) => decl.id.span().contains(node.span()),
+      Node::ClassDecl(decl) => decl.ident.span().contains(node.span()),
+      Node::ClassExpr(decl) => decl.ident.span().contains(node.span()),
+      Node::TsInterfaceDecl(decl) => decl.id.span().contains(node.span()),
+      Node::FnDecl(decl) => decl.ident.span().contains(node.span()),
+      Node::FnExpr(decl) => decl.ident.span().contains(node.span()),
+      Node::TsModuleDecl(decl) => decl.id.span().contains(node.span()),
+      Node::TsNamespaceDecl(decl) => decl.id.span().contains(node.span()),
+      Node::VarDeclarator(decl) => decl.name.span().contains(node.span()),
+      Node::ImportNamedSpecifier(decl) => decl.span().contains(node.span()),
+      Node::ExportNamedSpecifier(decl) => decl.span().contains(node.span()),
+      Node::ImportDefaultSpecifier(decl) => decl.span().contains(node.span()),
+      Node::ExportDefaultSpecifier(decl) => decl.span().contains(node.span()),
+      Node::ImportStarAsSpecifier(decl) => decl.span().contains(node.span()),
+      Node::ExportNamespaceSpecifier(decl) => decl.span().contains(node.span()),
+      Node::KeyValuePatProp(decl) => decl.key.span().contains(node.span()),
+      Node::AssignPatProp(decl) => decl.key.span().contains(node.span()),
+      _ => false,
     }
   } else {
     false
   }
-}
-
-fn in_left_hand_assignment(node: Node) -> bool {
-  for ancestor in node.ancestors() {
-    if let Node::AssignExpr(expr) = ancestor {
-      return expr.left.span().contains(node.span());
-    }
-  }
-  false
-}
-
-fn is_in_type(mut node: Node) -> bool {
-  // todo: add unit tests and investigate if there's something in swc that does this?
-  while let Some(parent) = node.parent() {
-    let is_type = match parent {
-      Node::ArrayLit(_)
-      | Node::ArrayPat(_)
-      | Node::ArrowExpr(_)
-      | Node::AssignExpr(_)
-      | Node::AssignPat(_)
-      | Node::AssignPatProp(_)
-      | Node::AssignProp(_)
-      | Node::AwaitExpr(_)
-      | Node::BinExpr(_)
-      | Node::BindingIdent(_)
-      | Node::BlockStmt(_)
-      | Node::BreakStmt(_)
-      | Node::CallExpr(_)
-      | Node::CatchClause(_)
-      | Node::Class(_)
-      | Node::ClassDecl(_)
-      | Node::ClassExpr(_)
-      | Node::ClassMethod(_)
-      | Node::ClassProp(_)
-      | Node::ComputedPropName(_)
-      | Node::CondExpr(_)
-      | Node::Constructor(_)
-      | Node::ContinueStmt(_)
-      | Node::DebuggerStmt(_)
-      | Node::Decorator(_)
-      | Node::DoWhileStmt(_)
-      | Node::EmptyStmt(_)
-      | Node::ExportAll(_)
-      | Node::ExportDecl(_)
-      | Node::ExportDefaultDecl(_)
-      | Node::ExportDefaultExpr(_)
-      | Node::ExportDefaultSpecifier(_)
-      | Node::ExportNamedSpecifier(_)
-      | Node::ExportNamespaceSpecifier(_)
-      | Node::ExprOrSpread(_)
-      | Node::ExprStmt(_)
-      | Node::FnDecl(_)
-      | Node::FnExpr(_)
-      | Node::ForInStmt(_)
-      | Node::ForOfStmt(_)
-      | Node::ForStmt(_)
-      | Node::Function(_)
-      | Node::GetterProp(_)
-      | Node::IfStmt(_)
-      | Node::ImportDecl(_)
-      | Node::ImportDefaultSpecifier(_)
-      | Node::ImportNamedSpecifier(_)
-      | Node::ImportStarAsSpecifier(_)
-      | Node::Invalid(_)
-      | Node::UnaryExpr(_)
-      | Node::UpdateExpr(_)
-      | Node::VarDecl(_)
-      | Node::VarDeclarator(_)
-      | Node::WhileStmt(_)
-      | Node::WithStmt(_)
-      | Node::YieldExpr(_)
-      | Node::JSXAttr(_)
-      | Node::JSXClosingElement(_)
-      | Node::JSXClosingFragment(_)
-      | Node::JSXElement(_)
-      | Node::JSXEmptyExpr(_)
-      | Node::JSXExprContainer(_)
-      | Node::JSXFragment(_)
-      | Node::JSXMemberExpr(_)
-      | Node::JSXNamespacedName(_)
-      | Node::JSXOpeningElement(_)
-      | Node::JSXOpeningFragment(_)
-      | Node::JSXSpreadChild(_)
-      | Node::JSXText(_)
-      | Node::KeyValuePatProp(_)
-      | Node::KeyValueProp(_)
-      | Node::LabeledStmt(_)
-      | Node::MetaPropExpr(_)
-      | Node::MethodProp(_)
-      | Node::Module(_)
-      | Node::NamedExport(_)
-      | Node::NewExpr(_)
-      | Node::ObjectLit(_)
-      | Node::ObjectPat(_)
-      | Node::OptChainExpr(_)
-      | Node::Param(_)
-      | Node::ParenExpr(_)
-      | Node::PrivateMethod(_)
-      | Node::PrivateName(_)
-      | Node::PrivateProp(_)
-      | Node::Regex(_)
-      | Node::RestPat(_)
-      | Node::ReturnStmt(_)
-      | Node::Script(_)
-      | Node::SeqExpr(_)
-      | Node::SetterProp(_)
-      | Node::SpreadElement(_)
-      | Node::StaticBlock(_)
-      | Node::Super(_)
-      | Node::SwitchCase(_)
-      | Node::SwitchStmt(_)
-      | Node::TaggedTpl(_)
-      | Node::ThisExpr(_)
-      | Node::ThrowStmt(_)
-      | Node::Tpl(_)
-      | Node::TplElement(_)
-      | Node::TryStmt(_)
-      | Node::TsEnumDecl(_)
-      | Node::TsEnumMember(_)
-      | Node::TsExportAssignment(_)
-      | Node::TsExternalModuleRef(_)
-      | Node::TsImportEqualsDecl(_)
-      | Node::TsModuleBlock(_)
-      | Node::TsModuleDecl(_)
-      | Node::TsNamespaceDecl(_)
-      | Node::TsNamespaceExportDecl(_) => Some(false),
-
-      Node::TsArrayType(_)
-      | Node::TsCallSignatureDecl(_)
-      | Node::TsConditionalType(_)
-      | Node::TsConstAssertion(_)
-      | Node::TsConstructSignatureDecl(_)
-      | Node::TsConstructorType(_)
-      | Node::TsExprWithTypeArgs(_)
-      | Node::TsFnType(_)
-      | Node::TsGetterSignature(_)
-      | Node::TsImportType(_)
-      | Node::TsIndexSignature(_)
-      | Node::TsIndexedAccessType(_)
-      | Node::TsInferType(_)
-      | Node::TsInterfaceBody(_)
-      | Node::TsInterfaceDecl(_)
-      | Node::TsIntersectionType(_)
-      | Node::TsKeywordType(_)
-      | Node::TsLitType(_)
-      | Node::TsMappedType(_)
-      | Node::TsMethodSignature(_)
-      | Node::TsNonNullExpr(_)
-      | Node::TsOptionalType(_)
-      | Node::TsParamProp(_)
-      | Node::TsParenthesizedType(_)
-      | Node::TsPropertySignature(_)
-      | Node::TsQualifiedName(_)
-      | Node::TsRestType(_)
-      | Node::TsSetterSignature(_)
-      | Node::TsThisType(_)
-      | Node::TsTplLitType(_)
-      | Node::TsTupleElement(_)
-      | Node::TsTupleType(_)
-      | Node::TsTypeAliasDecl(_)
-      | Node::TsTypeAnn(_)
-      | Node::TsTypeLit(_)
-      | Node::TsTypeOperator(_)
-      | Node::TsTypeParam(_)
-      | Node::TsTypeParamDecl(_)
-      | Node::TsTypeParamInstantiation(_)
-      | Node::TsTypePredicate(_)
-      | Node::TsTypeQuery(_)
-      | Node::TsTypeRef(_)
-      | Node::TsUnionType(_) => Some(true),
-
-      // may be a type
-      Node::TsTypeAssertion(expr) => {
-        Some(expr.type_ann.span().contains(node.span()))
-      }
-      Node::TsAsExpr(expr) => Some(expr.type_ann.span().contains(node.span())),
-
-      // still need more info
-      Node::BigInt(_)
-      | Node::Bool(_)
-      | Node::Null(_)
-      | Node::Number(_)
-      | Node::MemberExpr(_)
-      | Node::Str(_)
-      | Node::Ident(_) => None,
-    };
-    if let Some(is_type) = is_type {
-      return is_type;
-    }
-    node = parent;
-  }
-
-  false
 }
 
 fn get_ignore_line_indexes(program: &Program) -> HashSet<usize> {
@@ -404,25 +200,6 @@ fn get_ignore_line_indexes(program: &Program) -> HashSet<usize> {
     }
   }
   result
-}
-
-fn get_top_level_declarations(
-  program: &Program,
-  top_level_context: SyntaxContext,
-) -> HashSet<String> {
-  use deno_ast::swc::common::collections::AHashSet;
-  use deno_ast::swc::utils::collect_decls_with_ctxt;
-  use deno_ast::swc::utils::Id;
-
-  let results: AHashSet<Id> = match program {
-    Program::Module(module) => {
-      collect_decls_with_ctxt(module.inner, top_level_context)
-    }
-    Program::Script(script) => {
-      collect_decls_with_ctxt(script.inner, top_level_context)
-    }
-  };
-  results.iter().map(|v| v.0.to_string()).collect()
 }
 
 fn get_all_ident_names(program: &Program) -> HashSet<String> {
