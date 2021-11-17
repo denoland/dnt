@@ -122,7 +122,8 @@ fn should_ignore_global_this(ident: &Ident, context: &Context) -> bool {
     return true;
   }
 
-  // ensure a member expression like `globalThis.something` is `globalThis.Deno
+  // don't inject the Deno namespace when it's a member expression
+  // not like `globalThis.Deno`
   if let Some(parent_member_expr) = ident.parent().to::<MemberExpr>() {
     if parent_member_expr.obj.span().contains(ident.span()) {
       match parent_member_expr.prop.into() {
