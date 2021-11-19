@@ -159,6 +159,7 @@ export async function build(options: BuildOptions): Promise<void> {
     compilerOptions: {
       outDir: typesOutDir,
       allowJs: true,
+      alwaysStrict: true,
       stripInternal: true,
       strictBindCallApply: true,
       strictFunctionTypes: true,
@@ -169,7 +170,6 @@ export async function build(options: BuildOptions): Promise<void> {
       noImplicitAny: true,
       noImplicitReturns: false,
       noImplicitThis: true,
-      noImplicitUseStrict: true,
       noStrictGenericChecks: false,
       noUncheckedIndexedAccess: false,
       declaration: options.declaration,
