@@ -131,9 +131,9 @@ For example:
 await build({
   // ...etc...
   mappings: {
-    "https://deno.land/x/code_block_writer@10.1.1/mod.ts": {
+    "https://deno.land/x/code_block_writer@11.0.0/mod.ts": {
       name: "code-block-writer",
-      version: "^10.1.1",
+      version: "^11.0.0",
     },
   },
 });
@@ -141,8 +141,8 @@ await build({
 
 This will:
 
-1. Change all `"https://deno.land/x/code_block_writer@10.1.1/mod.ts"` specifiers to `"code-block-writer"`
-2. Add a package.json dependency for `"code-block-writer": "^10.1.1"`.
+1. Change all `"https://deno.land/x/code_block_writer@11.0.0/mod.ts"` specifiers to `"code-block-writer"`
+2. Add a package.json dependency for `"code-block-writer": "^11.0.0"`.
 
 Note that dnt will error if you specify a mapping and it is not found in the code. This is done to prevent the scenario where a remote specifier's version is bumped and the mapping isn't updated.
 
