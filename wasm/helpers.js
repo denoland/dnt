@@ -1,4 +1,4 @@
-import { createCache } from "https://deno.land/x/deno_cache@0.2.0/mod.ts";
+import { createCache } from "https://deno.land/x/deno_cache@0.2.1/mod.ts";
 
 const fileFetcher = createCache();
 
