@@ -3,13 +3,13 @@ if (!Object.hasOwn) {
   Object.defineProperty(Object, "hasOwn", {
     value: function (object: any, property: any) {
       if (object == null) {
-        throw new TypeError("Cannot convert undefined or null to object")
+        throw new TypeError("Cannot convert undefined or null to object");
       }
-      return Object.prototype.hasOwnProperty.call(Object(object), property)
+      return Object.prototype.hasOwnProperty.call(Object(object), property);
     },
     configurable: true,
     enumerable: false,
-    writable: true
+    writable: true,
   });
 }
 

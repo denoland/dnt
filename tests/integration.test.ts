@@ -293,7 +293,6 @@ Deno.test("should build shim project", async () => {
   });
 });
 
-
 Deno.test("should build polyfill project", async () => {
   await runTest("polyfill_project", {
     entryPoints: ["mod.ts"],
@@ -316,7 +315,12 @@ export interface Output {
 }
 
 async function runTest(
-  project: "test_project" | "tla_project" | "mappings_project" | "shim_project" | "polyfill_project",
+  project:
+    | "test_project"
+    | "tla_project"
+    | "mappings_project"
+    | "shim_project"
+    | "polyfill_project",
   options: BuildOptions,
   checkOutput?: (output: Output) => (Promise<void> | void),
 ) {
