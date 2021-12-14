@@ -293,6 +293,20 @@ Deno.test("should build shim project", async () => {
   });
 });
 
+
+Deno.test("should build polyfill project", async () => {
+  await runTest("polyfill_project", {
+    entryPoints: ["mod.ts"],
+    outDir: "./npm",
+    package: {
+      name: "polyfill-package",
+      version: "1.0.0",
+    },
+  }, (output) => {
+    output.assertExists("esm/_dnt.polyfills.js");
+  });
+});
+
 export interface Output {
   packageJson: any;
   npmIgnore: string;
@@ -302,7 +316,7 @@ export interface Output {
 }
 
 async function runTest(
-  project: "test_project" | "tla_project" | "mappings_project" | "shim_project",
+  project: "test_project" | "tla_project" | "mappings_project" | "shim_project" | "polyfill_project",
   options: BuildOptions,
   checkOutput?: (output: Output) => (Promise<void> | void),
 ) {

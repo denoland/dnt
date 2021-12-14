@@ -12,7 +12,7 @@ use deno_ast::ModuleSpecifier;
 use crate::graph::ModuleGraph;
 use crate::mappings::Mappings;
 use crate::text_changes::TextChange;
-use crate::utils::get_relative_path;
+use crate::utils::get_relative_specifier;
 
 pub struct GetModuleSpecifierTextChangesParams<'a> {
   pub specifier: &'a ModuleSpecifier,
@@ -79,21 +79,7 @@ fn visit_module_specifier(str: &Str, context: &mut Context) {
       bare_specifier.to_string()
     } else {
       let specifier_file_path = context.mappings.get_file_path(&specifier);
-      let relative_path =
-        get_relative_path(context.output_file_path, specifier_file_path);
-      let relative_path_str = relative_path
-        .with_extension("js")
-        .to_string_lossy()
-        .to_string()
-        .replace("\\", "/");
-
-      if relative_path_str.starts_with("../")
-        || relative_path_str.starts_with("./")
-      {
-        relative_path_str
-      } else {
-        format!("./{}", relative_path_str)
-      }
+      get_relative_specifier(context.output_file_path, specifier_file_path)
     };
 
   context.text_changes.push(TextChange {

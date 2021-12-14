@@ -2,6 +2,8 @@
 
 use std::collections::BTreeMap;
 use std::collections::HashMap;
+use std::collections::HashSet;
+use std::path::Path;
 use std::path::PathBuf;
 
 use anyhow::Result;
@@ -10,11 +12,17 @@ extern crate lazy_static;
 
 use graph::ModuleGraphOptions;
 use mappings::Mappings;
+use polyfills::build_polyfill_file;
+use polyfills::Polyfill;
 use specifiers::Specifiers;
 use text_changes::apply_text_changes;
+use utils::get_relative_specifier;
+use visitors::fill_polyfills;
 use visitors::get_deno_comment_directive_text_changes;
 use visitors::get_deno_global_text_changes;
+use visitors::get_ignore_line_indexes;
 use visitors::get_module_specifier_text_changes;
+use visitors::FillPolyfillsParams;
 use visitors::GetDenoGlobalTextChangesParams;
 use visitors::GetModuleSpecifierTextChangesParams;
 
@@ -30,6 +38,7 @@ mod graph;
 mod loader;
 mod mappings;
 mod parser;
+mod polyfills;
 mod specifiers;
 mod text_changes;
 mod utils;
@@ -64,7 +73,7 @@ pub struct TransformOutput {
 #[cfg_attr(feature = "serialization", serde(rename_all = "camelCase"))]
 #[derive(Debug, PartialEq, Default)]
 pub struct TransformOutputEnvironment {
-  pub entry_points: Vec<String>,
+  pub entry_points: Vec<PathBuf>,
   pub files: Vec<OutputFile>,
   pub shim_used: bool,
   pub dependencies: Vec<Dependency>,
@@ -118,7 +127,7 @@ pub async fn transform(options: TransformOptions) -> Result<TransformOutput> {
     entry_points: options
       .entry_points
       .iter()
-      .map(|p| mappings.get_file_path(p).to_string_lossy().to_string())
+      .map(|p| mappings.get_file_path(p).to_owned())
       .collect(),
     dependencies: get_dependencies(specifiers.main.mapped),
     ..Default::default()
@@ -127,11 +136,13 @@ pub async fn transform(options: TransformOptions) -> Result<TransformOutput> {
     entry_points: options
       .test_entry_points
       .iter()
-      .map(|p| mappings.get_file_path(p).to_string_lossy().to_string())
+      .map(|p| mappings.get_file_path(p).to_owned())
       .collect(),
     dependencies: get_dependencies(specifiers.test.mapped),
     ..Default::default()
   };
+  let mut main_polyfills = HashSet::new();
+  let mut test_polyfills = HashSet::new();
 
   for specifier in specifiers
     .local
@@ -140,19 +151,29 @@ pub async fn transform(options: TransformOptions) -> Result<TransformOutput> {
     .chain(specifiers.types.iter().map(|(_, d)| &d.selected.specifier))
   {
     let module = module_graph.get(specifier);
-    let environment = if specifiers.test_modules.contains(specifier) {
-      &mut test_environment
-    } else {
-      &mut main_environment
-    };
+    let (environment, polyfills) =
+      if specifiers.test_modules.contains(specifier) {
+        (&mut test_environment, &mut test_polyfills)
+      } else {
+        (&mut main_environment, &mut main_polyfills)
+      };
     let parsed_source = module.parsed_source.clone();
 
     let text_changes = parsed_source.with_view(|program| {
+      let ignore_line_indexes = get_ignore_line_indexes(&program);
+
+      fill_polyfills(&mut FillPolyfillsParams {
+        polyfills,
+        program: &program,
+        top_level_context: parsed_source.top_level_context(),
+      });
+
       let mut text_changes =
         get_deno_global_text_changes(&GetDenoGlobalTextChangesParams {
           program: &program,
           top_level_context: parsed_source.top_level_context(),
           shim_package_name: shim_package_name.as_str(),
+          ignore_line_indexes: &ignore_line_indexes,
         });
       if !text_changes.is_empty() {
         environment.shim_used = true;
@@ -181,11 +202,50 @@ pub async fn transform(options: TransformOptions) -> Result<TransformOutput> {
     });
   }
 
+  // assumes that these file names won't be in the regular output
+  check_add_polyfills_to_environment(
+    &main_polyfills,
+    &mut main_environment,
+    "_dnt.polyfills.ts",
+  );
+  check_add_polyfills_to_environment(
+    &test_polyfills,
+    &mut test_environment,
+    "_dnt.test_polyfills.ts",
+  );
+
   Ok(TransformOutput {
     main: main_environment,
     test: test_environment,
     warnings,
   })
+}
+
+fn check_add_polyfills_to_environment(
+  polyfills: &HashSet<Polyfill>,
+  environment: &mut TransformOutputEnvironment,
+  polyfill_path: impl AsRef<Path>,
+) {
+  if let Some(polyfill_file_text) = build_polyfill_file(polyfills) {
+    environment.files.push(OutputFile {
+      file_path: polyfill_path.as_ref().to_path_buf(),
+      file_text: polyfill_file_text,
+    });
+
+    for entry_point in environment.entry_points.iter() {
+      if let Some(file) = environment
+        .files
+        .iter_mut()
+        .find(|f| &f.file_path == entry_point)
+      {
+        file.file_text = format!(
+          "import '{}';\n{}",
+          get_relative_specifier(&file.file_path, &polyfill_path),
+          file.file_text
+        );
+      }
+    }
+  }
 }
 
 fn get_dependencies(

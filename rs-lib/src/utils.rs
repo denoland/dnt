@@ -6,6 +6,24 @@ use std::path::PathBuf;
 use anyhow::Result;
 use deno_ast::ModuleSpecifier;
 
+pub fn get_relative_specifier(
+  from: impl AsRef<Path>,
+  to: impl AsRef<Path>,
+) -> String {
+  let relative_path_str = get_relative_path(from, to)
+    .with_extension("js")
+    .to_string_lossy()
+    .to_string()
+    .replace("\\", "/");
+
+  if relative_path_str.starts_with("../") || relative_path_str.starts_with("./")
+  {
+    relative_path_str
+  } else {
+    format!("./{}", relative_path_str)
+  }
+}
+
 pub fn get_relative_path(
   from: impl AsRef<Path>,
   to: impl AsRef<Path>,

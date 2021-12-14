@@ -36,6 +36,7 @@ pub struct GetDenoGlobalTextChangesParams<'a> {
   pub program: &'a Program<'a>,
   pub top_level_context: SyntaxContext,
   pub shim_package_name: &'a str,
+  pub ignore_line_indexes: &'a HashSet<usize>,
 }
 
 struct Context<'a> {
@@ -44,7 +45,7 @@ struct Context<'a> {
   top_level_decls: &'a HashSet<String>,
   import_shim: bool,
   text_changes: Vec<TextChange>,
-  ignore_line_indexes: HashSet<usize>,
+  ignore_line_indexes: &'a HashSet<usize>,
 }
 
 pub fn get_deno_global_text_changes(
@@ -52,14 +53,13 @@ pub fn get_deno_global_text_changes(
 ) -> Vec<TextChange> {
   let top_level_decls =
     get_top_level_decls(params.program, params.top_level_context);
-  let ignore_line_indexes = get_ignore_line_indexes(params.program);
   let mut context = Context {
     program: params.program,
     top_level_context: params.top_level_context,
     top_level_decls: &top_level_decls,
     import_shim: false,
     text_changes: Vec::new(),
-    ignore_line_indexes,
+    ignore_line_indexes: params.ignore_line_indexes,
   };
   let program = params.program;
 
@@ -183,23 +183,6 @@ fn is_declaration_ident(node: Node) -> bool {
   } else {
     false
   }
-}
-
-fn get_ignore_line_indexes(program: &Program) -> HashSet<usize> {
-  let mut result = HashSet::new();
-  for comment in program.comment_container().unwrap().all_comments() {
-    if comment
-      .text
-      .trim()
-      .to_lowercase()
-      .starts_with("deno-shim-ignore")
-    {
-      if let Some(next_token) = comment.next_token_fast(program) {
-        result.insert(next_token.span.lo.start_line_fast(program));
-      }
-    }
-  }
-  result
 }
 
 fn get_all_ident_names(program: &Program) -> HashSet<String> {

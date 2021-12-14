@@ -947,7 +947,7 @@ async fn test_entry_points() {
       version: "^10.5.0".to_string(),
     },]
   );
-  assert_eq!(result.main.entry_points, &["mod.ts"]);
+  assert_eq!(result.main.entry_points, &[PathBuf::from("mod.ts")]);
   assert_eq!(result.main.shim_used, false);
 
   assert_files!(
@@ -970,7 +970,7 @@ async fn test_entry_points() {
       version: "17.0.2".to_string(),
     },]
   );
-  assert_eq!(result.test.entry_points, &["mod.test.ts"]);
+  assert_eq!(result.test.entry_points, &[PathBuf::from("mod.test.ts")]);
   assert_eq!(result.test.shim_used, true);
 }
 
@@ -1034,13 +1034,93 @@ async fn test_entry_points_same_module_multiple_places() {
       ("deps/deno_land/std_0.102.0/path.ts", "export class Path {}")
     ]
   );
-  assert_eq!(result.main.entry_points, &["mod.ts"]);
+  assert_eq!(result.main.entry_points, &[PathBuf::from("mod.ts")]);
   assert_eq!(result.main.shim_used, false);
 
   assert_files!(
     result.test.files,
     &[("mod.test.ts", "import * as deps from './deps.js';",)]
   );
-  assert_eq!(result.test.entry_points, &["mod.test.ts"]);
+  assert_eq!(result.test.entry_points, &[PathBuf::from("mod.test.ts")]);
+  assert_eq!(result.test.shim_used, false);
+}
+
+#[tokio::test]
+async fn polyfills() {
+  let result = TestBuilder::new()
+    .with_loader(|loader| {
+      loader
+        .add_local_file(
+          "/mod.ts",
+          "export const test = (obj) => Object.hasOwn(obj, 'test');",
+        )
+        .add_local_file("/mod.test.ts", "import * as mod from './mod.ts';");
+    })
+    .add_test_entry_point("file:///mod.test.ts")
+    .transform()
+    .await
+    .unwrap();
+
+  assert_files!(
+    result.main.files,
+    &[
+      (
+        "mod.ts",
+        concat!(
+          "import './_dnt.polyfills.js';\n",
+          "export const test = (obj) => Object.hasOwn(obj, 'test');",
+        ),
+      ),
+      (
+        "_dnt.polyfills.ts",
+        include_str!("../src/polyfills/scripts/object-has-own.ts"),
+      ),
+    ]
+  );
+  assert_eq!(result.main.entry_points, &[PathBuf::from("mod.ts")]);
+  assert_eq!(result.main.shim_used, false);
+
+  assert_files!(
+    result.test.files,
+    &[("mod.test.ts", concat!("import * as mod from './mod.js';",),)]
+  );
+  assert_eq!(result.test.entry_points, &[PathBuf::from("mod.test.ts")]);
+  assert_eq!(result.test.shim_used, false);
+}
+
+#[tokio::test]
+async fn polyfills_test_files() {
+  let result = TestBuilder::new()
+    .with_loader(|loader| {
+      loader
+        .add_local_file("/mod.ts", "")
+        .add_local_file("/mod.test.ts", "Object.hasOwn({}, 'prop');");
+    })
+    .add_test_entry_point("file:///mod.test.ts")
+    .transform()
+    .await
+    .unwrap();
+
+  assert_files!(result.main.files, &[("mod.ts", "",)]);
+  assert_eq!(result.main.entry_points, &[PathBuf::from("mod.ts")]);
+  assert_eq!(result.main.shim_used, false);
+
+  assert_files!(
+    result.test.files,
+    &[
+      (
+        "mod.test.ts",
+        concat!(
+          "import './_dnt.test_polyfills.js';\n",
+          "Object.hasOwn({}, 'prop');"
+        )
+      ),
+      (
+        "_dnt.test_polyfills.ts",
+        include_str!("../src/polyfills/scripts/object-has-own.ts"),
+      )
+    ]
+  );
+  assert_eq!(result.test.entry_points, &[PathBuf::from("mod.test.ts")]);
   assert_eq!(result.test.shim_used, false);
 }
