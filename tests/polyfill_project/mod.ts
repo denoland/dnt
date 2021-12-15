@@ -3,7 +3,7 @@
 export function hasOwn(a: { prop?: number }) {
   try {
     return Object.hasOwn(a, "prop");
-  } catch(err) {
+  } catch (err) {
     err.cause = new Error("test");
   }
 }

@@ -1058,7 +1058,7 @@ async fn polyfills() {
             "} catch (err) {\n",
             "  err.cause = new Error();\n",
             "}\n",
-          )
+          ),
         )
         .add_local_file("/mod.test.ts", "import * as mod from './mod.ts';");
     })

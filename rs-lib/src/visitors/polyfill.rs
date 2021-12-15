@@ -47,9 +47,9 @@ fn visit_children(node: Node, context: &mut Context) {
     Node::MemberExpr(expr) => {
       // very simple detection as we don't have type checking
       if expr.prop.text_fast(context.program) == "cause" {
-          context.polyfills.insert(Polyfill::ErrorCause);
+        context.polyfills.insert(Polyfill::ErrorCause);
       }
     }
-    _ => {},
+    _ => {}
   }
 }
