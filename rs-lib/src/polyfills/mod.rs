@@ -5,6 +5,7 @@ use std::collections::HashSet;
 #[derive(PartialEq, Eq, Clone, Copy, Hash, PartialOrd, Ord)]
 pub enum Polyfill {
   ObjectHasOwn,
+  ErrorCause,
 }
 
 pub fn build_polyfill_file(polyfills: &HashSet<Polyfill>) -> Option<String> {
@@ -20,6 +21,9 @@ pub fn build_polyfill_file(polyfills: &HashSet<Polyfill>) -> Option<String> {
     match polyfill {
       Polyfill::ObjectHasOwn => {
         file_text.push_str(include_str!("./scripts/object-has-own.ts"));
+      }
+      Polyfill::ErrorCause => {
+        file_text.push_str(include_str!("./scripts/error-cause.ts"));
       }
     }
   }

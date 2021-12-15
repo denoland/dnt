@@ -1052,7 +1052,13 @@ async fn polyfills() {
       loader
         .add_local_file(
           "/mod.ts",
-          "export const test = (obj) => Object.hasOwn(obj, 'test');",
+          concat!(
+            "export const test = (obj) => Object.hasOwn(obj, 'test');\n",
+            "try {\n",
+            "} catch (err) {\n",
+            "  err.cause = new Error();\n",
+            "}\n",
+          ),
         )
         .add_local_file("/mod.test.ts", "import * as mod from './mod.ts';");
     })
@@ -1068,12 +1074,19 @@ async fn polyfills() {
         "mod.ts",
         concat!(
           "import './_dnt.polyfills.js';\n",
-          "export const test = (obj) => Object.hasOwn(obj, 'test');",
+          "export const test = (obj) => Object.hasOwn(obj, 'test');\n",
+          "try {\n",
+          "} catch (err) {\n",
+          "  err.cause = new Error();\n",
+          "}\n",
         ),
       ),
       (
         "_dnt.polyfills.ts",
-        include_str!("../src/polyfills/scripts/object-has-own.ts"),
+        concat!(
+          include_str!("../src/polyfills/scripts/object-has-own.ts"),
+          include_str!("../src/polyfills/scripts/error-cause.ts"),
+        )
       ),
     ]
   );
