@@ -34,13 +34,22 @@ fn visit_children(node: Node, context: &mut Context) {
     visit_children(child, context);
   }
 
-  if let Node::CallExpr(expr) = node {
-    if let Node::MemberExpr(callee) = expr.callee.as_node() {
-      if callee.text_fast(context.program) == "Object.hasOwn"
-        && callee.obj.span().ctxt() == context.top_level_context
-      {
-        context.polyfills.insert(Polyfill::ObjectHasOwn);
+  match node {
+    Node::CallExpr(expr) => {
+      if let Node::MemberExpr(callee) = expr.callee.as_node() {
+        if callee.text_fast(context.program) == "Object.hasOwn"
+          && callee.obj.span().ctxt() == context.top_level_context
+        {
+          context.polyfills.insert(Polyfill::ObjectHasOwn);
+        }
       }
     }
+    Node::MemberExpr(expr) => {
+      // very simple detection as we don't have type checking
+      if expr.prop.text_fast(context.program) == "cause" {
+          context.polyfills.insert(Polyfill::ErrorCause);
+      }
+    }
+    _ => {},
   }
 }
