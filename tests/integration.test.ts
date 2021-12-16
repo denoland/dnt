@@ -306,6 +306,20 @@ Deno.test("should build polyfill project", async () => {
   });
 });
 
+Deno.test("should build and test node files project", async () => {
+  await runTest("node_files_project", {
+    entryPoints: ["mod.ts"],
+    outDir: "./npm",
+    package: {
+      name: "node-files-package",
+      version: "1.0.0",
+    },
+  }, (output) => {
+    output.assertExists("esm/output.node.js");
+    output.assertNotExists("esm/output.deno.js");
+  });
+});
+
 export interface Output {
   packageJson: any;
   npmIgnore: string;
@@ -320,7 +334,8 @@ async function runTest(
     | "tla_project"
     | "mappings_project"
     | "shim_project"
-    | "polyfill_project",
+    | "polyfill_project"
+    | "node_files_project",
   options: BuildOptions,
   checkOutput?: (output: Output) => (Promise<void> | void),
 ) {

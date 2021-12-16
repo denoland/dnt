@@ -1211,13 +1211,7 @@ async fn runtime_specific_files_entrypoint() {
     .await
     .unwrap();
 
-  assert_files!(
-    result.main.files,
-    &[(
-      "mod.node.ts",
-      "5;"
-    )]
-  );
+  assert_files!(result.main.files, &[("mod.node.ts", "5;")]);
   assert_eq!(result.main.entry_points, &[PathBuf::from("mod.node.ts")]);
   assert_eq!(result.main.shim_used, false);
 }

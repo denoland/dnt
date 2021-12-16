@@ -120,16 +120,18 @@ impl<'a> deno_graph::source::Loader for SourceLoader<'a> {
     let specifiers = self.specifiers.clone();
 
     Box::pin(async move {
-      // get the corresponding node runtime file
-      if let Some((node_specifier, response)) =
-        get_node_runtime_file(&**loader, &specifier).await
-      {
-        specifiers
-          .lock()
-          .unwrap()
-          .resolved_node_specifiers
-          .insert(node_specifier);
-        return (specifier, response.map(Some));
+      // get the corresponding node runtime file only for local files
+      if specifier.scheme() == "file" {
+        if let Some((node_specifier, response)) =
+          get_node_runtime_file(&**loader, &specifier).await
+        {
+          specifiers
+            .lock()
+            .unwrap()
+            .resolved_node_specifiers
+            .insert(node_specifier);
+          return (specifier, response.map(Some));
+        }
       }
 
       let resp = loader.load(specifier.clone()).await;

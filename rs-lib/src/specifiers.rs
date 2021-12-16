@@ -58,7 +58,10 @@ pub fn get_specifiers(
     let mut pending = vec![&module.specifier];
 
     while !pending.is_empty() {
-      if let Some(module) = pending.pop().map(|s| modules.remove(&module_graph.resolve(s))).flatten()
+      if let Some(module) = pending
+        .pop()
+        .map(|s| modules.remove(&module_graph.resolve(s)))
+        .flatten()
       {
         if let Some(mapped_entry) = specifiers.mapped.remove(&module.specifier)
         {
