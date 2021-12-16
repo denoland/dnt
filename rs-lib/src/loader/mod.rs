@@ -16,15 +16,9 @@ mod specifier_mappers;
 
 #[cfg(feature = "tokio-loader")]
 pub use default_loader::*;
-use regex::Regex;
 pub use specifier_mappers::*;
 
 use crate::MappedSpecifier;
-
-lazy_static! {
-  static ref DENO_SUFFIX_RE: Regex =
-    Regex::new(r"(?i)^(.*)\.deno\.([A-Za-z]+)$").unwrap();
-}
 
 #[cfg_attr(feature = "serialization", derive(serde::Deserialize))]
 #[cfg_attr(feature = "serialization", serde(rename_all = "camelCase"))]

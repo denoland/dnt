@@ -94,10 +94,10 @@ pub struct TransformOptions {
   pub test_entry_points: Vec<ModuleSpecifier>,
   pub shim_package_name: String,
   pub loader: Option<Box<dyn Loader>>,
-  /// Maps specifiers to a npm module. This does not follow or resolve
+  /// Maps specifiers to an npm module. This does not follow or resolve
   /// the mapped specifier
   pub specifier_mappings: HashMap<ModuleSpecifier, MappedSpecifier>,
-  /// Redirects map to the other code.
+  /// Redirects one specifier to another specifier.
   pub redirects: HashMap<ModuleSpecifier, ModuleSpecifier>,
 }
 
