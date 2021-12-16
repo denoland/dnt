@@ -9,6 +9,7 @@ use deno_graph::Module;
 
 use crate::graph::ModuleGraph;
 
+#[derive(Debug)]
 pub struct DeclarationFileResolution {
   pub selected: TypesDependency,
   /// Specified declaration dependencies that were ignored.

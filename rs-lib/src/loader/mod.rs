@@ -33,34 +33,36 @@ pub trait Loader {
   fn load(
     &self,
     url: ModuleSpecifier,
-  ) -> Pin<Box<dyn Future<Output = Result<LoadResponse>> + 'static>>;
+  ) -> Pin<Box<dyn Future<Output = Result<Option<LoadResponse>>> + 'static>>;
 }
 
+#[derive(Default, Clone)]
 pub struct LoaderSpecifiers {
   pub mapped: BTreeMap<ModuleSpecifier, MappedSpecifier>,
+  pub redirects: HashMap<ModuleSpecifier, ModuleSpecifier>,
 }
 
 pub struct SourceLoader<'a> {
-  #[allow(clippy::redundant_allocation)]
   loader: Arc<Box<dyn Loader>>,
   specifiers: LoaderSpecifiers,
   specifier_mappers: Vec<Box<dyn SpecifierMapper>>,
-  specifier_mappings: Option<&'a HashMap<ModuleSpecifier, MappedSpecifier>>,
+  specifier_mappings: &'a HashMap<ModuleSpecifier, MappedSpecifier>,
+  redirects: &'a HashMap<ModuleSpecifier, ModuleSpecifier>,
 }
 
 impl<'a> SourceLoader<'a> {
   pub fn new(
     loader: Box<dyn Loader>,
     specifier_mappers: Vec<Box<dyn SpecifierMapper>>,
-    specifier_mappings: Option<&'a HashMap<ModuleSpecifier, MappedSpecifier>>,
+    specifier_mappings: &'a HashMap<ModuleSpecifier, MappedSpecifier>,
+    redirects: &'a HashMap<ModuleSpecifier, ModuleSpecifier>,
   ) -> Self {
     Self {
       loader: Arc::new(loader),
-      specifiers: LoaderSpecifiers {
-        mapped: BTreeMap::new(),
-      },
+      specifiers: Default::default(),
       specifier_mappers,
       specifier_mappings,
+      redirects,
     }
   }
 
@@ -76,12 +78,7 @@ impl<'a> deno_graph::source::Loader for SourceLoader<'a> {
     // todo: handle dynamic
     _is_dynamic: bool,
   ) -> deno_graph::source::LoadFuture {
-    if let Some(mapping) = self
-      .specifier_mappings
-      .as_ref()
-      .map(|m| m.get(specifier))
-      .flatten()
-    {
+    if let Some(mapping) = self.specifier_mappings.get(specifier) {
       self
         .specifiers
         .mapped
@@ -100,13 +97,23 @@ impl<'a> deno_graph::source::Loader for SourceLoader<'a> {
 
     let loader = self.loader.clone();
     let specifier = specifier.clone();
+    let load_specifier =
+      if let Some(redirect) = self.redirects.get(&specifier).cloned() {
+        self
+          .specifiers
+          .redirects
+          .insert(specifier.clone(), redirect.clone());
+        redirect
+      } else {
+        specifier.clone()
+      };
 
     Box::pin(async move {
-      let resp = loader.load(specifier.clone()).await;
+      let resp = loader.load(load_specifier.clone()).await;
       (
         specifier.clone(),
         resp.map(|r| {
-          Some(deno_graph::source::LoadResponse {
+          r.map(|r| deno_graph::source::LoadResponse {
             specifier: r.specifier,
             content: Arc::new(r.content),
             maybe_headers: r.headers,

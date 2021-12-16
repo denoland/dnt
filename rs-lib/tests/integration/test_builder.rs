@@ -17,7 +17,8 @@ pub struct TestBuilder {
   additional_entry_points: Vec<String>,
   test_entry_points: Vec<String>,
   shim_package_name: Option<String>,
-  specifier_mappings: Option<HashMap<ModuleSpecifier, MappedSpecifier>>,
+  specifier_mappings: HashMap<ModuleSpecifier, MappedSpecifier>,
+  redirects: HashMap<ModuleSpecifier, ModuleSpecifier>,
 }
 
 impl TestBuilder {
@@ -29,7 +30,8 @@ impl TestBuilder {
       additional_entry_points: Vec::new(),
       test_entry_points: Vec::new(),
       shim_package_name: None,
-      specifier_mappings: None,
+      specifier_mappings: Default::default(),
+      redirects: Default::default(),
     }
   }
 
@@ -69,18 +71,24 @@ impl TestBuilder {
     bare_specifier: impl AsRef<str>,
     version: Option<&str>,
   ) -> &mut Self {
-    let mappings = if let Some(mappings) = self.specifier_mappings.as_mut() {
-      mappings
-    } else {
-      self.specifier_mappings = Some(HashMap::new());
-      self.specifier_mappings.as_mut().unwrap()
-    };
-    mappings.insert(
+    self.specifier_mappings.insert(
       ModuleSpecifier::parse(specifier.as_ref()).unwrap(),
       MappedSpecifier {
         name: bare_specifier.as_ref().to_string(),
         version: version.map(|v| v.to_string()),
       },
+    );
+    self
+  }
+
+  pub fn add_redirect(
+    &mut self,
+    from: impl AsRef<str>,
+    to: impl AsRef<str>,
+  ) -> &mut Self {
+    self.redirects.insert(
+      ModuleSpecifier::parse(from.as_ref()).unwrap(),
+      ModuleSpecifier::parse(to.as_ref()).unwrap(),
     );
     self
   }
@@ -108,6 +116,7 @@ impl TestBuilder {
         .unwrap_or_else(|| "deno.ns".to_string()),
       loader: Some(Box::new(self.loader.clone())),
       specifier_mappings: self.specifier_mappings.clone(),
+      redirects: self.redirects.clone(),
     })
     .await
   }

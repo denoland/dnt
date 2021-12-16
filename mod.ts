@@ -11,7 +11,12 @@ import { colors, createProjectSync, path, ts } from "./lib/mod.deps.ts";
 import { getNpmIgnoreText } from "./lib/npm_ignore.ts";
 import { PackageJsonObject } from "./lib/types.ts";
 import { glob, runNpmCommand } from "./lib/utils.ts";
-import { SpecifierMappings, transform, TransformOutput } from "./transform.ts";
+import {
+  Redirects,
+  SpecifierMappings,
+  transform,
+  TransformOutput,
+} from "./transform.ts";
 import * as compilerTransforms from "./lib/compiler_transforms.ts";
 import { getPackageJson } from "./lib/package_json.ts";
 import { ScriptTarget } from "./lib/compiler.ts";
@@ -26,7 +31,7 @@ export interface EntryPoint {
   /** Name of the entrypoint in the "binary" or "exports". */
   name: string;
   /** Path to the entrypoint. */
-  path: string | URL;
+  path: string;
 }
 
 export interface BuildOptions {
@@ -63,8 +68,21 @@ export interface BuildOptions {
     name: string;
     version: string;
   };
-  /** Specifiers to map from and to. */
+  /** Specifiers to map from and to a bare specifier with optional version. */
   mappings?: SpecifierMappings;
+  /**
+   * Specifiers to redirect from and to. This will cause dnt to do a redirect
+   * and can be useful for using different modules in the output.
+   *
+   * For example, you may wish to create a node specific file then do:
+   *
+   * ```
+   * redirect: {
+   *   "./file.deno.ts": "./file.node.ts",
+   * }
+   * ```
+   */
+  redirects?: Redirects;
   /** Package.json output. You may override dependencies and dev dependencies in here. */
   package: PackageJsonObject;
   /** Optional compiler options. */
@@ -367,6 +385,7 @@ export async function build(options: BuildOptions): Promise<void> {
         : [],
       shimPackageName: shimPackage.name,
       mappings: options.mappings,
+      redirects: options.redirects,
     });
   }
 

@@ -1,5 +1,6 @@
 // Copyright 2018-2021 the Deno authors. All rights reserved. MIT license.
 
+use std::collections::BTreeMap;
 use std::collections::HashMap;
 
 use crate::loader::get_all_specifier_mappers;
@@ -16,7 +17,8 @@ pub struct ModuleGraphOptions<'a> {
   pub entry_points: Vec<ModuleSpecifier>,
   pub test_entry_points: Vec<ModuleSpecifier>,
   pub loader: Option<Box<dyn Loader>>,
-  pub specifier_mappings: Option<&'a HashMap<ModuleSpecifier, MappedSpecifier>>,
+  pub specifier_mappings: &'a HashMap<ModuleSpecifier, MappedSpecifier>,
+  pub redirects: &'a HashMap<ModuleSpecifier, ModuleSpecifier>,
 }
 
 /// Wrapper around deno_graph::ModuleGraph.
@@ -38,6 +40,7 @@ impl ModuleGraph {
       // todo: support configuring this in the future
       get_all_specifier_mappers(),
       options.specifier_mappings,
+      options.redirects,
     );
     let source_parser = ScopeAnalysisParser::new();
     let graph = Self {
@@ -65,16 +68,28 @@ impl ModuleGraph {
         if !error_message.is_empty() {
           error_message.push_str("\n\n");
         }
-        error_message.push_str(&format!(
-          "{} ({})",
-          error.to_string(),
-          error.specifier()
-        ));
+        error_message.push_str(&error.to_string());
+        if !error_message.contains(error.specifier().as_str()) {
+          error_message.push_str(&format!(" ({})", error.specifier()));
+        }
       }
       anyhow::bail!("{}", error_message);
     }
 
     let loader_specifiers = loader.into_specifiers();
+
+    let not_found_redirects = options
+      .redirects
+      .keys()
+      .filter(|s| !loader_specifiers.redirects.contains_key(s))
+      .collect::<Vec<_>>();
+    if !not_found_redirects.is_empty() {
+      anyhow::bail!(
+        "The following specifiers were indicated to be redirected, but were not found:\n{}",
+        format_specifiers_for_message(not_found_redirects),
+      );
+    }
+
     let specifiers = get_specifiers(
       &options.entry_points,
       loader_specifiers,
@@ -82,22 +97,27 @@ impl ModuleGraph {
       &graph.graph.modules(),
     )?;
 
-    if let Some(specifier_mappings) = options.specifier_mappings {
-      let mut not_found_specifiers = specifier_mappings
-        .iter()
-        .map(|m| m.0)
-        .filter(|s| !specifiers.has_mapped(s))
-        .collect::<Vec<_>>();
-      if !not_found_specifiers.is_empty() {
-        not_found_specifiers.sort();
-        anyhow::bail!(
+    let not_found_specifiers = options
+      .specifier_mappings
+      .keys()
+      .filter(|s| !specifiers.has_mapped(s))
+      .collect::<Vec<_>>();
+    if !not_found_specifiers.is_empty() {
+      anyhow::bail!(
         "The following specifiers were indicated to be mapped, but were not found:\n{}",
-        not_found_specifiers.into_iter().map(|s| format!("  * {}", s)).collect::<Vec<_>>().join("\n"),
+        format_specifiers_for_message(not_found_specifiers),
       );
-      }
     }
 
     Ok((graph, specifiers))
+  }
+
+  pub fn redirects(&self) -> &BTreeMap<ModuleSpecifier, ModuleSpecifier> {
+    &self.graph.redirects
+  }
+
+  pub fn resolve(&self, specifier: &ModuleSpecifier) -> ModuleSpecifier {
+    self.graph.resolve(specifier)
   }
 
   pub fn get(&self, specifier: &ModuleSpecifier) -> &deno_graph::Module {
@@ -131,4 +151,15 @@ impl ModuleGraph {
         }
       })
   }
+}
+
+fn format_specifiers_for_message(
+  mut specifiers: Vec<&ModuleSpecifier>,
+) -> String {
+  specifiers.sort();
+  specifiers
+    .into_iter()
+    .map(|s| format!("  * {}", s))
+    .collect::<Vec<_>>()
+    .join("\n")
 }

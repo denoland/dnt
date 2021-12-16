@@ -94,7 +94,11 @@ pub struct TransformOptions {
   pub test_entry_points: Vec<ModuleSpecifier>,
   pub shim_package_name: String,
   pub loader: Option<Box<dyn Loader>>,
-  pub specifier_mappings: Option<HashMap<ModuleSpecifier, MappedSpecifier>>,
+  /// Maps specifiers to an npm module. This does not follow or resolve
+  /// the mapped specifier
+  pub specifier_mappings: HashMap<ModuleSpecifier, MappedSpecifier>,
+  /// Redirects one specifier to another specifier.
+  pub redirects: HashMap<ModuleSpecifier, ModuleSpecifier>,
 }
 
 pub async fn transform(options: TransformOptions) -> Result<TransformOutput> {
@@ -107,7 +111,8 @@ pub async fn transform(options: TransformOptions) -> Result<TransformOutput> {
     crate::graph::ModuleGraph::build_with_specifiers(ModuleGraphOptions {
       entry_points: options.entry_points.clone(),
       test_entry_points: options.test_entry_points.clone(),
-      specifier_mappings: options.specifier_mappings.as_ref(),
+      specifier_mappings: &options.specifier_mappings,
+      redirects: &options.redirects,
       loader: options.loader,
     })
     .await?;
@@ -168,16 +173,23 @@ pub async fn transform(options: TransformOptions) -> Result<TransformOutput> {
         top_level_context: parsed_source.top_level_context(),
       });
 
-      let mut text_changes =
-        get_deno_global_text_changes(&GetDenoGlobalTextChangesParams {
-          program: &program,
-          top_level_context: parsed_source.top_level_context(),
-          shim_package_name: shim_package_name.as_str(),
-          ignore_line_indexes: &ignore_line_indexes,
-        });
-      if !text_changes.is_empty() {
-        environment.shim_used = true;
+      let mut text_changes = Vec::new();
+
+      // shim changes
+      {
+        let shim_changes =
+          get_deno_global_text_changes(&GetDenoGlobalTextChangesParams {
+            program: &program,
+            top_level_context: parsed_source.top_level_context(),
+            shim_package_name: shim_package_name.as_str(),
+            ignore_line_indexes: &ignore_line_indexes,
+          });
+        if !shim_changes.is_empty() {
+          environment.shim_used = true;
+        }
+        text_changes.extend(shim_changes);
       }
+
       text_changes.extend(get_deno_comment_directive_text_changes(&program));
       text_changes.extend(get_module_specifier_text_changes(
         &GetModuleSpecifierTextChangesParams {

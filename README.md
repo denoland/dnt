@@ -232,7 +232,24 @@ Deno.readTextFileSync(...);
 
 You may find yourself in a scenario where you want to run certain code based on whether someone is in Deno or if someone is in Node and feature testing is not possible. For example, say you want to run the `deno` executable when the code is running in Deno and the `node` executable when it's running in Node.
 
-One option to handle this, is to use the [`which_runtime`](https://deno.land/x/which_runtime@0.1.0) deno.land/x module which provides some exports saying if the code is running in Deno or Node.
+#### `which_runtime`
+
+One option to handle this, is to use the [`which_runtime`](https://deno.land/x/which_runtime) deno.land/x module which provides some exports saying if the code is running in Deno or Node.
+
+#### Node and Deno Specific Modules
+
+Another option is to create node and deno specific modules. This can be done by specifying a redirect:
+
+```ts
+await build({
+  // ...etc...
+  redirects: {
+    "./file.deno.ts": "./file.node.ts",
+  },
+});
+```
+
+Then within the file, use `// deno-shim-ignore` directives to disable shimming if you desire.
 
 ### Pre & Post Build Steps
 

@@ -372,7 +372,10 @@ async fn transform_local_file_not_exists() {
     .err()
     .unwrap();
 
-  assert_eq!(err_message.to_string(), "file not found (file:///other.ts)");
+  assert_eq!(
+    err_message.to_string(),
+    r#"Cannot load module "file:///other.ts"."#
+  );
 }
 
 #[tokio::test]
@@ -392,7 +395,7 @@ async fn transform_remote_file_not_exists() {
 
   assert_eq!(
     err_message.to_string(),
-    "Not found. (http://localhost/other.ts)"
+    r#"Cannot load module "http://localhost/other.ts"."#
   );
 }
 
@@ -438,7 +441,7 @@ async fn transform_parse_error() {
     .err()
     .unwrap();
 
-  assert_eq!(err_message.to_string(), "The module's source code could not be parsed: Expected ';', '}' or <eof> at http://localhost/declarations.d.ts:1:6 (http://localhost/declarations.d.ts)");
+  assert_eq!(err_message.to_string(), "The module's source code could not be parsed: Expected ';', '}' or <eof> at http://localhost/declarations.d.ts:1:6");
 }
 
 #[tokio::test]
@@ -1136,4 +1139,103 @@ async fn polyfills_test_files() {
   );
   assert_eq!(result.test.entry_points, &[PathBuf::from("mod.test.ts")]);
   assert_eq!(result.test.shim_used, false);
+}
+
+#[tokio::test]
+async fn redirects_general() {
+  let result = TestBuilder::new()
+    .with_loader(|loader| {
+      loader
+        .add_local_file("/mod.ts", "import './other.deno.ts';")
+        .add_local_file("/other.deno.ts", "console.log(5);")
+        .add_local_file(
+          "/other.node.ts",
+          concat!(
+            "import * as fs from 'fs';\n",
+            "import { myFunction } from './myFunction.ts'\n",
+            "export function test() {\n",
+            "  // deno-shim-ignore\n",
+            "  Deno.readFileSync('test');\n",
+            "  Object.hasOwn({}, 'prop');\n",
+            "}",
+          ),
+        )
+        .add_local_file("/myFunction.ts", "export function myFunction() {}");
+    })
+    .add_redirect("file:///other.deno.ts", "file:///other.node.ts")
+    .transform()
+    .await
+    .unwrap();
+
+  assert_files!(
+    result.main.files,
+    &[
+      (
+        "mod.ts",
+        concat!(
+          "import './_dnt.polyfills.js';\n",
+          "import './other.node.js';"
+        ),
+      ),
+      (
+        "other.node.ts",
+        concat!(
+          "import * as fs from 'fs';\n",
+          "import { myFunction } from './myFunction.js'\n",
+          "export function test() {\n",
+          "  // deno-shim-ignore\n",
+          "  Deno.readFileSync('test');\n",
+          "  Object.hasOwn({}, 'prop');\n",
+          "}",
+        )
+      ),
+      ("myFunction.ts", "export function myFunction() {}",),
+      (
+        "_dnt.polyfills.ts",
+        include_str!("../src/polyfills/scripts/object-has-own.ts")
+      ),
+    ]
+  );
+  assert_eq!(result.main.entry_points, &[PathBuf::from("mod.ts")]);
+  assert_eq!(result.main.shim_used, false);
+}
+
+#[tokio::test]
+async fn redirect_entrypoint() {
+  let result = TestBuilder::new()
+    .with_loader(|loader| {
+      loader
+        .add_local_file("/mod.deno.ts", "console.log(5);")
+        .add_local_file("/mod.node.ts", "5;");
+    })
+    .entry_point("file:///mod.deno.ts")
+    .add_redirect("file:///mod.deno.ts", "file:///mod.node.ts")
+    .transform()
+    .await
+    .unwrap();
+
+  assert_files!(result.main.files, &[("mod.node.ts", "5;")]);
+  assert_eq!(result.main.entry_points, &[PathBuf::from("mod.node.ts")]);
+  assert_eq!(result.main.shim_used, false);
+}
+
+#[tokio::test]
+async fn redirect_not_found() {
+  let err_message = TestBuilder::new()
+    .with_loader(|loader| {
+      loader.add_local_file("/mod.ts", "console.log(5);");
+    })
+    .add_redirect("file:///mod.deno.ts", "file:///mod.node.ts")
+    .transform()
+    .await
+    .err()
+    .unwrap();
+
+  assert_eq!(
+    err_message.to_string(),
+    concat!(
+      "The following specifiers were indicated to be redirected, but were not found:\n",
+      "  * file:///mod.deno.ts",
+    ),
+  );
 }
