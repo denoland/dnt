@@ -132,35 +132,6 @@ impl<'a> deno_graph::source::Loader for SourceLoader<'a> {
         return (specifier, response.map(Some));
       }
 
-      if let Some(captures) = DENO_SUFFIX_RE.captures(specifier.path()) {
-        let node_specifier = {
-          let new_path = format!(
-            "{}.node.{}",
-            captures.get(1).unwrap().as_str(),
-            captures.get(2).unwrap().as_str()
-          );
-          let mut specifier = specifier.clone();
-          specifier.set_path(&new_path);
-          specifier
-        };
-        let node_response = loader.load(node_specifier.clone()).await;
-        match node_response {
-          Ok(Some(r)) => {
-            return (
-              specifier,
-              Ok(Some(deno_graph::source::LoadResponse {
-                specifier: r.specifier,
-                content: Arc::new(r.content),
-                maybe_headers: r.headers,
-              })),
-            )
-          }
-          Err(err) => return (specifier, Err(err)),
-          // not found, don't use it
-          Ok(None) => {}
-        }
-      }
-
       let resp = loader.load(specifier.clone()).await;
       (
         specifier.clone(),

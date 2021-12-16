@@ -104,6 +104,10 @@ impl ModuleGraph {
     &self.graph.redirects
   }
 
+  pub fn resolve(&self, specifier: &ModuleSpecifier) -> ModuleSpecifier {
+    self.graph.resolve(specifier)
+  }
+
   pub fn get(&self, specifier: &ModuleSpecifier) -> &deno_graph::Module {
     self.graph.get(specifier).unwrap_or_else(|| {
       panic!("Programming error. Did not find specifier: {}", specifier);

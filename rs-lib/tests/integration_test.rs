@@ -1142,18 +1142,26 @@ async fn polyfills_test_files() {
 }
 
 #[tokio::test]
-async fn runtime_specific_files_entrypoint() {
+async fn runtime_specific_files_general() {
   let result = TestBuilder::new()
     .with_loader(|loader| {
       loader
-        .add_local_file("/mod.deno.ts", "console.log(5);")
+        .add_local_file("/mod.ts", "import './other.deno.ts';")
+        .add_local_file("/other.deno.ts", "console.log(5);")
         // should not shim the deno namespace, but should do polyfills
         .add_local_file(
-          "/mod.node.ts",
-          "Deno.readFileSync('test'); Object.hasOwn({}, 'prop');",
+          "/other.node.ts",
+          concat!(
+            "import * as fs from 'fs';\n",
+            "import { myFunction } from './myFunction.ts'\n",
+            "export function test() { Deno.readFileSync('test'); Object.hasOwn({}, 'prop'); }",
+          ),
+        )
+        .add_local_file(
+          "/myFunction.ts",
+          "export function myFunction() {}"
         );
     })
-    .entry_point("file:///mod.deno.ts")
     .transform()
     .await
     .unwrap();
@@ -1162,17 +1170,53 @@ async fn runtime_specific_files_entrypoint() {
     result.main.files,
     &[
       (
-        "mod.node.ts",
+        "mod.ts",
         concat!(
           "import './_dnt.polyfills.js';\n",
-          "Deno.readFileSync('test'); Object.hasOwn({}, 'prop');"
+          "import './other.node.js';"
         ),
+      ),
+      (
+        "other.node.ts",
+        concat!(
+          "import * as fs from 'fs';\n",
+          "import { myFunction } from './myFunction.js'\n",
+          "export function test() { Deno.readFileSync('test'); Object.hasOwn({}, 'prop'); }",
+        )
+      ),
+      (
+        "myFunction.ts",
+        "export function myFunction() {}",
       ),
       (
         "_dnt.polyfills.ts",
         include_str!("../src/polyfills/scripts/object-has-own.ts")
       ),
     ]
+  );
+  assert_eq!(result.main.entry_points, &[PathBuf::from("mod.ts")]);
+  assert_eq!(result.main.shim_used, false);
+}
+
+#[tokio::test]
+async fn runtime_specific_files_entrypoint() {
+  let result = TestBuilder::new()
+    .with_loader(|loader| {
+      loader
+        .add_local_file("/mod.deno.ts", "console.log(5);")
+        .add_local_file("/mod.node.ts", "5;");
+    })
+    .entry_point("file:///mod.deno.ts")
+    .transform()
+    .await
+    .unwrap();
+
+  assert_files!(
+    result.main.files,
+    &[(
+      "mod.node.ts",
+      "5;"
+    )]
   );
   assert_eq!(result.main.entry_points, &[PathBuf::from("mod.node.ts")]);
   assert_eq!(result.main.shim_used, false);

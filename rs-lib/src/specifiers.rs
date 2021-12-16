@@ -14,6 +14,7 @@ use crate::graph::ModuleGraph;
 use crate::loader::LoaderSpecifiers;
 use crate::MappedSpecifier;
 
+#[derive(Debug)]
 pub struct Specifiers {
   pub local: Vec<ModuleSpecifier>,
   pub remote: Vec<ModuleSpecifier>,
@@ -31,6 +32,7 @@ impl Specifiers {
   }
 }
 
+#[derive(Debug)]
 pub struct EnvironmentSpecifiers {
   pub mapped: BTreeMap<ModuleSpecifier, MappedSpecifier>,
 }
@@ -56,7 +58,7 @@ pub fn get_specifiers(
     let mut pending = vec![&module.specifier];
 
     while !pending.is_empty() {
-      if let Some(module) = pending.pop().map(|s| modules.remove(&s)).flatten()
+      if let Some(module) = pending.pop().map(|s| modules.remove(&module_graph.resolve(s))).flatten()
       {
         if let Some(mapped_entry) = specifiers.mapped.remove(&module.specifier)
         {
@@ -82,7 +84,7 @@ pub fn get_specifiers(
     }
   }
 
-  // clear out all the mapped test modules
+  // clear out all the mapped modules
   for specifier in specifiers.mapped.keys() {
     modules.remove(specifier);
   }
