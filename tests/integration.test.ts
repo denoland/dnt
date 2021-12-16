@@ -307,12 +307,15 @@ Deno.test("should build polyfill project", async () => {
 });
 
 Deno.test("should build and test node files project", async () => {
-  await runTest("node_files_project", {
+  await runTest("redirects_project", {
     entryPoints: ["mod.ts"],
     outDir: "./npm",
     package: {
       name: "node-files-package",
       version: "1.0.0",
+    },
+    redirects: {
+      "./output.deno.ts": "./output.node.ts",
     },
   }, (output) => {
     output.assertExists("esm/output.node.js");
@@ -335,7 +338,7 @@ async function runTest(
     | "mappings_project"
     | "shim_project"
     | "polyfill_project"
-    | "node_files_project",
+    | "redirects_project",
   options: BuildOptions,
   checkOutput?: (output: Output) => (Promise<void> | void),
 ) {
@@ -369,7 +372,12 @@ async function runTest(
       });
     }
   } finally {
-    Deno.removeSync(options.outDir, { recursive: true });
-    Deno.chdir(originalCwd);
+    try {
+      Deno.removeSync(options.outDir, { recursive: true });
+    } catch (err) {
+      console.error(`Error removing dir: ${err}`)
+    } finally {
+      Deno.chdir(originalCwd);
+    }
   }
 }

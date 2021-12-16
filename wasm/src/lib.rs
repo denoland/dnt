@@ -52,7 +52,8 @@ pub struct TransformOptions {
   pub entry_points: Vec<String>,
   pub test_entry_points: Vec<String>,
   pub shim_package_name: String,
-  pub mappings: Option<HashMap<ModuleSpecifier, MappedSpecifier>>,
+  pub mappings: HashMap<ModuleSpecifier, MappedSpecifier>,
+  pub redirects: HashMap<ModuleSpecifier, ModuleSpecifier>,
 }
 
 #[wasm_bindgen]
@@ -66,6 +67,7 @@ pub async fn transform(options: JsValue) -> Result<JsValue, JsValue> {
     shim_package_name: options.shim_package_name,
     loader: Some(Box::new(JsLoader {})),
     specifier_mappings: options.mappings,
+    redirects: options.redirects,
   })
   .await
   .map_err(|err| err.to_string())?;

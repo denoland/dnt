@@ -1142,19 +1142,22 @@ async fn polyfills_test_files() {
 }
 
 #[tokio::test]
-async fn runtime_specific_files_general() {
+async fn redirects_general() {
   let result = TestBuilder::new()
     .with_loader(|loader| {
       loader
         .add_local_file("/mod.ts", "import './other.deno.ts';")
         .add_local_file("/other.deno.ts", "console.log(5);")
-        // should not shim the deno namespace, but should do polyfills
         .add_local_file(
           "/other.node.ts",
           concat!(
             "import * as fs from 'fs';\n",
             "import { myFunction } from './myFunction.ts'\n",
-            "export function test() { Deno.readFileSync('test'); Object.hasOwn({}, 'prop'); }",
+            "export function test() {\n",
+            "  // deno-shim-ignore\n",
+            "  Deno.readFileSync('test');\n",
+            "  Object.hasOwn({}, 'prop');\n",
+            "}",
           ),
         )
         .add_local_file(
@@ -1162,6 +1165,7 @@ async fn runtime_specific_files_general() {
           "export function myFunction() {}"
         );
     })
+    .add_redirect("file:///other.deno.ts", "file:///other.node.ts")
     .transform()
     .await
     .unwrap();
@@ -1181,7 +1185,11 @@ async fn runtime_specific_files_general() {
         concat!(
           "import * as fs from 'fs';\n",
           "import { myFunction } from './myFunction.js'\n",
-          "export function test() { Deno.readFileSync('test'); Object.hasOwn({}, 'prop'); }",
+          "export function test() {\n",
+          "  // deno-shim-ignore\n",
+          "  Deno.readFileSync('test');\n",
+          "  Object.hasOwn({}, 'prop');\n",
+          "}",
         )
       ),
       (
@@ -1199,7 +1207,7 @@ async fn runtime_specific_files_general() {
 }
 
 #[tokio::test]
-async fn runtime_specific_files_entrypoint() {
+async fn redirect_entrypoint() {
   let result = TestBuilder::new()
     .with_loader(|loader| {
       loader
@@ -1207,6 +1215,7 @@ async fn runtime_specific_files_entrypoint() {
         .add_local_file("/mod.node.ts", "5;");
     })
     .entry_point("file:///mod.deno.ts")
+    .add_redirect("file:///mod.deno.ts", "file:///mod.node.ts")
     .transform()
     .await
     .unwrap();
@@ -1214,4 +1223,26 @@ async fn runtime_specific_files_entrypoint() {
   assert_files!(result.main.files, &[("mod.node.ts", "5;")]);
   assert_eq!(result.main.entry_points, &[PathBuf::from("mod.node.ts")]);
   assert_eq!(result.main.shim_used, false);
+}
+
+
+#[tokio::test]
+async fn redirect_not_found() {
+  let err_message = TestBuilder::new()
+    .with_loader(|loader| {
+      loader.add_local_file("/mod.ts", "console.log(5);");
+    })
+    .add_redirect("file:///mod.deno.ts", "file:///mod.node.ts")
+    .transform()
+    .await
+    .err()
+    .unwrap();
+
+  assert_eq!(
+    err_message.to_string(),
+    concat!(
+      "The following specifiers were indicated to be redirected, but were not found:\n",
+      "  * file:///mod.deno.ts",
+    ),
+  );
 }

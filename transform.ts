@@ -7,10 +7,16 @@ import { source } from "./lib/pkg/dnt_wasm_bg.ts";
 await init(source);
 
 export interface TransformOptions {
-  entryPoints: (string | URL)[];
-  testEntryPoints?: (string | URL)[];
+  entryPoints: string[];
+  testEntryPoints?: string[];
   shimPackageName: string;
   mappings?: SpecifierMappings;
+  redirects?: Redirects;
+}
+
+export interface Redirects {
+  /** The to and from specifier redirect. */
+  [specifier: string]: string;
 }
 
 /** Specifier to bare specifier mappings. */
@@ -59,27 +65,29 @@ export function transform(options: TransformOptions): Promise<TransformOutput> {
   }
   const newOptions = {
     ...options,
-    mappings: options.mappings && Object.fromEntries(
-      Object.entries(options.mappings).map(([key, value]) => {
-        const lowerCaseKey = key.toLowerCase();
-        if (
-          !lowerCaseKey.startsWith("http://") &&
-          !lowerCaseKey.startsWith("https://")
-        ) {
-          key = path.toFileUrl(lowerCaseKey).toString();
-        }
-        return [key, value];
+    mappings: Object.fromEntries(
+      Object.entries(options.mappings ?? {}).map(([key, value]) => {
+        return [valueToUrl(key), value];
       }),
     ),
-    entryPoints: options.entryPoints.map(stringOrUrlToString),
-    testEntryPoints: (options.testEntryPoints ?? []).map(stringOrUrlToString),
+    redirects: Object.fromEntries(
+      Object.entries(options.redirects ?? {}).map(([key, value]) => {
+        return [valueToUrl(key), valueToUrl(value)];
+      }),
+    ),
+    entryPoints: options.entryPoints.map(valueToUrl),
+    testEntryPoints: (options.testEntryPoints ?? []).map(valueToUrl),
   };
   return wasmFuncs.transform(newOptions);
 }
 
-function stringOrUrlToString(value: string | URL) {
-  if (value instanceof URL) {
-    return value.toString();
+function valueToUrl(value: string) {
+  const lowerCaseValue = value.toLowerCase();
+  if (
+    lowerCaseValue.startsWith("http://") ||
+    lowerCaseValue.startsWith("https://")
+  ) {
+    return value;
   } else {
     return path.toFileUrl(path.resolve(value)).toString();
   }

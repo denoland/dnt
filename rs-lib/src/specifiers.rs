@@ -20,7 +20,6 @@ pub struct Specifiers {
   pub remote: Vec<ModuleSpecifier>,
   pub types: BTreeMap<ModuleSpecifier, DeclarationFileResolution>,
   pub test_modules: HashSet<ModuleSpecifier>,
-  pub node_modules: HashSet<ModuleSpecifier>,
   pub main: EnvironmentSpecifiers,
   pub test: EnvironmentSpecifiers,
 }
@@ -132,7 +131,6 @@ pub fn get_specifiers(
       .collect(),
     types,
     test_modules: test_modules.values().map(|k| k.specifier.clone()).collect(),
-    node_modules: specifiers.resolved_node_specifiers,
     main: EnvironmentSpecifiers {
       mapped: found_mapped_specifiers,
     },

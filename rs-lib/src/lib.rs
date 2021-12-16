@@ -94,7 +94,11 @@ pub struct TransformOptions {
   pub test_entry_points: Vec<ModuleSpecifier>,
   pub shim_package_name: String,
   pub loader: Option<Box<dyn Loader>>,
-  pub specifier_mappings: Option<HashMap<ModuleSpecifier, MappedSpecifier>>,
+  /// Maps specifiers to a npm module. This does not follow or resolve
+  /// the mapped specifier
+  pub specifier_mappings: HashMap<ModuleSpecifier, MappedSpecifier>,
+  /// Redirects map to the other code.
+  pub redirects: HashMap<ModuleSpecifier, ModuleSpecifier>,
 }
 
 pub async fn transform(options: TransformOptions) -> Result<TransformOutput> {
@@ -107,7 +111,8 @@ pub async fn transform(options: TransformOptions) -> Result<TransformOutput> {
     crate::graph::ModuleGraph::build_with_specifiers(ModuleGraphOptions {
       entry_points: options.entry_points.clone(),
       test_entry_points: options.test_entry_points.clone(),
-      specifier_mappings: options.specifier_mappings.as_ref(),
+      specifier_mappings: &options.specifier_mappings,
+      redirects: &options.redirects,
       loader: options.loader,
     })
     .await?;
@@ -170,8 +175,8 @@ pub async fn transform(options: TransformOptions) -> Result<TransformOutput> {
 
       let mut text_changes = Vec::new();
 
-      // do not shim for *.node.ts-like modules
-      if !specifiers.node_modules.contains(&module.specifier) {
+      // shim changes
+      {
         let shim_changes =
           get_deno_global_text_changes(&GetDenoGlobalTextChangesParams {
             program: &program,
