@@ -11,7 +11,12 @@ import { colors, createProjectSync, path, ts } from "./lib/mod.deps.ts";
 import { getNpmIgnoreText } from "./lib/npm_ignore.ts";
 import { PackageJsonObject } from "./lib/types.ts";
 import { glob, runNpmCommand } from "./lib/utils.ts";
-import { Redirects, SpecifierMappings, transform, TransformOutput } from "./transform.ts";
+import {
+  Redirects,
+  SpecifierMappings,
+  transform,
+  TransformOutput,
+} from "./transform.ts";
 import * as compilerTransforms from "./lib/compiler_transforms.ts";
 import { getPackageJson } from "./lib/package_json.ts";
 import { ScriptTarget } from "./lib/compiler.ts";

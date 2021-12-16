@@ -1160,10 +1160,7 @@ async fn redirects_general() {
             "}",
           ),
         )
-        .add_local_file(
-          "/myFunction.ts",
-          "export function myFunction() {}"
-        );
+        .add_local_file("/myFunction.ts", "export function myFunction() {}");
     })
     .add_redirect("file:///other.deno.ts", "file:///other.node.ts")
     .transform()
@@ -1192,10 +1189,7 @@ async fn redirects_general() {
           "}",
         )
       ),
-      (
-        "myFunction.ts",
-        "export function myFunction() {}",
-      ),
+      ("myFunction.ts", "export function myFunction() {}",),
       (
         "_dnt.polyfills.ts",
         include_str!("../src/polyfills/scripts/object-has-own.ts")
@@ -1224,7 +1218,6 @@ async fn redirect_entrypoint() {
   assert_eq!(result.main.entry_points, &[PathBuf::from("mod.node.ts")]);
   assert_eq!(result.main.shim_used, false);
 }
-
 
 #[tokio::test]
 async fn redirect_not_found() {

@@ -375,7 +375,7 @@ async function runTest(
     try {
       Deno.removeSync(options.outDir, { recursive: true });
     } catch (err) {
-      console.error(`Error removing dir: ${err}`)
+      console.error(`Error removing dir: ${err}`);
     } finally {
       Deno.chdir(originalCwd);
     }

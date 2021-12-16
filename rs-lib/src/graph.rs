@@ -78,7 +78,8 @@ impl ModuleGraph {
 
     let loader_specifiers = loader.into_specifiers();
 
-    let not_found_redirects = options.redirects
+    let not_found_redirects = options
+      .redirects
       .keys()
       .filter(|s| !loader_specifiers.redirects.contains_key(s))
       .collect::<Vec<_>>();
@@ -96,7 +97,8 @@ impl ModuleGraph {
       &graph.graph.modules(),
     )?;
 
-    let not_found_specifiers = options.specifier_mappings
+    let not_found_specifiers = options
+      .specifier_mappings
       .keys()
       .filter(|s| !specifiers.has_mapped(s))
       .collect::<Vec<_>>();
@@ -151,7 +153,13 @@ impl ModuleGraph {
   }
 }
 
-fn format_specifiers_for_message(mut specifiers: Vec<&ModuleSpecifier>) -> String {
+fn format_specifiers_for_message(
+  mut specifiers: Vec<&ModuleSpecifier>,
+) -> String {
   specifiers.sort();
-  specifiers.into_iter().map(|s| format!("  * {}", s)).collect::<Vec<_>>().join("\n")
+  specifiers
+    .into_iter()
+    .map(|s| format!("  * {}", s))
+    .collect::<Vec<_>>()
+    .join("\n")
 }

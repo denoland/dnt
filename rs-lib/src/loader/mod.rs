@@ -84,10 +84,7 @@ impl<'a> deno_graph::source::Loader for SourceLoader<'a> {
     // todo: handle dynamic
     _is_dynamic: bool,
   ) -> deno_graph::source::LoadFuture {
-    if let Some(mapping) = self
-      .specifier_mappings
-      .get(specifier)
-    {
+    if let Some(mapping) = self.specifier_mappings.get(specifier) {
       self
         .specifiers
         .mapped
@@ -98,10 +95,7 @@ impl<'a> deno_graph::source::Loader for SourceLoader<'a> {
 
     for mapper in self.specifier_mappers.iter() {
       if let Some(entry) = mapper.map(specifier) {
-        self
-          .specifiers
-          .mapped
-          .insert(specifier.clone(), entry);
+        self.specifiers.mapped.insert(specifier.clone(), entry);
         // provide a dummy file so that this module can be analyzed later
         return get_dummy_module(specifier);
       }
@@ -109,12 +103,16 @@ impl<'a> deno_graph::source::Loader for SourceLoader<'a> {
 
     let loader = self.loader.clone();
     let specifier = specifier.clone();
-    let load_specifier = if let Some(redirect) = self.redirects.get(&specifier).cloned() {
-      self.specifiers.redirects.insert(specifier.clone(), redirect.clone());
-      redirect
-    } else {
-      specifier.clone()
-    };
+    let load_specifier =
+      if let Some(redirect) = self.redirects.get(&specifier).cloned() {
+        self
+          .specifiers
+          .redirects
+          .insert(specifier.clone(), redirect.clone());
+        redirect
+      } else {
+        specifier.clone()
+      };
 
     Box::pin(async move {
       let resp = loader.load(load_specifier.clone()).await;

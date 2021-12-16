@@ -244,7 +244,7 @@ Another option is to create node and deno specific modules. This can be done by 
 await build({
   // ...etc...
   redirects: {
-    "./file.deno.ts": "./file.node.ts"
+    "./file.deno.ts": "./file.node.ts",
   },
 });
 ```
