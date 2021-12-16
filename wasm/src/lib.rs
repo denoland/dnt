@@ -30,15 +30,18 @@ impl dnt::Loader for JsLoader {
     &self,
     url: dnt::ModuleSpecifier,
   ) -> std::pin::Pin<
-    Box<dyn Future<Output = Result<dnt::LoadResponse>> + 'static>,
+    Box<dyn Future<Output = Result<Option<dnt::LoadResponse>>> + 'static>,
   > {
     Box::pin(async move {
       let resp = fetch_specifier(url.to_string()).await;
+      if resp.is_null() || resp.is_undefined() {
+        return Ok(None);
+      }
       if !resp.is_object() {
         anyhow::bail!("fetch response wasn't an object");
       }
       let load_response = resp.into_serde().unwrap();
-      Ok(load_response)
+      Ok(Some(load_response))
     })
   }
 }

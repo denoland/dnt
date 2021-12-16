@@ -1,5 +1,6 @@
 // Copyright 2018-2021 the Deno authors. All rights reserved. MIT license.
 
+use std::io::ErrorKind;
 use std::pin::Pin;
 
 use anyhow::Result;
@@ -22,16 +23,24 @@ impl Loader for DefaultLoader {
   fn load(
     &self,
     specifier: ModuleSpecifier,
-  ) -> Pin<Box<dyn Future<Output = Result<LoadResponse>> + 'static>> {
+  ) -> Pin<Box<dyn Future<Output = Result<Option<LoadResponse>>> + 'static>> {
     Box::pin(async move {
       if specifier.scheme() == "file" {
         let file_path = url_to_file_path(&specifier)?;
-        let result = tokio::fs::read_to_string(file_path).await?;
-        return Ok(LoadResponse {
-          specifier,
-          content: result,
-          headers: None,
-        });
+        return match tokio::fs::read_to_string(file_path).await {
+          Ok(result) => Ok(Some(LoadResponse {
+            specifier,
+            content: result,
+            headers: None,
+          })),
+          Err(err) => {
+            if err.kind() == ErrorKind::NotFound {
+              Ok(None)
+            } else {
+              Err(err.into())
+            }
+          }
+        };
       }
 
       let response = reqwest::get(specifier.clone()).await?;
@@ -46,11 +55,11 @@ impl Loader for DefaultLoader {
       let final_url = response.url().to_owned();
       let text = response.text().await?;
 
-      Ok(LoadResponse {
+      Ok(Some(LoadResponse {
         specifier: final_url,
         content: text,
         headers: Some(headers),
-      })
+      }))
     })
   }
 }

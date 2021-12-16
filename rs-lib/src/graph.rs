@@ -1,5 +1,6 @@
 // Copyright 2018-2021 the Deno authors. All rights reserved. MIT license.
 
+use std::collections::BTreeMap;
 use std::collections::HashMap;
 
 use crate::loader::get_all_specifier_mappers;
@@ -65,11 +66,10 @@ impl ModuleGraph {
         if !error_message.is_empty() {
           error_message.push_str("\n\n");
         }
-        error_message.push_str(&format!(
-          "{} ({})",
-          error.to_string(),
-          error.specifier()
-        ));
+        error_message.push_str(&error.to_string());
+        if !error_message.contains(error.specifier().as_str()) {
+          error_message.push_str(&format!(" ({})", error.specifier()));
+        }
       }
       anyhow::bail!("{}", error_message);
     }
@@ -98,6 +98,10 @@ impl ModuleGraph {
     }
 
     Ok((graph, specifiers))
+  }
+
+  pub fn redirects(&self) -> &BTreeMap<ModuleSpecifier, ModuleSpecifier> {
+    &self.graph.redirects
   }
 
   pub fn get(&self, specifier: &ModuleSpecifier) -> &deno_graph::Module {

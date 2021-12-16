@@ -8,15 +8,10 @@ use std::path::PathBuf;
 use anyhow::Result;
 use deno_ast::MediaType;
 use deno_ast::ModuleSpecifier;
-use regex::Regex;
 
 use crate::graph::ModuleGraph;
 use crate::specifiers::Specifiers;
 use crate::utils::url_to_file_path;
-
-lazy_static! {
-  static ref HAS_EXTENSION_RE: Regex = Regex::new(r"\.[A-Za-z0-9]*$").unwrap();
-}
 
 pub struct Mappings {
   inner: HashMap<ModuleSpecifier, PathBuf>,
@@ -112,13 +107,26 @@ impl Mappings {
       let file_path = mappings.get(code_specifier).unwrap();
       let new_file_path = file_path.with_extension("d.ts");
       if let Some(past_path) = mappings.insert(to.clone(), new_file_path) {
-        // this would indicate a programming error
         panic!(
-          "Already had path {} in map when adding declaration file for {}. Adding: {}",
+          "Programming error: Already had path {} in map when adding declaration file for {}. Adding: {}",
           past_path.display(),
           code_specifier,
           to
         );
+      }
+    }
+
+    // add the redirects in the graph to the mappings
+    for (key, value) in module_graph.redirects() {
+      if !mappings.contains_key(key) {
+        if let Some(path) = mappings.get(value).map(ToOwned::to_owned) {
+          mappings.insert(key.clone(), path);
+        } else {
+          panic!(
+            "Programming error: Could not find the mapping for {}",
+            value
+          );
+        }
       }
     }
 

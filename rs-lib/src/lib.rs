@@ -168,16 +168,23 @@ pub async fn transform(options: TransformOptions) -> Result<TransformOutput> {
         top_level_context: parsed_source.top_level_context(),
       });
 
-      let mut text_changes =
-        get_deno_global_text_changes(&GetDenoGlobalTextChangesParams {
-          program: &program,
-          top_level_context: parsed_source.top_level_context(),
-          shim_package_name: shim_package_name.as_str(),
-          ignore_line_indexes: &ignore_line_indexes,
-        });
-      if !text_changes.is_empty() {
-        environment.shim_used = true;
+      let mut text_changes = Vec::new();
+
+      // do not shim for *.node.ts-like modules
+      if !specifiers.node_modules.contains(&module.specifier) {
+        let shim_changes =
+          get_deno_global_text_changes(&GetDenoGlobalTextChangesParams {
+            program: &program,
+            top_level_context: parsed_source.top_level_context(),
+            shim_package_name: shim_package_name.as_str(),
+            ignore_line_indexes: &ignore_line_indexes,
+          });
+        if !shim_changes.is_empty() {
+          environment.shim_used = true;
+        }
+        text_changes.extend(shim_changes);
       }
+
       text_changes.extend(get_deno_comment_directive_text_changes(&program));
       text_changes.extend(get_module_specifier_text_changes(
         &GetModuleSpecifierTextChangesParams {

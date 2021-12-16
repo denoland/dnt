@@ -372,7 +372,10 @@ async fn transform_local_file_not_exists() {
     .err()
     .unwrap();
 
-  assert_eq!(err_message.to_string(), "file not found (file:///other.ts)");
+  assert_eq!(
+    err_message.to_string(),
+    r#"Cannot load module "file:///other.ts"."#
+  );
 }
 
 #[tokio::test]
@@ -392,7 +395,7 @@ async fn transform_remote_file_not_exists() {
 
   assert_eq!(
     err_message.to_string(),
-    "Not found. (http://localhost/other.ts)"
+    r#"Cannot load module "http://localhost/other.ts"."#
   );
 }
 
@@ -438,7 +441,7 @@ async fn transform_parse_error() {
     .err()
     .unwrap();
 
-  assert_eq!(err_message.to_string(), "The module's source code could not be parsed: Expected ';', '}' or <eof> at http://localhost/declarations.d.ts:1:6 (http://localhost/declarations.d.ts)");
+  assert_eq!(err_message.to_string(), "The module's source code could not be parsed: Expected ';', '}' or <eof> at http://localhost/declarations.d.ts:1:6");
 }
 
 #[tokio::test]
@@ -1136,4 +1139,41 @@ async fn polyfills_test_files() {
   );
   assert_eq!(result.test.entry_points, &[PathBuf::from("mod.test.ts")]);
   assert_eq!(result.test.shim_used, false);
+}
+
+#[tokio::test]
+async fn runtime_specific_files_entrypoint() {
+  let result = TestBuilder::new()
+    .with_loader(|loader| {
+      loader
+        .add_local_file("/mod.deno.ts", "console.log(5);")
+        // should not shim the deno namespace, but should do polyfills
+        .add_local_file(
+          "/mod.node.ts",
+          "Deno.readFileSync('test'); Object.hasOwn({}, 'prop');",
+        );
+    })
+    .entry_point("file:///mod.deno.ts")
+    .transform()
+    .await
+    .unwrap();
+
+  assert_files!(
+    result.main.files,
+    &[
+      (
+        "mod.node.ts",
+        concat!(
+          "import './_dnt.polyfills.js';\n",
+          "Deno.readFileSync('test'); Object.hasOwn({}, 'prop');"
+        ),
+      ),
+      (
+        "_dnt.polyfills.ts",
+        include_str!("../src/polyfills/scripts/object-has-own.ts")
+      ),
+    ]
+  );
+  assert_eq!(result.main.entry_points, &[PathBuf::from("mod.node.ts")]);
+  assert_eq!(result.main.shim_used, false);
 }

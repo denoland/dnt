@@ -5,6 +5,7 @@ use std::path::Path;
 use std::path::PathBuf;
 use std::pin::Pin;
 
+use anyhow::anyhow;
 use anyhow::Result;
 use futures::Future;
 
@@ -88,20 +89,16 @@ impl Loader for InMemoryLoader {
   fn load(
     &self,
     specifier: ModuleSpecifier,
-  ) -> Pin<Box<dyn Future<Output = Result<LoadResponse>> + 'static>> {
+  ) -> Pin<Box<dyn Future<Output = Result<Option<LoadResponse>>> + 'static>> {
     if specifier.scheme() == "file" {
       let file_path = url_to_file_path(&specifier).unwrap();
-      let result = self
-        .local_files
-        .get(&file_path)
-        .map(ToOwned::to_owned)
-        .ok_or_else(|| anyhow::anyhow!("file not found"));
+      let result = self.local_files.get(&file_path).map(ToOwned::to_owned);
       return Box::pin(async move {
-        Ok(LoadResponse {
-          content: result?,
+        Ok(result.map(|result| LoadResponse {
+          content: result,
           headers: None,
           specifier,
-        })
+        }))
       });
     }
     let result = self
@@ -116,9 +113,9 @@ impl Loader for InMemoryLoader {
         Err(err) => Err(err),
       });
     let result = match result {
-      Some(Ok(result)) => Ok(result),
-      Some(Err(err)) => Err(anyhow::anyhow!("{}", err)),
-      None => Err(anyhow::anyhow!("Not found.")),
+      Some(Ok(result)) => Ok(Some(result)),
+      Some(Err(err)) => Err(anyhow!("{}", err.to_string())),
+      None => Ok(None),
     };
     Box::pin(futures::future::ready(result))
   }
