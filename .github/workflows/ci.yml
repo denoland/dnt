@@ -15,7 +15,7 @@ jobs:
     - uses: actions-rs/toolchain@v1
       with:
         profile: minimal
-        toolchain: 1.56.0
+        toolchain: 1.57.0
         override: true
     - uses: Swatinem/rust-cache@v1
 
@@ -31,7 +31,7 @@ jobs:
 
     - uses: denoland/setup-deno@v1
       with:
-        deno-version: ~1.15
+        deno-version: ~1.17
     - run: deno lint --config deno.json
     - run: deno fmt --config deno.json --check
 

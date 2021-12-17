@@ -22,7 +22,8 @@
       "exclude": [
         "target/",
         "wasm/target/",
-        "lib/pkg/"
+        "lib/pkg/",
+        "rs-lib/src/polyfills/scripts/"
       ]
     }
   }
