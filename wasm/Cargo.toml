@@ -11,7 +11,7 @@ crate-type = ["cdylib", "rlib"]
 default = ["console_error_panic_hook"]
 
 [dependencies]
-anyhow = "1.0.44"
+anyhow = "1.0.51"
 dnt = { path = "../rs-lib", default-features = false, features = ["serialization"], package="deno_node_transform" }
 js-sys = "0.3.55"
 wasm-bindgen = { version = "0.2.63", features = ["serde-serialize"] }

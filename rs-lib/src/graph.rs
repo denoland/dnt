@@ -12,6 +12,7 @@ use crate::specifiers::Specifiers;
 use crate::MappedSpecifier;
 use anyhow::Result;
 use deno_ast::ModuleSpecifier;
+use deno_graph::Module;
 
 pub struct ModuleGraphOptions<'a> {
   pub entry_points: Vec<ModuleSpecifier>,
@@ -120,10 +121,14 @@ impl ModuleGraph {
     self.graph.resolve(specifier)
   }
 
-  pub fn get(&self, specifier: &ModuleSpecifier) -> &deno_graph::Module {
-    self.graph.get(specifier).unwrap_or_else(|| {
+  pub fn get(&self, specifier: &ModuleSpecifier) -> &deno_graph::EsModule {
+    let module = self.graph.get(specifier).unwrap_or_else(|| {
       panic!("Programming error. Did not find specifier: {}", specifier);
-    })
+    });
+    match module {
+      Module::Es(module) => module,
+      Module::Synthetic(_) => panic!("JSON modules are not implemented."),
+    }
   }
 
   pub fn resolve_dependency(

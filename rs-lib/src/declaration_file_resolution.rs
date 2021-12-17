@@ -5,7 +5,7 @@ use std::collections::HashSet;
 
 use anyhow::Result;
 use deno_ast::ModuleSpecifier;
-use deno_graph::Module;
+use deno_graph::EsModule;
 
 use crate::graph::ModuleGraph;
 
@@ -26,7 +26,7 @@ pub struct TypesDependency {
 
 pub fn resolve_declaration_file_mappings(
   module_graph: &ModuleGraph,
-  modules: &[&Module],
+  modules: &[&EsModule],
 ) -> Result<BTreeMap<ModuleSpecifier, DeclarationFileResolution>> {
   let mut type_dependencies = BTreeMap::new();
 
@@ -106,7 +106,7 @@ fn select_best_types_dep(
 }
 
 fn fill_types_for_module(
-  module: &Module,
+  module: &EsModule,
   type_dependencies: &mut BTreeMap<ModuleSpecifier, HashSet<TypesDependency>>,
 ) -> Result<()> {
   // check for the module specifying its type dependency
@@ -140,7 +140,7 @@ fn fill_types_for_module(
   return Ok(());
 
   fn add_type_dependency(
-    module: &Module,
+    module: &EsModule,
     code_specifier: &ModuleSpecifier,
     type_specifier: &ModuleSpecifier,
     type_dependencies: &mut BTreeMap<ModuleSpecifier, HashSet<TypesDependency>>,
