@@ -6,7 +6,7 @@ use std::collections::HashSet;
 
 use anyhow::Result;
 use deno_ast::ModuleSpecifier;
-use deno_graph::Module;
+use deno_graph::EsModule;
 
 use crate::declaration_file_resolution::resolve_declaration_file_mappings;
 use crate::declaration_file_resolution::DeclarationFileResolution;
@@ -40,12 +40,12 @@ pub fn get_specifiers(
   entry_points: &[ModuleSpecifier],
   mut specifiers: LoaderSpecifiers,
   module_graph: &ModuleGraph,
-  modules: &[&Module],
+  modules: &[&EsModule],
 ) -> Result<Specifiers> {
   let mut local_specifiers = Vec::new();
   let mut remote_specifiers = Vec::new();
 
-  let mut modules: BTreeMap<&ModuleSpecifier, &Module> =
+  let mut modules: BTreeMap<&ModuleSpecifier, &EsModule> =
     modules.iter().map(|m| (&m.specifier, *m)).collect();
 
   let mut found_module_specifiers = Vec::new();
