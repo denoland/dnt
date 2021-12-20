@@ -70,7 +70,7 @@ pub async fn transform(options: JsValue) -> Result<JsValue, JsValue> {
     redirects: options.redirects,
   })
   .await
-  .map_err(|err| err.to_string())?;
+  .map_err(|err| format!("{:?}", err))?; // need to include the anyhow context
 
   Ok(JsValue::from_serde(&result).unwrap())
 }

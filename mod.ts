@@ -264,7 +264,7 @@ export async function build(options: BuildOptions): Promise<void> {
     const diagnostics = ts.getPreEmitDiagnostics(program);
     if (diagnostics.length > 0) {
       outputDiagnostics(diagnostics);
-      Deno.exit(1);
+      throw new Error(`Had ${diagnostics.length} diagnostics.`);
     }
   }
 
@@ -340,7 +340,7 @@ export async function build(options: BuildOptions): Promise<void> {
 
     if (emitResult.diagnostics.length > 0) {
       outputDiagnostics(emitResult.diagnostics);
-      Deno.exit(1);
+      throw new Error(`Had ${emitResult.diagnostics.length} emit diagnostics.`);
     }
   }
 

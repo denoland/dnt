@@ -1239,3 +1239,77 @@ async fn redirect_not_found() {
     ),
   );
 }
+
+#[tokio::test]
+async fn json_module_import_default() {
+  let result = TestBuilder::new()
+    .with_loader(|loader| {
+      loader
+        .add_local_file(
+          "/mod.ts",
+          r#"import jsonData from './data.json' assert { type: 'json' };"#,
+        )
+        .add_local_file("/data.json", r#"{ "prop": 5 }"#);
+    })
+    .transform()
+    .await
+    .unwrap();
+
+  assert_files!(
+    result.main.files,
+    &[("mod.ts", r#"const jsonData = JSON.parse(`{ "prop": 5 }`);"#),]
+  );
+}
+
+#[tokio::test]
+async fn json_module_dynamic_import() {
+  let result = TestBuilder::new()
+    .with_loader(|loader| {
+      loader
+        .add_local_file(
+          "/mod.ts",
+          r#"const jsonData = await import('./data.json', { assert: { type: 'json' } });"#
+        )
+        .add_local_file("/data.json", r#"{ "prop": 5 }"#);
+    })
+    .transform()
+    .await
+    .unwrap();
+
+  assert_files!(
+    result.main.files,
+    &[(
+      "mod.ts",
+      r#"const jsonData = await Promise.resolve({ default: JSON.parse(`{ "prop": 5 }`) });"#
+    ),]
+  );
+}
+
+#[tokio::test]
+async fn json_module_re_export_not_supported() {
+  let err = TestBuilder::new()
+    .with_loader(|loader| {
+      loader
+        .add_local_file(
+          "/mod.ts",
+          r#"export { default as Test } from './data.json' assert { type: "json" };"#
+        )
+        .add_local_file("/data.json", r#"{ "prop": 5 }"#);
+    })
+    .transform()
+    .await
+    .err()
+    .unwrap();
+
+  assert_eq!(
+    format!("{:?}", err),
+    concat!(
+      "Issue getting text changes from file:///mod.ts\n",
+      "\n",
+      "Caused by:\n",
+      "    Re-exporting JSON modules has not been implemented. If you need this functionality, please open an issue in dnt's repo.\n",
+      "    \n",
+      "    As a workaround, consider importing the module with an import declaration then exporting the identifier on a separate statement."
+    )
+  );
+}

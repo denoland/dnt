@@ -8,6 +8,7 @@ use deno_ast::ModuleSpecifier;
 use deno_graph::EsModule;
 
 use crate::graph::ModuleGraph;
+use crate::graph::ModuleRef;
 
 #[derive(Debug)]
 pub struct DeclarationFileResolution {
@@ -26,11 +27,11 @@ pub struct TypesDependency {
 
 pub fn resolve_declaration_file_mappings(
   module_graph: &ModuleGraph,
-  modules: &[&EsModule],
+  modules: &[ModuleRef<'_>],
 ) -> Result<BTreeMap<ModuleSpecifier, DeclarationFileResolution>> {
   let mut type_dependencies = BTreeMap::new();
 
-  for module in modules {
+  for module in modules.iter().filter_map(|m| m.as_es_module()) {
     fill_types_for_module(module, &mut type_dependencies)?;
   }
 
@@ -90,9 +91,9 @@ fn select_best_types_dep(
         true
       } else {
         // as a last resort, use the declaration file that's the largest
-        let dep_file_len = module_graph.get(&dep.specifier).source.len();
+        let dep_file_len = module_graph.get(&dep.specifier).source().len();
         let selected_dep_file_len =
-          module_graph.get(&selected_dep.specifier).source.len();
+          module_graph.get(&selected_dep.specifier).source().len();
         dep_file_len > selected_dep_file_len
       }
     } else {

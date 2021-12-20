@@ -6,25 +6,28 @@ use std::collections::HashSet;
 use std::path::Path;
 use std::path::PathBuf;
 
+use anyhow::Context;
 use anyhow::Result;
 #[macro_use]
 extern crate lazy_static;
 
 use graph::ModuleGraphOptions;
+use graph::ModuleRef;
 use mappings::Mappings;
 use polyfills::build_polyfill_file;
 use polyfills::Polyfill;
 use specifiers::Specifiers;
 use text_changes::apply_text_changes;
+use text_changes::TextChange;
 use utils::get_relative_specifier;
 use visitors::fill_polyfills;
 use visitors::get_deno_comment_directive_text_changes;
 use visitors::get_deno_global_text_changes;
 use visitors::get_ignore_line_indexes;
-use visitors::get_module_specifier_text_changes;
+use visitors::get_import_exports_text_changes;
 use visitors::FillPolyfillsParams;
 use visitors::GetDenoGlobalTextChangesParams;
-use visitors::GetModuleSpecifierTextChangesParams;
+use visitors::GetImportExportsTextChangesParams;
 
 pub use deno_ast::ModuleSpecifier;
 pub use loader::LoadResponse;
@@ -162,55 +165,73 @@ pub async fn transform(options: TransformOptions) -> Result<TransformOutput> {
       } else {
         (&mut main_environment, &mut main_polyfills)
       };
-    let parsed_source = module.parsed_source.clone();
 
-    let text_changes = parsed_source.with_view(|program| {
-      let ignore_line_indexes = get_ignore_line_indexes(&program);
+    let file_text = match module {
+      ModuleRef::Es(module) => {
+        let parsed_source = module.parsed_source.clone();
 
-      fill_polyfills(&mut FillPolyfillsParams {
-        polyfills,
-        program: &program,
-        top_level_context: parsed_source.top_level_context(),
-      });
+        let text_changes = parsed_source
+          .with_view(|program| -> Result<Vec<TextChange>> {
+            let ignore_line_indexes = get_ignore_line_indexes(&program);
 
-      let mut text_changes = Vec::new();
+            fill_polyfills(&mut FillPolyfillsParams {
+              polyfills,
+              program: &program,
+              top_level_context: parsed_source.top_level_context(),
+            });
 
-      // shim changes
-      {
-        let shim_changes =
-          get_deno_global_text_changes(&GetDenoGlobalTextChangesParams {
-            program: &program,
-            top_level_context: parsed_source.top_level_context(),
-            shim_package_name: shim_package_name.as_str(),
-            ignore_line_indexes: &ignore_line_indexes,
-          });
-        if !shim_changes.is_empty() {
-          environment.shim_used = true;
-        }
-        text_changes.extend(shim_changes);
+            let mut text_changes = Vec::new();
+
+            // shim changes
+            {
+              let shim_changes =
+                get_deno_global_text_changes(&GetDenoGlobalTextChangesParams {
+                  program: &program,
+                  top_level_context: parsed_source.top_level_context(),
+                  shim_package_name: shim_package_name.as_str(),
+                  ignore_line_indexes: &ignore_line_indexes,
+                });
+              if !shim_changes.is_empty() {
+                environment.shim_used = true;
+              }
+              text_changes.extend(shim_changes);
+            }
+
+            text_changes
+              .extend(get_deno_comment_directive_text_changes(&program));
+            text_changes.extend(get_import_exports_text_changes(
+              &GetImportExportsTextChangesParams {
+                specifier,
+                module_graph: &module_graph,
+                mappings: &mappings,
+                program: &program,
+                specifier_mappings: &all_specifier_mappings,
+              },
+            )?);
+
+            Ok(text_changes)
+          })
+          .with_context(|| {
+            format!(
+              "Issue getting text changes from {}",
+              parsed_source.specifier()
+            )
+          })?;
+
+        apply_text_changes(
+          parsed_source.source().text().to_string(),
+          text_changes,
+        )
       }
-
-      text_changes.extend(get_deno_comment_directive_text_changes(&program));
-      text_changes.extend(get_module_specifier_text_changes(
-        &GetModuleSpecifierTextChangesParams {
-          specifier,
-          module_graph: &module_graph,
-          mappings: &mappings,
-          program: &program,
-          specifier_mappings: &all_specifier_mappings,
-        },
-      ));
-
-      text_changes
-    });
+      ModuleRef::Synthetic(_) => {
+        continue; // these are inlined
+      }
+    };
 
     let file_path = mappings.get_file_path(specifier).to_owned();
     environment.files.push(OutputFile {
       file_path,
-      file_text: apply_text_changes(
-        parsed_source.source().text().to_string(),
-        text_changes,
-      ),
+      file_text,
     });
   }
 
