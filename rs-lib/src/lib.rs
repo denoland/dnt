@@ -130,7 +130,7 @@ pub async fn transform(options: TransformOptions) -> Result<TransformOutput> {
     .collect();
 
   // todo: parallelize
-  let warnings = get_declaration_warnings(&specifiers);
+  let mut warnings = get_declaration_warnings(&specifiers);
   let mut main_environment = TransformOutputEnvironment {
     entry_points: options
       .entry_points
@@ -172,7 +172,9 @@ pub async fn transform(options: TransformOptions) -> Result<TransformOutput> {
 
         let text_changes = parsed_source
           .with_view(|program| -> Result<Vec<TextChange>> {
-            let ignore_line_indexes = get_ignore_line_indexes(&program);
+            let ignore_line_indexes =
+              get_ignore_line_indexes(parsed_source.specifier(), &program);
+            warnings.extend(ignore_line_indexes.warnings);
 
             fill_polyfills(&mut FillPolyfillsParams {
               polyfills,
@@ -189,7 +191,7 @@ pub async fn transform(options: TransformOptions) -> Result<TransformOutput> {
                   program: &program,
                   top_level_context: parsed_source.top_level_context(),
                   shim_package_name: shim_package_name.as_str(),
-                  ignore_line_indexes: &ignore_line_indexes,
+                  ignore_line_indexes: &ignore_line_indexes.line_indexes,
                 });
               if !shim_changes.is_empty() {
                 environment.shim_used = true;

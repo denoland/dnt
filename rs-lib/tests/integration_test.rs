@@ -89,20 +89,27 @@ async fn transform_deno_shim() {
 
 #[tokio::test]
 async fn no_transform_deno_ignored() {
-  assert_identity_transforms(vec!["// deno-shim-ignore\nDeno.readTextFile();"])
+  assert_identity_transforms(vec!["// dnt-shim-ignore\nDeno.readTextFile();"])
     .await;
 }
 
 #[tokio::test]
-async fn transform_deno_shim_with_name_collision() {
-  assert_transforms(vec![(
-    "Deno.readTextFile(); const denoShim = {};",
-    concat!(
-      r#"import * as denoShim1 from "test-shim";"#,
-      "\ndenoShim1.Deno.readTextFile(); const denoShim = {};"
-    ),
-  )])
-  .await;
+async fn transform_legacy_deno_shim_ignore_warnings() {
+  // this was renamed to dnt-shim-ignore
+  let result = TestBuilder::new()
+    .with_loader(|loader| {
+      loader
+        .add_local_file("/mod.ts", "// deno-shim-ignore\nDeno.readTextFile();");
+    })
+    .transform()
+    .await
+    .unwrap();
+
+  assert_eq!(result.warnings, vec!["deno-shim-ignore has been renamed to dnt-shim-ignore. Please rename it in file:///mod.ts"]);
+  assert_files!(
+    result.main.files,
+    &[("mod.ts", "// deno-shim-ignore\nDeno.readTextFile();")]
+  );
 }
 
 #[tokio::test]
@@ -1154,7 +1161,7 @@ async fn redirects_general() {
             "import * as fs from 'fs';\n",
             "import { myFunction } from './myFunction.ts'\n",
             "export function test() {\n",
-            "  // deno-shim-ignore\n",
+            "  // dnt-shim-ignore\n",
             "  Deno.readFileSync('test');\n",
             "  Object.hasOwn({}, 'prop');\n",
             "}",
@@ -1183,7 +1190,7 @@ async fn redirects_general() {
           "import * as fs from 'fs';\n",
           "import { myFunction } from './myFunction.js'\n",
           "export function test() {\n",
-          "  // deno-shim-ignore\n",
+          "  // dnt-shim-ignore\n",
           "  Deno.readFileSync('test');\n",
           "  Object.hasOwn({}, 'prop');\n",
           "}",
