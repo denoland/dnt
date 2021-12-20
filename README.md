@@ -219,10 +219,10 @@ import * as denoShim from "deno.ns";
 denoShim.Deno.readTextFileSync(...);
 ```
 
-Maybe there are scenarios where you don't want that to happen though. To prevent it, add a `// deno-shim-ignore` comment:
+Maybe there are scenarios where you don't want that to happen though. To prevent it, add a `// dnt-shim-ignore` comment:
 
 ```ts
-// deno-shim-ignore
+// dnt-shim-ignore
 Deno.readTextFileSync(...);
 ```
 
@@ -249,7 +249,7 @@ await build({
 });
 ```
 
-Then within the file, use `// deno-shim-ignore` directives to disable shimming if you desire.
+Then within the file, use `// dnt-shim-ignore` directives to disable shimming if you desire.
 
 ### Pre & Post Build Steps
 
