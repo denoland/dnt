@@ -1,5 +1,6 @@
 // Copyright 2018-2021 the Deno authors. All rights reserved. MIT license.
 
+use std::borrow::Cow;
 use std::collections::BTreeMap;
 use std::collections::HashMap;
 
@@ -11,8 +12,66 @@ use crate::specifiers::get_specifiers;
 use crate::specifiers::Specifiers;
 use crate::MappedSpecifier;
 use anyhow::Result;
+use deno_ast::MediaType;
 use deno_ast::ModuleSpecifier;
+use deno_graph::Dependency;
+use deno_graph::EsModule;
 use deno_graph::Module;
+use deno_graph::Resolved;
+use deno_graph::SyntheticModule;
+
+#[derive(Clone, Copy)]
+pub enum ModuleRef<'a> {
+  Es(&'a EsModule),
+  Synthetic(&'a SyntheticModule),
+}
+
+impl<'a> ModuleRef<'a> {
+  pub fn as_es_module(&self) -> Option<&EsModule> {
+    match self {
+      ModuleRef::Es(m) => Some(m),
+      ModuleRef::Synthetic(_) => None,
+    }
+  }
+
+  pub fn specifier(&self) -> &ModuleSpecifier {
+    match self {
+      ModuleRef::Es(m) => &m.specifier,
+      ModuleRef::Synthetic(m) => &m.specifier,
+    }
+  }
+
+  pub fn media_type(&self) -> MediaType {
+    match self {
+      ModuleRef::Es(m) => m.media_type,
+      ModuleRef::Synthetic(m) => m.media_type,
+    }
+  }
+
+  pub fn maybe_dependencies(&self) -> Option<&'a BTreeMap<String, Dependency>> {
+    match self {
+      ModuleRef::Es(m) => Some(&m.dependencies),
+      ModuleRef::Synthetic(_) => None,
+    }
+  }
+
+  pub fn maybe_types_dependency(&self) -> Option<&'a (String, Resolved)> {
+    match self {
+      ModuleRef::Es(m) => m.maybe_types_dependency.as_ref(),
+      ModuleRef::Synthetic(_) => None,
+    }
+  }
+
+  pub fn source(&self) -> Cow<str> {
+    match self {
+      ModuleRef::Es(m) => Cow::Borrowed(m.source.as_str()),
+      ModuleRef::Synthetic(m) => match m.maybe_source.as_ref() {
+        Some(s) => Cow::Borrowed(s.as_str()),
+        None => Cow::Owned(String::new()),
+      },
+    }
+  }
+}
 
 pub struct ModuleGraphOptions<'a> {
   pub entry_points: Vec<ModuleSpecifier>,
@@ -95,7 +154,7 @@ impl ModuleGraph {
       &options.entry_points,
       loader_specifiers,
       &graph,
-      &graph.graph.modules(),
+      &graph.all_modules(),
     )?;
 
     let not_found_specifiers = options
@@ -121,13 +180,13 @@ impl ModuleGraph {
     self.graph.resolve(specifier)
   }
 
-  pub fn get(&self, specifier: &ModuleSpecifier) -> &deno_graph::EsModule {
+  pub fn get(&self, specifier: &ModuleSpecifier) -> ModuleRef<'_> {
     let module = self.graph.get(specifier).unwrap_or_else(|| {
       panic!("Programming error. Did not find specifier: {}", specifier);
     });
     match module {
-      Module::Es(module) => module,
-      Module::Synthetic(_) => panic!("JSON modules are not implemented."),
+      Module::Es(m) => ModuleRef::Es(m),
+      Module::Synthetic(m) => ModuleRef::Synthetic(m),
     }
   }
 
@@ -155,6 +214,22 @@ impl ModuleGraph {
           None
         }
       })
+  }
+
+  pub fn all_modules(&self) -> Vec<ModuleRef<'_>> {
+    self
+      .graph
+      .modules()
+      .into_iter()
+      .map(ModuleRef::Es)
+      .chain(
+        self
+          .graph
+          .synthetic_modules()
+          .into_iter()
+          .map(ModuleRef::Synthetic),
+      )
+      .collect()
   }
 }
 

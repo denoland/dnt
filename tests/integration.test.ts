@@ -323,6 +323,23 @@ Deno.test("should build and test node files project", async () => {
   });
 });
 
+Deno.test("should handle json modules", async () => {
+  await runTest("json_module_project", {
+    entryPoints: ["mod.ts"],
+    outDir: "./npm",
+    package: {
+      name: "json-module-package",
+      version: "1.0.0",
+    },
+    compilerOptions: {
+      target: "ES2015",
+    },
+  }, (output) => {
+    // it will have been inlined
+    output.assertNotExists("esm/data.json");
+  });
+});
+
 export interface Output {
   packageJson: any;
   npmIgnore: string;
@@ -338,7 +355,8 @@ async function runTest(
     | "mappings_project"
     | "shim_project"
     | "polyfill_project"
-    | "redirects_project",
+    | "redirects_project"
+    | "json_module_project",
   options: BuildOptions,
   checkOutput?: (output: Output) => (Promise<void> | void),
 ) {
