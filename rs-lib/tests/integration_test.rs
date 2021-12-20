@@ -381,7 +381,7 @@ async fn transform_local_file_not_exists() {
 
   assert_eq!(
     err_message.to_string(),
-    r#"Cannot load module "file:///other.ts"."#
+    r#"Module not found "file:///other.ts"."#
   );
 }
 
@@ -402,7 +402,7 @@ async fn transform_remote_file_not_exists() {
 
   assert_eq!(
     err_message.to_string(),
-    r#"Cannot load module "http://localhost/other.ts"."#
+    r#"Module not found "http://localhost/other.ts"."#
   );
 }
 
