@@ -142,6 +142,26 @@ async fn transform_global_this_deno() {
 }
 
 #[tokio::test]
+async fn transform_window() {
+  assert_transforms(vec![
+    (
+      concat!("window.test = 5;", "window.Deno.test();",),
+      concat!(
+        r#"import * as denoShim from "test-shim";"#,
+        "\nglobalThis.test = 5;",
+        "({ ...denoShim, ...globalThis }).Deno.test();",
+      ),
+    ),
+    (
+      // should be as-is because there's a declaration
+      "const window = {}; window.test;",
+      "const window = {}; window.test;",
+    ),
+  ])
+  .await;
+}
+
+#[tokio::test]
 async fn no_shim_situations() {
   assert_identity_transforms(vec![
     "const { Deno } = test; Deno.test;",
