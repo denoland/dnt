@@ -849,11 +849,11 @@ async fn skypack_esm_module_mapping() {
           "import package2 from '@scope/package-name';\n",
           "import package3 from 'react';\n",
           "import package4 from './deps/esm_sh/swr.js';\n",
-          "import package5 from './deps/esm_sh/test_1.js';\n"
+          "import package5 from './deps/esm_sh/test_1.2.5.js';\n"
         )
       ),
       ("deps/esm_sh/swr.ts", "",),
-      ("deps/esm_sh/test_1.ts", "",)
+      ("deps/esm_sh/test_1.2.5.ts", "",)
     ]
   );
   assert_eq!(
@@ -1264,7 +1264,10 @@ async fn json_module_import_default() {
 
   assert_files!(
     result.main.files,
-    &[("mod.ts", r#"const jsonData = JSON.parse(`{ "prop": 5 }`);"#),]
+    &[
+      ("mod.ts", r#"import jsonData from './data.js';"#),
+      ("data.js", r#"export default JSON.parse(`{ "prop": 5 }`);"#)
+    ]
   );
 }
 
@@ -1275,7 +1278,7 @@ async fn json_module_dynamic_import() {
       loader
         .add_local_file(
           "/mod.ts",
-          r#"const jsonData = await import('./data.json', { assert: { type: 'json' } });"#
+          r#"const jsonData = (await import('./data.json', { assert: { type: 'json' } })).default;"#
         )
         .add_local_file("/data.json", r#"{ "prop": 5 }"#);
     })
@@ -1285,16 +1288,19 @@ async fn json_module_dynamic_import() {
 
   assert_files!(
     result.main.files,
-    &[(
-      "mod.ts",
-      r#"const jsonData = await Promise.resolve({ default: JSON.parse(`{ "prop": 5 }`) });"#
-    ),]
+    &[
+      (
+        "mod.ts",
+        r#"const jsonData = (await import('./data.js')).default;"#
+      ),
+      ("data.js", r#"export default JSON.parse(`{ "prop": 5 }`);"#)
+    ]
   );
 }
 
 #[tokio::test]
-async fn json_module_re_export_not_supported() {
-  let err = TestBuilder::new()
+async fn json_module_re_export() {
+  let result = TestBuilder::new()
     .with_loader(|loader| {
       loader
         .add_local_file(
@@ -1305,18 +1311,13 @@ async fn json_module_re_export_not_supported() {
     })
     .transform()
     .await
-    .err()
     .unwrap();
 
-  assert_eq!(
-    format!("{:?}", err),
-    concat!(
-      "Issue getting text changes from file:///mod.ts\n",
-      "\n",
-      "Caused by:\n",
-      "    Re-exporting JSON modules has not been implemented. If you need this functionality, please open an issue in dnt's repo.\n",
-      "    \n",
-      "    As a workaround, consider importing the module with an import declaration then exporting the identifier on a separate statement."
-    )
+  assert_files!(
+    result.main.files,
+    &[
+      ("mod.ts", r#"export { default as Test } from './data.js';"#),
+      ("data.js", r#"export default JSON.parse(`{ "prop": 5 }`);"#)
+    ]
   );
 }

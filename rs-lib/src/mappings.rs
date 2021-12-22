@@ -3,6 +3,7 @@
 use std::collections::HashMap;
 use std::collections::HashSet;
 use std::path::Component;
+use std::path::Path;
 use std::path::PathBuf;
 
 use anyhow::Result;
@@ -23,8 +24,10 @@ impl Mappings {
     specifiers: &Specifiers,
   ) -> Result<Self> {
     let mut mappings = HashMap::new();
+    let mut mapped_filepaths_no_ext = HashSet::new();
     let base_dir = get_base_dir(&specifiers.local)?;
     let mut root_local_dirs = HashSet::new();
+
     for specifier in specifiers.local.iter() {
       let file_path = url_to_file_path(specifier)?;
       let relative_file_path =
@@ -35,7 +38,14 @@ impl Mappings {
             base_dir.display()
           )
         })?;
-      mappings.insert(specifier.clone(), relative_file_path.to_path_buf());
+      mappings.insert(
+        specifier.clone(),
+        get_mapped_file_path(
+          relative_file_path.into(),
+          &relative_file_path,
+          &mut mapped_filepaths_no_ext,
+        ),
+      );
       if let Some(Component::Normal(first_dir)) =
         relative_file_path.components().next()
       {
@@ -81,7 +91,6 @@ impl Mappings {
     }
 
     let mut mapped_base_dirs = HashSet::new();
-    let mut mapped_filepaths_no_ext = HashSet::new();
     let deps_path =
       get_unique_path(PathBuf::from("deps"), &mut root_local_dirs);
     for (root, specifiers) in root_remote_specifiers.into_iter() {
@@ -90,15 +99,16 @@ impl Mappings {
         &mut mapped_base_dirs,
       ));
       for (specifier, media_type) in specifiers {
-        let relative =
-          sanitize_filepath(&make_url_relative(&root, &specifier)?);
-        let filepath_no_ext = get_unique_path(
-          base_dir.join(relative).with_extension(""),
-          &mut mapped_filepaths_no_ext,
+        let relative = base_dir
+          .join(sanitize_filepath(&make_url_relative(&root, &specifier)?));
+        mappings.insert(
+          specifier,
+          get_mapped_file_path(
+            media_type,
+            &relative,
+            &mut mapped_filepaths_no_ext,
+          ),
         );
-        let file_path =
-          filepath_no_ext.with_extension(&media_type.as_ts_extension()[1..]);
-        mappings.insert(specifier, file_path);
       }
     }
 
@@ -141,6 +151,38 @@ impl Mappings {
       )
     })
   }
+}
+
+fn get_mapped_file_path(
+  media_type: MediaType,
+  path: impl AsRef<Path>,
+  mapped_filepaths_no_ext: &mut HashSet<PathBuf>,
+) -> PathBuf {
+  fn without_ext(path: impl AsRef<Path>) -> PathBuf {
+    // remove the extension if it's known
+    // Ex. url could be `https://deno.land/test/1.2.5`
+    // and we don't want to use `test_1.2`
+    let media_type: MediaType = path.as_ref().into();
+    if media_type == MediaType::Unknown {
+      path.as_ref().into()
+    } else {
+      path.as_ref().with_extension("")
+    }
+  }
+
+  let filepath_no_ext =
+    get_unique_path(without_ext(path), mapped_filepaths_no_ext);
+  let extension = match media_type {
+    MediaType::Json => "js",
+    _ => &media_type.as_ts_extension()[1..],
+  };
+  filepath_no_ext.with_extension(
+    if let Some(sub_ext) = filepath_no_ext.extension() {
+      format!("{}.{}", sub_ext.to_string_lossy(), extension)
+    } else {
+      extension.to_string()
+    },
+  )
 }
 
 fn get_unique_path(
