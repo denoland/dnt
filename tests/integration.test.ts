@@ -335,8 +335,8 @@ Deno.test("should handle json modules", async () => {
       target: "ES2015",
     },
   }, (output) => {
-    // it will have been inlined
     output.assertNotExists("esm/data.json");
+    output.assertExists("esm/data.js");
   });
 });
 

@@ -92,19 +92,41 @@ fn visit_children(node: Node, import_name: &str, context: &mut Context) {
     let id = ident.inner.to_id();
     let is_top_level_context = id.1 == context.top_level_context;
     let ident_text = ident.text_fast(context.program);
-    if is_top_level_context
-      && ident_text == "globalThis"
-      && !should_ignore_global_this(ident, context)
-    {
-      context.text_changes.push(TextChange {
-        span: ident.span(),
-        new_text: format!("({{ ...{}, ...globalThis }})", import_name),
-      });
-      context.import_shim = true;
-    }
 
-    // check if Deno should be imported
     if is_top_level_context {
+      // check to replace globalThis
+      if ident_text == "globalThis"
+        && !should_ignore_global_this(ident, context)
+      {
+        context.text_changes.push(TextChange {
+          span: ident.span(),
+          new_text: format!("({{ ...{}, ...globalThis }})", import_name),
+        });
+        context.import_shim = true;
+        return;
+      }
+
+      // change `window` -> `globalThis`
+      if ident_text == "window"
+        && !context.top_level_decls.contains("window")
+        && !has_ignore_comment(ident.into(), context)
+      {
+        if should_ignore_global_this(ident, context) {
+          context.text_changes.push(TextChange {
+            span: ident.span(),
+            new_text: "globalThis".to_string(),
+          });
+        } else {
+          context.text_changes.push(TextChange {
+            span: ident.span(),
+            new_text: format!("({{ ...{}, ...globalThis }})", import_name),
+          });
+          context.import_shim = true;
+        }
+        return;
+      }
+
+      // check if Deno should be imported
       for name in DENO_SHIM_GLOBAL_NAMES {
         if ident_text == name
           && !context.top_level_decls.contains(name)
@@ -115,6 +137,7 @@ fn visit_children(node: Node, import_name: &str, context: &mut Context) {
             new_text: format!("{}.{}", import_name, ident_text),
           });
           context.import_shim = true;
+          return;
         }
       }
     }
@@ -150,12 +173,16 @@ fn should_ignore_global_this(ident: &Ident, context: &Context) -> bool {
 }
 
 fn should_ignore(node: Node, context: &Context) -> bool {
-  context
-    .ignore_line_indexes
-    .contains(&node.span().start_line_fast(context.program))
+  has_ignore_comment(node, context)
     || is_in_left_hand_assignment(node)
     || is_declaration_ident(node)
     || is_directly_in_condition(node)
+}
+
+fn has_ignore_comment(node: Node, context: &Context) -> bool {
+  context
+    .ignore_line_indexes
+    .contains(&node.span().start_line_fast(context.program))
 }
 
 fn is_declaration_ident(node: Node) -> bool {

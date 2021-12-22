@@ -296,7 +296,7 @@ await Deno.writeTextFile(
 );
 ```
 
-Alternatively, you could also use the [`which_runtime`](https://deno.land/x/which_runtime@0.1.0) module and use a different directory path when the tests are running in Node. This is probably more ideal if you have a lot of test data.
+Alternatively, you could also use the [`which_runtime`](https://deno.land/x/which_runtime) module and use a different directory path when the tests are running in Node. This is probably more ideal if you have a lot of test data.
 
 ### Test File Matching
 
