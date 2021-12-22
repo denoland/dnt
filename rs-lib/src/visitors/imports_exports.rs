@@ -3,8 +3,6 @@
 use std::collections::HashMap;
 use std::path::PathBuf;
 
-use anyhow::anyhow;
-use anyhow::bail;
 use anyhow::Result;
 use deno_ast::swc::common::BytePos;
 use deno_ast::swc::common::Span;
@@ -16,7 +14,6 @@ use crate::graph::ModuleGraph;
 use crate::mappings::Mappings;
 use crate::text_changes::TextChange;
 use crate::utils::get_relative_specifier;
-use crate::utils::is_json_file_path;
 
 pub struct GetImportExportsTextChangesParams<'a> {
   pub specifier: &'a ModuleSpecifier,
@@ -58,63 +55,23 @@ fn visit_children(node: Node, context: &mut Context) -> Result<()> {
   for child in node.children() {
     match child {
       Node::ImportDecl(import_decl) => {
-        match analyze_specifier(import_decl.src, context) {
-          Some(NewSpecifierOrJson::Specifier(new_text)) => {
-            replace_specifier(import_decl.src, new_text, context)
-          }
-          Some(NewSpecifierOrJson::Json(json)) => {
-            let default_import = import_decl
-              .specifiers
-              .iter()
-              .filter_map(|s| {
-                if let ImportSpecifier::Default(s) = s {
-                  Some(s)
-                } else {
-                  None
-                }
-              })
-              .next()
-              .ok_or_else(|| {
-                anyhow!(
-                  "Could not find default specifier for import:\n  {}",
-                  import_decl.text_fast(context.program)
-                )
-              })?;
-
-            context.text_changes.push(TextChange {
-              span: import_decl.span(),
-              new_text: format!(
-                "const {} = JSON.parse(`{}`);",
-                default_import.text_fast(context.program),
-                json.text.replace("`", "\\`")
-              ),
-            });
-          }
-          None => {}
+        visit_module_specifier(import_decl.src, context);
+        if let Some(asserts) = import_decl.asserts {
+          visit_asserts(asserts, context);
         }
       }
       Node::ExportAll(export_all) => {
-        match analyze_specifier(export_all.src, context) {
-          Some(NewSpecifierOrJson::Specifier(new_text)) => {
-            replace_specifier(export_all.src, new_text, context)
-          }
-          Some(NewSpecifierOrJson::Json(_)) => {
-            bail_not_supported_json_reexport()?;
-          }
-          None => {}
+        visit_module_specifier(export_all.src, context);
+        if let Some(asserts) = export_all.asserts {
+          visit_asserts(asserts, context);
         }
       }
       Node::NamedExport(named_export) => {
         if let Some(src) = named_export.src.as_ref() {
-          match analyze_specifier(src, context) {
-            Some(NewSpecifierOrJson::Specifier(new_text)) => {
-              replace_specifier(src, new_text, context)
-            }
-            Some(NewSpecifierOrJson::Json(_)) => {
-              bail_not_supported_json_reexport()?;
-            }
-            None => {}
-          }
+          visit_module_specifier(src, context);
+        }
+        if let Some(asserts) = named_export.asserts {
+          visit_asserts(asserts, context);
         }
       }
       Node::CallExpr(call_expr) => {
@@ -122,20 +79,19 @@ fn visit_children(node: Node, context: &mut Context) -> Result<()> {
           if let Some(Node::Str(src)) =
             call_expr.args.get(0).map(|a| a.expr.as_node())
           {
-            match analyze_specifier(src, context) {
-              Some(NewSpecifierOrJson::Specifier(new_text)) => {
-                replace_specifier(src, new_text, context)
-              }
-              Some(NewSpecifierOrJson::Json(json)) => {
-                context.text_changes.push(TextChange {
-                  span: call_expr.span(),
-                  new_text: format!(
-                    "Promise.resolve({{ default: JSON.parse(`{}`) }})",
-                    json.text.replace("`", "\\`")
-                  ),
-                });
-              }
-              None => {}
+            visit_module_specifier(src, context);
+            if call_expr.args.len() > 1 {
+              let assert_arg = call_expr.args[1];
+              let comma_token =
+                assert_arg.previous_token_fast(context.program).unwrap();
+              context.text_changes.push(TextChange {
+                span: Span::new(
+                  comma_token.span().lo,
+                  assert_arg.span().hi,
+                  Default::default(),
+                ),
+                new_text: String::new(),
+              });
             }
           }
         } else {
@@ -151,43 +107,24 @@ fn visit_children(node: Node, context: &mut Context) -> Result<()> {
   Ok(())
 }
 
-enum NewSpecifierOrJson {
-  Specifier(String),
-  Json(JsonDetails),
-}
-
-struct JsonDetails {
-  text: String,
-}
-
-fn analyze_specifier(
-  str: &Str,
-  context: &Context,
-) -> Option<NewSpecifierOrJson> {
+fn visit_module_specifier(str: &Str, context: &mut Context) {
   let value = str.value().to_string();
   let specifier = context
     .module_graph
-    .resolve_dependency(&value, context.specifier)?;
-  Some(
+    .resolve_dependency(&value, context.specifier);
+  let specifier = match specifier {
+    Some(s) => s,
+    None => return,
+  };
+
+  let new_text =
     if let Some(bare_specifier) = context.specifier_mappings.get(&specifier) {
-      NewSpecifierOrJson::Specifier(bare_specifier.to_string())
+      bare_specifier.to_string()
     } else {
       let specifier_file_path = context.mappings.get_file_path(&specifier);
-      if is_json_file_path(&specifier_file_path) {
-        NewSpecifierOrJson::Json(JsonDetails {
-          text: context.module_graph.get(&specifier).source().to_string(),
-        })
-      } else {
-        NewSpecifierOrJson::Specifier(get_relative_specifier(
-          context.output_file_path,
-          specifier_file_path,
-        ))
-      }
-    },
-  )
-}
+      get_relative_specifier(context.output_file_path, specifier_file_path)
+    };
 
-fn replace_specifier(str: &Str, new_text: String, context: &mut Context) {
   context.text_changes.push(TextChange {
     span: Span::new(
       str.span().lo + BytePos(1),
@@ -198,9 +135,17 @@ fn replace_specifier(str: &Str, new_text: String, context: &mut Context) {
   });
 }
 
-fn bail_not_supported_json_reexport() -> Result<()> {
-  bail!(concat!(
-    "Re-exporting JSON modules has not been implemented. If you need this functionality, please open an issue in dnt's repo.\n\n",
-    "As a workaround, consider importing the module with an import declaration then exporting the identifier on a separate statement.",
-  ))
+fn visit_asserts(asserts: &ObjectLit, context: &mut Context) {
+  let assert_token = asserts.previous_token_fast(context.program).unwrap();
+  assert_eq!(assert_token.text_fast(context.program), "assert");
+  let previous_token =
+    assert_token.previous_token_fast(context.program).unwrap();
+  context.text_changes.push(TextChange {
+    span: Span::new(
+      previous_token.span().hi,
+      asserts.span().hi,
+      Default::default(),
+    ),
+    new_text: String::new(),
+  });
 }

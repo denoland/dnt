@@ -10,15 +10,7 @@ pub fn get_relative_specifier(
   from: impl AsRef<Path>,
   to: impl AsRef<Path>,
 ) -> String {
-  let mut relative_path = get_relative_path(from, to);
-  // no need to check media type because the extension should have been resolved
-  // based on the media type at this point
-  if is_json_file_path(&relative_path) {
-    relative_path.set_extension("json");
-  } else {
-    relative_path.set_extension("js");
-  }
-
+  let relative_path = get_relative_path(from, to).with_extension("js");
   let relative_path_str = relative_path
     .to_string_lossy()
     .to_string()
@@ -58,15 +50,6 @@ pub fn url_to_file_path(module_specifier: &ModuleSpecifier) -> Result<PathBuf> {
     final_text = format!("/{}", final_text);
   }
   Ok(PathBuf::from(final_text))
-}
-
-pub fn is_json_file_path(path: impl AsRef<Path>) -> bool {
-  path
-    .as_ref()
-    .extension()
-    .map(|e| e.to_string_lossy().to_lowercase())
-    .unwrap_or_default()
-    == "json"
 }
 
 fn is_windows_path_segment(specifier: &str) -> bool {

@@ -225,8 +225,15 @@ pub async fn transform(options: TransformOptions) -> Result<TransformOutput> {
           text_changes,
         )
       }
-      ModuleRef::Synthetic(_) => {
-        continue; // these are inlined
+      ModuleRef::Synthetic(module) => {
+        if let Some(source) = &module.maybe_source {
+          format!(
+            "export default JSON.parse(`{}`);",
+            source.replace("`", "\\`")
+          )
+        } else {
+          continue;
+        }
       }
     };
 
