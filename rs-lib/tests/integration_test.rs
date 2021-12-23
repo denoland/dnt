@@ -27,60 +27,44 @@ async fn transform_standalone_file() {
 }
 
 #[tokio::test]
-async fn transform_deno_shim() {
+async fn transform_shims() {
   assert_transforms(vec![
     (
       "Deno.readTextFile();",
       concat!(
-        r#"import * as denoShim from "test-shim";"#,
-        "\ndenoShim.Deno.readTextFile();"
+        r#"import * as dntGlobalShim from "./_dnt.shims.js";"#,
+        "\ndntGlobalShim.Deno.readTextFile();"
       ),
     ),
     (
       "const [test=Deno] = other;",
       concat!(
-        r#"import * as denoShim from "test-shim";"#,
-        "\nconst [test=denoShim.Deno] = other;"
+        r#"import * as dntGlobalShim from "./_dnt.shims.js";"#,
+        "\nconst [test=dntGlobalShim.Deno] = other;"
       ),
     ),
     (
       "const obj = { test: Deno };",
       concat!(
-        r#"import * as denoShim from "test-shim";"#,
-        "\nconst obj = { test: denoShim.Deno };"
+        r#"import * as dntGlobalShim from "./_dnt.shims.js";"#,
+        "\nconst obj = { test: dntGlobalShim.Deno };"
       ),
     ),
     (
       concat!(
-        "const decl01 = Blob;\n",
-        "const decl02 = crypto;\n",
-        "const decl03 = fetch;\n",
-        "const decl04 = File;\n",
-        "const decl05 = FormData;\n",
-        "const decl06 = Headers;\n",
-        "const decl07 = Request;\n",
-        "const decl08 = Response;\n",
-        "const decl09 = alert;\n",
-        "const decl10 = confirm;\n",
-        "const decl11: typeof prompt = prompt;\n",
+        "const decl01 = Deno;\n",
+        "const decl02 = setTimeout;\n",
+        "const decl03 = setInterval;\n",
+        "const decl04: typeof setTimeout = setTimeout;\n",
         "setTimeout(() => {}, 100);\n",
-        "setInterval(() => {}, 100);\n",
       ),
       concat!(
-        r#"import * as denoShim from "test-shim";"#,
-        "\nconst decl01 = denoShim.Blob;\n",
-        "const decl02 = denoShim.crypto;\n",
-        "const decl03 = denoShim.fetch;\n",
-        "const decl04 = denoShim.File;\n",
-        "const decl05 = denoShim.FormData;\n",
-        "const decl06 = denoShim.Headers;\n",
-        "const decl07 = denoShim.Request;\n",
-        "const decl08 = denoShim.Response;\n",
-        "const decl09 = denoShim.alert;\n",
-        "const decl10 = denoShim.confirm;\n",
-        "const decl11: typeof denoShim.prompt = denoShim.prompt;\n",
-        "denoShim.setTimeout(() => {}, 100);\n",
-        "denoShim.setInterval(() => {}, 100);\n",
+        r#"import * as dntGlobalShim from "./_dnt.shims.js";"#,
+        "\nconst decl01 = dntGlobalShim.Deno;\n",
+        "const decl02 = dntGlobalShim.setTimeout;\n",
+        "const decl03 = dntGlobalShim.setInterval;\n",
+        "const decl04: typeof dntGlobalShim.setTimeout = dntGlobalShim.setTimeout;\n",
+        "dntGlobalShim.setTimeout(() => {}, 100);\n",
       ),
     ),
   ])
@@ -113,7 +97,7 @@ async fn transform_legacy_deno_shim_ignore_warnings() {
 }
 
 #[tokio::test]
-async fn transform_global_this_deno() {
+async fn transform_global_this_shim() {
   assert_transforms(vec![
     (
       concat!(
@@ -127,15 +111,15 @@ async fn transform_global_this_deno() {
         "typeof globalThis.Deno;",
       ),
       concat!(
-        r#"import * as denoShim from "test-shim";"#,
-        "\n({ ...denoShim, ...globalThis }).Deno.readTextFile();",
+        r#"import * as dntGlobalShim from "./_dnt.shims.js";"#,
+        "\n({ ...dntGlobalShim, ...globalThis }).Deno.readTextFile();",
         "globalThis.test();",
         "globalThis.test.test();",
         "globalThis['test']();",
         r#"globalThis["test"]();"#,
         "globalThis.Deno = 5;",
-        "true ? ({ ...denoShim, ...globalThis }) : ({ ...denoShim, ...globalThis });",
-        "typeof ({ ...denoShim, ...globalThis }).Deno;"
+        "true ? ({ ...dntGlobalShim, ...globalThis }) : ({ ...dntGlobalShim, ...globalThis });",
+        "typeof ({ ...dntGlobalShim, ...globalThis }).Deno;"
       )
     ),
   ]).await;
@@ -147,9 +131,9 @@ async fn transform_window() {
     (
       concat!("window.test = 5;", "window.Deno.test();",),
       concat!(
-        r#"import * as denoShim from "test-shim";"#,
+        r#"import * as dntGlobalShim from "./_dnt.shims.js";"#,
         "\nglobalThis.test = 5;",
-        "({ ...denoShim, ...globalThis }).Deno.test();",
+        "({ ...dntGlobalShim, ...globalThis }).Deno.test();",
       ),
     ),
     (
@@ -210,9 +194,9 @@ async fn transform_deno_collision() {
       "Deno.test;"
     ),
     concat!(
-      r#"import * as denoShim from "test-shim";"#,
+      r#"import * as dntGlobalShim from "./_dnt.shims.js";"#,
       "\nconst Deno = {};",
-      "const { Deno: Deno2 } = ({ ...denoShim, ...globalThis });",
+      "const { Deno: Deno2 } = ({ ...dntGlobalShim, ...globalThis });",
       "Deno2.readTextFile();",
       "Deno.test;"
     ),
@@ -962,6 +946,7 @@ async fn test_entry_points() {
         );
     })
     .add_test_entry_point("file:///mod.test.ts")
+    .add_default_shims()
     .transform()
     .await
     .unwrap();
@@ -978,30 +963,47 @@ async fn test_entry_points() {
     },]
   );
   assert_eq!(result.main.entry_points, &[PathBuf::from("mod.ts")]);
-  assert_eq!(result.main.shim_used, false);
 
   assert_files!(
     result.test.files,
-    &[(
-      "mod.test.ts",
-      concat!(
-        "import * as denoShim from \"deno.ns\";\n",
-        "import './mod.js';\n",
-        "import package1 from 'preact';\n",
-        "import package3 from 'react';\n",
-        "denoShim.Deno.writeTextFile('test', 'test')"
+    &[
+      (
+        "mod.test.ts",
+        concat!(
+          "import * as dntGlobalShim from \"./_dnt.test_shims.js\";\n",
+          "import './mod.js';\n",
+          "import package1 from 'preact';\n",
+          "import package3 from 'react';\n",
+          "dntGlobalShim.Deno.writeTextFile('test', 'test')"
+        ),
       ),
-    )]
+      (
+        "_dnt.test_shims.ts",
+        concat!(
+          "export { Deno } from \"@deno/shim-deno\";\n",
+          "export { setTimeout, setInterval } from \"@deno/shim-timers\";\n",
+        ),
+      )
+    ]
   );
   assert_eq!(
     result.test.dependencies,
-    &[Dependency {
-      name: "react".to_string(),
-      version: "17.0.2".to_string(),
-    },]
+    &[
+      Dependency {
+        name: "react".to_string(),
+        version: "17.0.2".to_string(),
+      },
+      Dependency {
+        name: "@deno/shim-deno".to_string(),
+        version: "^0.1.0".to_string(),
+      },
+      Dependency {
+        name: "@deno/shim-timers".to_string(),
+        version: "^0.1.0".to_string(),
+      }
+    ]
   );
   assert_eq!(result.test.entry_points, &[PathBuf::from("mod.test.ts")]);
-  assert_eq!(result.test.shim_used, true);
 }
 
 #[tokio::test]
@@ -1065,14 +1067,12 @@ async fn test_entry_points_same_module_multiple_places() {
     ]
   );
   assert_eq!(result.main.entry_points, &[PathBuf::from("mod.ts")]);
-  assert_eq!(result.main.shim_used, false);
 
   assert_files!(
     result.test.files,
     &[("mod.test.ts", "import * as deps from './deps.js';",)]
   );
   assert_eq!(result.test.entry_points, &[PathBuf::from("mod.test.ts")]);
-  assert_eq!(result.test.shim_used, false);
 }
 
 #[tokio::test]
@@ -1121,14 +1121,12 @@ async fn polyfills() {
     ]
   );
   assert_eq!(result.main.entry_points, &[PathBuf::from("mod.ts")]);
-  assert_eq!(result.main.shim_used, false);
 
   assert_files!(
     result.test.files,
     &[("mod.test.ts", concat!("import * as mod from './mod.js';",),)]
   );
   assert_eq!(result.test.entry_points, &[PathBuf::from("mod.test.ts")]);
-  assert_eq!(result.test.shim_used, false);
 }
 
 #[tokio::test]
@@ -1146,7 +1144,6 @@ async fn polyfills_test_files() {
 
   assert_files!(result.main.files, &[("mod.ts", "",)]);
   assert_eq!(result.main.entry_points, &[PathBuf::from("mod.ts")]);
-  assert_eq!(result.main.shim_used, false);
 
   assert_files!(
     result.test.files,
@@ -1165,7 +1162,6 @@ async fn polyfills_test_files() {
     ]
   );
   assert_eq!(result.test.entry_points, &[PathBuf::from("mod.test.ts")]);
-  assert_eq!(result.test.shim_used, false);
 }
 
 #[tokio::test]
@@ -1224,7 +1220,6 @@ async fn redirects_general() {
     ]
   );
   assert_eq!(result.main.entry_points, &[PathBuf::from("mod.ts")]);
-  assert_eq!(result.main.shim_used, false);
 }
 
 #[tokio::test]
@@ -1243,7 +1238,6 @@ async fn redirect_entrypoint() {
 
   assert_files!(result.main.files, &[("mod.node.ts", "5;")]);
   assert_eq!(result.main.entry_points, &[PathBuf::from("mod.node.ts")]);
-  assert_eq!(result.main.shim_used, false);
 }
 
 #[tokio::test]

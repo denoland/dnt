@@ -14,6 +14,25 @@ use crate::graph::ModuleGraph;
 use crate::specifiers::Specifiers;
 use crate::utils::url_to_file_path;
 
+pub struct SyntheticSpecifiers {
+  pub polyfills: ModuleSpecifier,
+  pub shims: ModuleSpecifier,
+}
+
+lazy_static! {
+  pub static ref SYNTHETIC_SPECIFIERS: SyntheticSpecifiers =
+    SyntheticSpecifiers {
+      polyfills: ModuleSpecifier::parse("dnt://_dnt.polyfills.ts").unwrap(),
+      shims: ModuleSpecifier::parse("dnt://_dnt.shims.ts").unwrap(),
+    };
+  pub static ref SYNTHETIC_TEST_SPECIFIERS: SyntheticSpecifiers =
+    SyntheticSpecifiers {
+      polyfills: ModuleSpecifier::parse("dnt://_dnt.test_polyfills.ts")
+        .unwrap(),
+      shims: ModuleSpecifier::parse("dnt://_dnt.test_shims.ts").unwrap(),
+    };
+}
+
 pub struct Mappings {
   inner: HashMap<ModuleSpecifier, PathBuf>,
 }
@@ -139,6 +158,44 @@ impl Mappings {
         }
       }
     }
+
+    // add the synthetic specifiers even though some of these files won't be created
+    fn add_synthetic_specifier(
+      mappings: &mut HashMap<ModuleSpecifier, PathBuf>,
+      mapped_filepaths_no_ext: &mut HashSet<PathBuf>,
+      specifier: &ModuleSpecifier,
+    ) {
+      debug_assert!(specifier.to_string().starts_with("dnt://"));
+      mappings.insert(
+        specifier.clone(),
+        get_mapped_file_path(
+          MediaType::TypeScript,
+          &specifier.to_string()["dnt://".len()..],
+          mapped_filepaths_no_ext,
+        ),
+      );
+    }
+
+    add_synthetic_specifier(
+      &mut mappings,
+      &mut mapped_filepaths_no_ext,
+      &SYNTHETIC_SPECIFIERS.polyfills,
+    );
+    add_synthetic_specifier(
+      &mut mappings,
+      &mut mapped_filepaths_no_ext,
+      &SYNTHETIC_TEST_SPECIFIERS.polyfills,
+    );
+    add_synthetic_specifier(
+      &mut mappings,
+      &mut mapped_filepaths_no_ext,
+      &SYNTHETIC_SPECIFIERS.shims,
+    );
+    add_synthetic_specifier(
+      &mut mappings,
+      &mut mapped_filepaths_no_ext,
+      &SYNTHETIC_TEST_SPECIFIERS.shims,
+    );
 
     Ok(Mappings { inner: mappings })
   }

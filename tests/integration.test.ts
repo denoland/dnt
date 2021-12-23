@@ -4,10 +4,14 @@ import {
   assertEquals,
   assertRejects,
 } from "https://deno.land/std@0.109.0/testing/asserts.ts";
-import { build, BuildOptions } from "../mod.ts";
+import { build, BuildOptions, ShimOptions } from "../mod.ts";
 
 const versions = {
-  denoNs: "0.8.0",
+  denoShim: "~0.1.0",
+  cryptoShim: "~0.1.0",
+  promptsShim: "~0.1.0",
+  timersShim: "~0.1.0",
+  undici: "^4.12.1",
   chalk: "4.1.2",
   nodeTypes: "16.11.1",
   tsLib: "2.3.1",
@@ -17,6 +21,10 @@ Deno.test("should build test project", async () => {
   await runTest("test_project", {
     entryPoints: ["mod.ts"],
     outDir: "./npm",
+    shims: {
+      ...getAllShimOptions(false),
+      deno: "dev",
+    },
     package: {
       name: "add",
       version: "1.0.0",
@@ -49,7 +57,7 @@ Deno.test("should build test project", async () => {
       devDependencies: {
         "@types/node": versions.nodeTypes,
         chalk: versions.chalk,
-        "deno.ns": versions.denoNs,
+        "@deno/shim-deno": versions.denoShim,
       },
     });
     assertEquals(
@@ -63,6 +71,8 @@ esm/deps/deno_land_std_0_109_0/testing/_diff.js
 umd/deps/deno_land_std_0_109_0/testing/_diff.js
 esm/deps/deno_land_std_0_109_0/testing/asserts.js
 umd/deps/deno_land_std_0_109_0/testing/asserts.js
+esm/_dnt.test_shims.js
+umd/_dnt.test_shims.js
 test_runner.js
 `,
     );
@@ -73,6 +83,10 @@ Deno.test("should build with all options off", async () => {
   await runTest("test_project", {
     entryPoints: ["mod.ts"],
     outDir: "./npm",
+    shims: {
+      ...getAllShimOptions(false),
+      deno: "dev",
+    },
     typeCheck: false,
     cjs: false,
     declaration: false,
@@ -115,6 +129,10 @@ Deno.test("should build bin project", async () => {
       name: "add",
       path: "./mod.ts",
     }],
+    shims: {
+      ...getAllShimOptions(false),
+      deno: "dev",
+    },
     outDir: "./npm",
     package: {
       name: "add",
@@ -134,7 +152,7 @@ Deno.test("should build bin project", async () => {
       devDependencies: {
         "@types/node": versions.nodeTypes,
         chalk: versions.chalk,
-        "deno.ns": versions.denoNs,
+        "@deno/shim-deno": versions.denoShim,
       },
       exports: {},
     });
@@ -154,6 +172,10 @@ Deno.test("error for TLA when emitting CommonJS", async () => {
   await assertRejects(() =>
     runTest("tla_project", {
       entryPoints: ["mod.ts"],
+      shims: {
+        ...getAllShimOptions(false),
+        deno: "dev",
+      },
       outDir: "./npm",
       package: {
         name: "add",
@@ -166,6 +188,10 @@ Deno.test("error for TLA when emitting CommonJS", async () => {
 Deno.test("not error for TLA when not using CommonJS", async () => {
   await runTest("tla_project", {
     entryPoints: ["mod.ts"],
+    shims: {
+      ...getAllShimOptions(false),
+      deno: "dev",
+    },
     outDir: "./npm",
     cjs: false, // ok, because cjs is disabled now
     package: {
@@ -191,7 +217,7 @@ Deno.test("not error for TLA when not using CommonJS", async () => {
       devDependencies: {
         "@types/node": versions.nodeTypes,
         chalk: versions.chalk,
-        "deno.ns": versions.denoNs,
+        "@deno/shim-deno": versions.denoShim,
       },
     });
   });
@@ -201,6 +227,10 @@ Deno.test("should build with source maps", async () => {
   await runTest("test_project", {
     entryPoints: ["mod.ts"],
     outDir: "./npm",
+    shims: {
+      ...getAllShimOptions(false),
+      deno: "dev",
+    },
     package: {
       name: "add",
       version: "1.0.0",
@@ -221,6 +251,8 @@ esm/deps/deno_land_std_0_109_0/testing/_diff.js
 umd/deps/deno_land_std_0_109_0/testing/_diff.js
 esm/deps/deno_land_std_0_109_0/testing/asserts.js
 umd/deps/deno_land_std_0_109_0/testing/asserts.js
+esm/_dnt.test_shims.js
+umd/_dnt.test_shims.js
 test_runner.js
 `,
     );
@@ -231,6 +263,10 @@ Deno.test("should build with mappings", async () => {
   await runTest("mappings_project", {
     entryPoints: ["mod.ts"],
     outDir: "./npm",
+    shims: {
+      ...getAllShimOptions(false),
+      deno: "dev",
+    },
     package: {
       name: "mappings",
       version: "1.2.3",
@@ -264,7 +300,7 @@ Deno.test("should build with mappings", async () => {
       devDependencies: {
         "@types/node": versions.nodeTypes,
         chalk: versions.chalk,
-        "deno.ns": versions.denoNs,
+        "@deno/shim-deno": versions.denoShim,
       },
     });
     assertEquals(
@@ -272,6 +308,8 @@ Deno.test("should build with mappings", async () => {
       `src/
 esm/mod.test.js
 umd/mod.test.js
+esm/_dnt.test_shims.js
+umd/_dnt.test_shims.js
 test_runner.js
 `,
     );
@@ -282,13 +320,18 @@ Deno.test("should build shim project", async () => {
   await runTest("shim_project", {
     entryPoints: ["mod.ts"],
     outDir: "./npm",
+    shims: getAllShimOptions(true),
     package: {
       name: "shim-package",
       version: "1.0.0",
     },
   }, (output) => {
     assertEquals(output.packageJson.dependencies, {
-      "deno.ns": versions.denoNs,
+      "@deno/shim-crypto": versions.cryptoShim,
+      "@deno/shim-deno": versions.denoShim,
+      "@deno/shim-prompts": versions.promptsShim,
+      "@deno/shim-timers": versions.timersShim,
+      "undici": versions.undici,
     });
   });
 });
@@ -297,6 +340,10 @@ Deno.test("should build polyfill project", async () => {
   await runTest("polyfill_project", {
     entryPoints: ["mod.ts"],
     outDir: "./npm",
+    shims: {
+      ...getAllShimOptions(false),
+      deno: "dev",
+    },
     package: {
       name: "polyfill-package",
       version: "1.0.0",
@@ -310,6 +357,10 @@ Deno.test("should build and test node files project", async () => {
   await runTest("redirects_project", {
     entryPoints: ["mod.ts"],
     outDir: "./npm",
+    shims: {
+      ...getAllShimOptions(false),
+      deno: "dev",
+    },
     package: {
       name: "node-files-package",
       version: "1.0.0",
@@ -327,6 +378,10 @@ Deno.test("should handle json modules", async () => {
   await runTest("json_module_project", {
     entryPoints: ["mod.ts"],
     outDir: "./npm",
+    shims: {
+      ...getAllShimOptions(false),
+      deno: "dev",
+    },
     package: {
       name: "json-module-package",
       version: "1.0.0",
@@ -398,4 +453,15 @@ async function runTest(
       Deno.chdir(originalCwd);
     }
   }
+}
+
+function getAllShimOptions(value: boolean | "dev"): ShimOptions {
+  return {
+    deno: value,
+    timers: value,
+    prompts: value,
+    blob: value,
+    crypto: value,
+    undici: value,
+  };
 }

@@ -60,7 +60,7 @@ pub async fn assert_transforms(files: Vec<(&str, &str)>) {
         loader.add_local_file(&format!("/{}", file_name), file.0);
       }
     })
-    .shim_package_name("test-shim");
+    .add_default_shims();
 
   for i in 1..files.len() {
     test_builder.add_entry_point(format!("file:///mod{}.ts", i));
@@ -71,7 +71,13 @@ pub async fn assert_transforms(files: Vec<(&str, &str)>) {
     .into_iter()
     .map(|(file_name, file)| (file_name, file.1))
     .collect::<Vec<_>>();
-  assert_files!(result.main.files, expected_files);
+  let actual_files = result
+    .main
+    .files
+    .into_iter()
+    .filter(|f| !f.file_path.ends_with("_dnt.shims.ts"))
+    .collect::<Vec<_>>();
+  assert_files!(actual_files, expected_files);
 }
 
 pub async fn assert_identity_transforms(files: Vec<&str>) {
