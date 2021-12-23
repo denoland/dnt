@@ -6,6 +6,8 @@ use std::path::PathBuf;
 use anyhow::Result;
 use deno_ast::ModuleSpecifier;
 
+pub const BOM_CHAR: char = '\u{FEFF}';
+
 pub fn get_relative_specifier(
   from: impl AsRef<Path>,
   to: impl AsRef<Path>,
@@ -65,4 +67,13 @@ fn is_windows_path_segment(specifier: &str) -> bool {
   }
 
   chars.next().is_none()
+}
+
+/// Strips the byte order mark from the provided text if it exists.
+pub fn strip_bom(text: &str) -> &str {
+  if text.starts_with(BOM_CHAR) {
+    &text[BOM_CHAR.len_utf8()..]
+  } else {
+    text
+  }
 }
