@@ -41,7 +41,7 @@ pub struct GetDenoGlobalTextChangesParams<'a> {
 
 pub struct GetDenoGlobalTextChanges {
   pub shim_used: bool,
-  pub text_changes: Vec<TextChange>
+  pub text_changes: Vec<TextChange>,
 }
 
 struct Context<'a> {
