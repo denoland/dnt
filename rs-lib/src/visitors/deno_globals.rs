@@ -39,6 +39,11 @@ pub struct GetDenoGlobalTextChangesParams<'a> {
   pub ignore_line_indexes: &'a HashSet<usize>,
 }
 
+pub struct GetDenoGlobalTextChanges {
+  pub shim_used: bool,
+  pub text_changes: Vec<TextChange>
+}
+
 struct Context<'a> {
   program: &'a Program<'a>,
   top_level_context: SyntaxContext,
@@ -50,7 +55,7 @@ struct Context<'a> {
 
 pub fn get_deno_global_text_changes(
   params: &GetDenoGlobalTextChangesParams<'_>,
-) -> Vec<TextChange> {
+) -> GetDenoGlobalTextChanges {
   let top_level_decls =
     get_top_level_decls(params.program, params.top_level_context);
   let mut context = Context {
@@ -80,7 +85,10 @@ pub fn get_deno_global_text_changes(
     });
   }
 
-  context.text_changes
+  GetDenoGlobalTextChanges {
+    shim_used: context.import_shim,
+    text_changes: context.text_changes,
+  }
 }
 
 fn visit_children(node: Node, import_name: &str, context: &mut Context) {
