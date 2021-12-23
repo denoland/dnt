@@ -58,3 +58,10 @@ Deno.test("should get when all false", () => {
   assertEquals(result.shims.length, 0);
   assertEquals(result.testShims.length, 0);
 });
+
+Deno.test("should get when all undefined", () => {
+  const result = shimOptionsToTransformShims({});
+
+  assertEquals(result.shims.length, 0);
+  assertEquals(result.testShims.length, 0);
+});

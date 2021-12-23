@@ -6,27 +6,25 @@ import type { Shim } from "../transform.ts";
  * `"dev"` to only use it in the test code, or `false` to not use the shim
  * at all.
  *
- * You must provide a value for each of these options in order to ensure
- * the shimming is done correctly and to be notified via compiler errors
- * for new shims.
+ * @remarks These all default to `false`.
  */
 export interface ShimOptions {
   /** Shim the `Deno` namespace. */
-  deno: boolean | "dev";
-  /** Shim global `setTimeout` and `setInterval` functions with
+  deno?: boolean | "dev";
+  /** Shim the global `setTimeout` and `setInterval` functions with
    * Deno and browser compatible versions.
    */
-  timers: boolean | "dev";
-  /** Shim global `confirm`, `alert`, and `prompt` functions. */
-  prompts: boolean | "dev";
+  timers?: boolean | "dev";
+  /** Shim the global `confirm`, `alert`, and `prompt` functions. */
+  prompts?: boolean | "dev";
   /** Shim the `Blob` global with the one from the "buffer" module. */
-  blob: boolean | "dev";
+  blob?: boolean | "dev";
   /** Shim the `crypto` global. */
-  crypto: boolean | "dev";
+  crypto?: boolean | "dev";
   /** Shim `fetch`, `File`, `FormData`, `Headers`, `Request`, and `Response` by
    * using the "undici" package (https://www.npmjs.com/package/undici).
    */
-  undici: boolean | "dev";
+  undici?: boolean | "dev";
   /** Custom shims to use. */
   custom?: Shim[];
   /** Custom shims to use only for the test code. */

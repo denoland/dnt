@@ -14,7 +14,7 @@ There are several steps done in a pipeline:
 
 1. Transforms Deno code to Node/canonical TypeScript including files found by `deno test`.
    - Rewrites module specifiers.
-   - Injects a [Deno shim](https://github.com/denoland/deno.ns) for any `Deno` namespace or other global name usages.
+   - Injects [shims](https://github.com/denoland/node_deno_shims) for any `Deno` namespace or other global name usages as specified.
    - Rewrites [Skypack](https://www.skypack.dev/) and [esm.sh](https://esm.sh/) specifiers to bare specifiers and includes these dependencies in a package.json.
    - When remote modules cannot be resolved to an npm package, it downloads them and rewrites specifiers to make them local.
    - Allows mapping any specifier to an npm package.
@@ -33,6 +33,10 @@ There are several steps done in a pipeline:
    await build({
      entryPoints: ["./mod.ts"],
      outDir: "./npm",
+     shims: {
+       // see JS docs for overview and more options
+       deno: true,
+     },
      package: {
        // package.json properties
        name: "your-package",
@@ -121,6 +125,102 @@ await build({
 });
 ```
 
+### Shims
+
+dnt will shim the globals specified in the build options. For example, if you specify the following build options:
+
+```ts
+await build({
+  // ...etc...
+  shims: {
+    deno: true,
+    timers: false,
+    prompts: false,
+    blob: false,
+    crypto: false,
+    undici: false,
+  },
+});
+```
+
+Then write a statement like so...
+
+```ts
+Deno.readTextFileSync(...);
+```
+
+...then dnt will create a shim file in the output, re-exporting the [@deno/shim-deno](https://github.com/denoland/node_deno_shims) npm shim package and change the Deno global be used as a property of this object.
+
+```ts
+import * as dntGlobalShim from "./_dnt.shims.js";
+
+dntGlobalShim.Deno.readTextFileSync(...);
+```
+
+#### Test-Only Shimming
+
+If you want a shim to only be used in your test code as a dev dependency, then specify `"dev"` for the option.
+
+For example, to use the `Deno` namespace only for development and the `setTimeout` and `setInterval` browser/Deno compatible shims in the distributed code, you would do:
+
+```ts
+await build({
+  // ...etc...
+  shims: {
+    deno: "dev",
+    timers: true,
+  },
+});
+```
+
+#### Preventing Shimming
+
+If you don't want shimming to occur, then you can set all the options to `false` in the build options. Maybe there are specific instances where you don't want shimming to happen though. To prevent it, add a `// dnt-shim-ignore` comment:
+
+```ts
+// dnt-shim-ignore
+Deno.readTextFileSync(...);
+```
+
+...which will now output that code as-is.
+
+#### Custom Shims (Advanced)
+
+In addition to the pre-defined shim options, you may specify your own custom packages to use to shim globals.
+
+For example:
+
+```ts
+await build({
+  // ...etc...
+  shims: {
+    // ...etc...
+    custom: [{
+      package: {
+        name: "@deno/shim-prompts",
+        version: "~0.1.0",
+      },
+      // these are the packages named exports to use and the global
+      // names that will be shimmed
+      globalNames: ["alert", "confirm", "prompt"],
+    }, {
+      package: {
+        name: "buffer", // uses node's "buffer" module
+      },
+      globalNames: ["Blob"],
+    }],
+    // shims to only use in the tests
+    customDev: [{
+      package: {
+        name: "@deno/shim-timers",
+        version: "~0.1.0",
+      },
+      globalNames: ["setTimeout", "setInterval"],
+    }],
+  },
+});
+```
+
 ### Specifier to Npm Package Mappings
 
 In most cases, dnt won't know about an npm package being available for one of your dependencies and will download remote modules to include in your package. There are scenarios though where an npm package may exist and you want to use it instead. This can be done by providing a specifier to npm package mapping.
@@ -202,31 +302,6 @@ await build({
 ```
 
 This will add a `"bin"` entry to the package.json and add `#!/usr/bin/env node` to the top of the specified entry point.
-
-### Preventing Shimming
-
-Dnt shims calls to Deno globals like so...
-
-```ts
-Deno.readTextFileSync(...);
-```
-
-...by adding an import statement to a [shim library](https://github.com/denoland/deno.ns) and changing the Deno global to reference to point at it.
-
-```ts
-import * as denoShim from "deno.ns";
-
-denoShim.Deno.readTextFileSync(...);
-```
-
-Maybe there are scenarios where you don't want that to happen though. To prevent it, add a `// dnt-shim-ignore` comment:
-
-```ts
-// dnt-shim-ignore
-Deno.readTextFileSync(...);
-```
-
-...which will now output that code as-is.
 
 ### Node and Deno Specific Code
 
@@ -371,7 +446,8 @@ import { transform } from "https://deno.land/x/dnt/transform.ts";
 const outputResult = await transform({
   entryPoints: ["./mod.ts"],
   testEntryPoints: ["./mod.test.ts"],
-  shimPackageName: "deno.ns",
+  shims: [],
+  testShims: [],
   // mappings: {}, // optional specifier mappings
 });
 ```
@@ -388,7 +464,8 @@ use deno_node_transform::TransformOptions;
 let output_result = transform(TransformOptions {
   entry_points: vec![ModuleSpecifier::from_file_path(PathBuf::from("./mod.ts")).unwrap()],
   test_entry_points: vec![ModuleSpecifier::from_file_path(PathBuf::from("./mod.test.ts")).unwrap()],
-  shim_package_name: "deno.ns".to_string(),
+  shims: vec![],
+  test_shims: vec![],
   loader: None, // use the default loader
   specifier_mappings: None,
 }).await?;
