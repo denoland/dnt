@@ -230,7 +230,7 @@ pub async fn transform(options: TransformOptions) -> Result<TransformOutput> {
         if let Some(source) = &module.maybe_source {
           format!(
             "export default JSON.parse(`{}`);",
-            strip_bom(&source.replace("`", "\\`"))
+            strip_bom(&source.replace("`", "\\`").replace("${", "\\${"))
           )
         } else {
           continue;
