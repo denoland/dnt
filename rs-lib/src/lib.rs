@@ -35,6 +35,7 @@ pub use loader::Loader;
 pub use utils::url_to_file_path;
 
 use crate::declaration_file_resolution::TypesDependency;
+use crate::utils::strip_bom;
 
 mod declaration_file_resolution;
 mod graph;
@@ -229,7 +230,7 @@ pub async fn transform(options: TransformOptions) -> Result<TransformOutput> {
         if let Some(source) = &module.maybe_source {
           format!(
             "export default JSON.parse(`{}`);",
-            source.replace("`", "\\`")
+            strip_bom(&source.replace("`", "\\`"))
           )
         } else {
           continue;

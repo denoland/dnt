@@ -1276,7 +1276,7 @@ async fn json_module_import_default() {
           "/mod.ts",
           r#"import jsonData from './data.json' assert { type: 'json' };"#,
         )
-        .add_local_file("/data.json", r#"{ "prop": 5 }"#);
+        .add_local_file("/data.json", "\u{FEFF}{ \"prop\": 5 }");
     })
     .transform()
     .await
