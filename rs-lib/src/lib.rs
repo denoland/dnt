@@ -186,17 +186,17 @@ pub async fn transform(options: TransformOptions) -> Result<TransformOutput> {
 
             // shim changes
             {
-              let shim_changes =
+              let result =
                 get_deno_global_text_changes(&GetDenoGlobalTextChangesParams {
                   program: &program,
                   top_level_context: parsed_source.top_level_context(),
                   shim_package_name: shim_package_name.as_str(),
                   ignore_line_indexes: &ignore_line_indexes.line_indexes,
                 });
-              if !shim_changes.is_empty() {
+              if result.shim_used {
                 environment.shim_used = true;
               }
-              text_changes.extend(shim_changes);
+              text_changes.extend(result.text_changes);
             }
 
             text_changes
