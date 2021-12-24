@@ -33,6 +33,8 @@ export interface GlobalName {
    * @remarks Defaults to the name. Specify `"default"` to use the default export.
    */
   exportName?: string;
+  /** Whether this is a name that only exists as a type declaration. */
+  typeOnly?: boolean;
 }
 
 export interface Shim {
@@ -123,8 +125,10 @@ function mapToGlobalName(value: string | GlobalName): GlobalName {
   if (typeof value === "string") {
     return {
       name: value,
+      typeOnly: false,
     };
   } else {
+    value.typeOnly ??= false;
     return value;
   }
 }

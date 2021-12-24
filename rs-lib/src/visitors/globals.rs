@@ -57,7 +57,7 @@ pub fn get_global_text_changes(
   // currently very crude. This should be improved to only look
   // at binding declarations
   let all_ident_names = get_all_ident_names(context.program);
-  let global_shim_name = get_unique_name("dntGlobalShim", &all_ident_names);
+  let global_shim_name = get_unique_name("dntShim", &all_ident_names);
 
   visit_children(program.into(), &global_shim_name, &mut context);
 
@@ -94,7 +94,7 @@ fn visit_children(node: Node, import_name: &str, context: &mut Context) {
       {
         context.text_changes.push(TextChange {
           span: ident.span(),
-          new_text: format!("({{ ...{}, ...globalThis }})", import_name),
+          new_text: format!("{}.dntGlobalThis", import_name.to_string()),
         });
         context.import_shim = true;
         return;
@@ -113,7 +113,7 @@ fn visit_children(node: Node, import_name: &str, context: &mut Context) {
         } else {
           context.text_changes.push(TextChange {
             span: ident.span(),
-            new_text: format!("({{ ...{}, ...globalThis }})", import_name),
+            new_text: format!("{}.dntGlobalThis", import_name.to_string()),
           });
           context.import_shim = true;
         }
@@ -139,7 +139,11 @@ fn visit_children(node: Node, import_name: &str, context: &mut Context) {
 }
 
 fn should_ignore_global_this(ident: &Ident, context: &Context) -> bool {
-  if should_ignore(ident.into(), context) || is_in_type(ident.into()) {
+  if has_ignore_comment(ident.into(), context)
+    || is_declaration_ident(ident.into())
+    || is_directly_in_condition(ident.into())
+    || is_in_type(ident.into())
+  {
     return true;
   }
 

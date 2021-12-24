@@ -152,9 +152,9 @@ Deno.readTextFileSync(...);
 ...then dnt will create a shim file in the output, re-exporting the [@deno/shim-deno](https://github.com/denoland/node_deno_shims) npm shim package and change the Deno global be used as a property of this object.
 
 ```ts
-import * as dntGlobalShim from "./_dnt.shims.js";
+import * as dntShim from "./_dnt.shims.js";
 
-dntGlobalShim.Deno.readTextFileSync(...);
+dntShim.Deno.readTextFileSync(...);
 ```
 
 #### Test-Only Shimming

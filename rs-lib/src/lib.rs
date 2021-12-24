@@ -102,6 +102,8 @@ pub struct GlobalName {
   pub name: String,
   /// Optional name of the export from the package.
   pub export_name: Option<String>,
+  /// Whether this is a name that only exists as a type declaration.
+  pub type_only: bool,
 }
 
 #[cfg_attr(feature = "serialization", derive(serde::Deserialize))]
@@ -369,7 +371,7 @@ fn check_add_shim_file_to_environment(
   shim_file_path: &Path,
 ) {
   if env_context.used_shim {
-    let shim_file_text = build_shim_file(env_context.shims.iter());
+    let shim_file_text = build_shim_file(env_context.shims);
     env_context.environment.files.push(OutputFile {
       file_path: shim_file_path.to_path_buf(),
       file_text: shim_file_text,
@@ -392,19 +394,44 @@ fn check_add_shim_file_to_environment(
     }
   }
 
-  fn build_shim_file<'a>(shims: impl Iterator<Item = &'a Shim>) -> String {
+  fn build_shim_file(shims: &[Shim]) -> String {
+    fn get_specifer_text(n: &GlobalName) -> String {
+      if let Some(export_name) = &n.export_name {
+        format!("{} as {}", export_name, n.name)
+      } else {
+        n.name.to_string()
+      }
+    }
+
     let mut text = String::new();
-    for shim in shims {
+    for shim in shims.iter() {
+      let declaration_names = shim
+        .global_names
+        .iter()
+        .filter(|n| !n.type_only)
+        .collect::<Vec<_>>();
+      if !declaration_names.is_empty() {
+        text.push_str(&format!(
+          "import {{ {} }} from \"{}\";\n",
+          declaration_names
+            .into_iter()
+            .map(get_specifer_text)
+            .collect::<Vec<_>>()
+            .join(", "),
+          shim.package.name
+        ));
+      }
+
       text.push_str(&format!(
         "export {{ {} }} from \"{}\";\n",
         shim
           .global_names
           .iter()
           .map(|n| {
-            if let Some(export_name) = &n.export_name {
-              format!("{} as {}", export_name, n.name)
+            if n.type_only {
+              format!("type {}", get_specifer_text(n))
             } else {
-              n.name.to_string()
+              get_specifer_text(n)
             }
           })
           .collect::<Vec<_>>()
@@ -412,10 +439,25 @@ fn check_add_shim_file_to_environment(
         shim.package.name
       ));
     }
-    if text.is_empty() {
-      // shouldn't happen
-      text.push_str("export {};\n");
+
+    if !text.is_empty() {
+      text.push('\n');
     }
+
+    text.push_str("const dntGlobals = {\n");
+    for global_name in shims.iter().map(|s| s.global_names.iter()).flatten() {
+      if !global_name.type_only {
+        text.push_str(&format!("  {},\n", global_name.name));
+      }
+    }
+    text.push_str("};\n\n");
+    text.push_str("export const dntGlobalThis = createMergeProxy(globalThis, dntGlobals);\n\n");
+
+    text.push_str(
+      &include_str!("scripts/createMergeProxy.ts")
+        .replace("export function", "function"),
+    );
+
     text
   }
 }
