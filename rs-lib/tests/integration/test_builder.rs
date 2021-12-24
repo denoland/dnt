@@ -73,6 +73,7 @@ impl TestBuilder {
       global_names: vec![GlobalName {
         name: "Deno".to_string(),
         export_name: None,
+        type_only: false,
       }],
     };
     self.add_shim(deno_shim.clone());
@@ -86,10 +87,12 @@ impl TestBuilder {
         GlobalName {
           name: "setTimeout".to_string(),
           export_name: None,
+          type_only: false,
         },
         GlobalName {
           name: "setInterval".to_string(),
           export_name: None,
+          type_only: false,
         },
       ],
     };

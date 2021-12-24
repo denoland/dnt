@@ -35,22 +35,22 @@ async fn transform_shims() {
     (
       "Deno.readTextFile();",
       concat!(
-        r#"import * as dntGlobalShim from "./_dnt.shims.js";"#,
-        "\ndntGlobalShim.Deno.readTextFile();"
+        r#"import * as dntShim from "./_dnt.shims.js";"#,
+        "\ndntShim.Deno.readTextFile();"
       ),
     ),
     (
       "const [test=Deno] = other;",
       concat!(
-        r#"import * as dntGlobalShim from "./_dnt.shims.js";"#,
-        "\nconst [test=dntGlobalShim.Deno] = other;"
+        r#"import * as dntShim from "./_dnt.shims.js";"#,
+        "\nconst [test=dntShim.Deno] = other;"
       ),
     ),
     (
       "const obj = { test: Deno };",
       concat!(
-        r#"import * as dntGlobalShim from "./_dnt.shims.js";"#,
-        "\nconst obj = { test: dntGlobalShim.Deno };"
+        r#"import * as dntShim from "./_dnt.shims.js";"#,
+        "\nconst obj = { test: dntShim.Deno };"
       ),
     ),
     (
@@ -62,12 +62,12 @@ async fn transform_shims() {
         "setTimeout(() => {}, 100);\n",
       ),
       concat!(
-        r#"import * as dntGlobalShim from "./_dnt.shims.js";"#,
-        "\nconst decl01 = dntGlobalShim.Deno;\n",
-        "const decl02 = dntGlobalShim.setTimeout;\n",
-        "const decl03 = dntGlobalShim.setInterval;\n",
-        "const decl04: typeof dntGlobalShim.setTimeout = dntGlobalShim.setTimeout;\n",
-        "dntGlobalShim.setTimeout(() => {}, 100);\n",
+        r#"import * as dntShim from "./_dnt.shims.js";"#,
+        "\nconst decl01 = dntShim.Deno;\n",
+        "const decl02 = dntShim.setTimeout;\n",
+        "const decl03 = dntShim.setInterval;\n",
+        "const decl04: typeof dntShim.setTimeout = dntShim.setTimeout;\n",
+        "dntShim.setTimeout(() => {}, 100);\n",
       ),
     ),
   ])
@@ -88,6 +88,7 @@ async fn transform_shim_custom_shims() {
       global_names: vec![GlobalName {
         name: "fetch".to_string(),
         export_name: Some("default".to_string()),
+        type_only: false,
       }],
     })
     .add_shim(Shim {
@@ -95,9 +96,28 @@ async fn transform_shim_custom_shims() {
         name: "buffer".to_string(),
         version: None,
       },
+      global_names: vec![
+        GlobalName {
+          name: "Blob".to_string(),
+          export_name: None,
+          type_only: false,
+        },
+        GlobalName {
+          name: "Other".to_string(),
+          export_name: None,
+          type_only: true,
+        },
+      ],
+    })
+    .add_shim(Shim {
+      package: MappedSpecifier {
+        name: "type-only".to_string(),
+        version: None,
+      },
       global_names: vec![GlobalName {
-        name: "Blob".to_string(),
+        name: "TypeOnly".to_string(),
         export_name: None,
+        type_only: true,
       }],
     })
     .transform()
@@ -107,8 +127,27 @@ async fn transform_shim_custom_shims() {
   assert_files!(
     result.main.files,
     &[
-      ("_dnt.shims.ts", "export { default as fetch } from \"node-fetch\";\nexport { Blob } from \"buffer\";\n"),
-      ("mod.ts", "import * as dntGlobalShim from \"./_dnt.shims.js\";\ndntGlobalShim.fetch(); console.log(dntGlobalShim.Blob);"),
+      (
+        "_dnt.shims.ts",
+        get_shim_file_text(
+          concat!(
+            "import { default as fetch } from \"node-fetch\";\n",
+            "export { default as fetch } from \"node-fetch\";\n",
+            "import { Blob } from \"buffer\";\n",
+            "export { Blob, type Other } from \"buffer\";\n",
+            "export { type TypeOnly } from \"type-only\";\n",
+            "\n",
+            "const dntGlobals = {\n",
+            "  fetch,\n",
+            "  Blob,\n",
+            "};\n",
+          ).to_string(),
+        ),
+      ),
+      (
+        "mod.ts",
+        "import * as dntShim from \"./_dnt.shims.js\";\ndntShim.fetch(); console.log(dntShim.Blob);".to_string()
+      ),
     ]
   );
   assert_eq!(
@@ -147,31 +186,30 @@ async fn transform_legacy_deno_shim_ignore_warnings() {
 
 #[tokio::test]
 async fn transform_global_this_shim() {
-  assert_transforms(vec![
-    (
-      concat!(
-        "globalThis.Deno.readTextFile();",
-        "globalThis.test();",
-        "globalThis.test.test();",
-        "globalThis['test']();",
-        r#"globalThis["test"]();"#,
-        "globalThis.Deno = 5;",
-        "true ? globalThis : globalThis;",
-        "typeof globalThis.Deno;",
-      ),
-      concat!(
-        r#"import * as dntGlobalShim from "./_dnt.shims.js";"#,
-        "\n({ ...dntGlobalShim, ...globalThis }).Deno.readTextFile();",
-        "globalThis.test();",
-        "globalThis.test.test();",
-        "globalThis['test']();",
-        r#"globalThis["test"]();"#,
-        "globalThis.Deno = 5;",
-        "true ? ({ ...dntGlobalShim, ...globalThis }) : ({ ...dntGlobalShim, ...globalThis });",
-        "typeof ({ ...dntGlobalShim, ...globalThis }).Deno;"
-      )
+  assert_transforms(vec![(
+    concat!(
+      "globalThis.Deno.readTextFile();",
+      "globalThis.test();",
+      "globalThis.test.test();",
+      "globalThis['test']();",
+      r#"globalThis["test"]();"#,
+      "globalThis.Deno = 5;",
+      "true ? globalThis : globalThis;",
+      "typeof globalThis.Deno;",
     ),
-  ]).await;
+    concat!(
+      r#"import * as dntShim from "./_dnt.shims.js";"#,
+      "\ndntShim.dntGlobalThis.Deno.readTextFile();",
+      "globalThis.test();",
+      "globalThis.test.test();",
+      "globalThis['test']();",
+      r#"globalThis["test"]();"#,
+      "dntShim.dntGlobalThis.Deno = 5;",
+      "true ? dntShim.dntGlobalThis : dntShim.dntGlobalThis;",
+      "typeof dntShim.dntGlobalThis.Deno;"
+    ),
+  )])
+  .await;
 }
 
 #[tokio::test]
@@ -180,9 +218,9 @@ async fn transform_window() {
     (
       concat!("window.test = 5;", "window.Deno.test();",),
       concat!(
-        r#"import * as dntGlobalShim from "./_dnt.shims.js";"#,
+        r#"import * as dntShim from "./_dnt.shims.js";"#,
         "\nglobalThis.test = 5;",
-        "({ ...dntGlobalShim, ...globalThis }).Deno.test();",
+        "dntShim.dntGlobalThis.Deno.test();",
       ),
     ),
     (
@@ -243,9 +281,9 @@ async fn transform_deno_collision() {
       "Deno.test;"
     ),
     concat!(
-      r#"import * as dntGlobalShim from "./_dnt.shims.js";"#,
+      r#"import * as dntShim from "./_dnt.shims.js";"#,
       "\nconst Deno = {};",
-      "const { Deno: Deno2 } = ({ ...dntGlobalShim, ...globalThis });",
+      "const { Deno: Deno2 } = dntShim.dntGlobalThis;",
       "Deno2.readTextFile();",
       "Deno.test;"
     ),
@@ -1019,18 +1057,30 @@ async fn test_entry_points() {
       (
         "mod.test.ts",
         concat!(
-          "import * as dntGlobalShim from \"./_dnt.test_shims.js\";\n",
+          "import * as dntShim from \"./_dnt.test_shims.js\";\n",
           "import './mod.js';\n",
           "import package1 from 'preact';\n",
           "import package3 from 'react';\n",
-          "dntGlobalShim.Deno.writeTextFile('test', 'test')"
-        ),
+          "dntShim.Deno.writeTextFile('test', 'test')"
+        )
+        .to_string(),
       ),
       (
         "_dnt.test_shims.ts",
-        concat!(
-          "export { Deno } from \"@deno/shim-deno\";\n",
-          "export { setTimeout, setInterval } from \"@deno/shim-timers\";\n",
+        get_shim_file_text(
+          concat!(
+            "import { Deno } from \"@deno/shim-deno\";\n",
+            "export { Deno } from \"@deno/shim-deno\";\n",
+            "import { setTimeout, setInterval } from \"@deno/shim-timers\";\n",
+            "export { setTimeout, setInterval } from \"@deno/shim-timers\";\n",
+            "\n",
+            "const dntGlobals = {\n",
+            "  Deno,\n",
+            "  setTimeout,\n",
+            "  setInterval,\n",
+            "};\n",
+          )
+          .to_string(),
         ),
       )
     ]
@@ -1383,4 +1433,13 @@ async fn json_module_re_export() {
       ("data.js", r#"export default JSON.parse(`{ "prop": 5 }`);"#)
     ]
   );
+}
+
+fn get_shim_file_text(mut text: String) -> String {
+  text.push_str("\nexport const dntGlobalThis = createMergeProxy(globalThis, dntGlobals);\n\n");
+  text.push_str(
+    &include_str!("../src/scripts/createMergeProxy.ts")
+      .replace("export function", "function"),
+  );
+  text
 }

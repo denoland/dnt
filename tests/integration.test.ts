@@ -366,6 +366,9 @@ Deno.test("should build shim project when using node-fetch", async () => {
         globalNames: [{
           name: "fetch",
           exportName: "default",
+        }, {
+          name: "RequestInit",
+          typeOnly: true,
         }],
       }],
     },
@@ -382,17 +385,43 @@ Deno.test("should build shim project when using node-fetch", async () => {
       "undici": versions.undici,
       "node-fetch": "~3.1.0",
     });
-    assertEquals(
-      output.getFileText("esm/_dnt.shims.js"),
-      `export { Deno } from "@deno/shim-deno";
+    const expectedText = `import { Deno } from "@deno/shim-deno";
+export { Deno } from "@deno/shim-deno";
+import { Blob } from "buffer";
 export { Blob } from "buffer";
+import { crypto } from "@deno/shim-crypto";
 export { crypto } from "@deno/shim-crypto";
+import { alert, confirm, prompt } from "@deno/shim-prompts";
 export { alert, confirm, prompt } from "@deno/shim-prompts";
+import { setInterval, setTimeout } from "@deno/shim-timers";
 export { setInterval, setTimeout } from "@deno/shim-timers";
+import { File, FormData, Headers, Request, Response } from "undici";
 export { File, FormData, Headers, Request, Response } from "undici";
-export { default as fetch } from "node-fetch";
-`,
+import { default as fetch } from "node-fetch";
+export { default as fetch, type RequestInit } from "node-fetch";
+
+const dntGlobals = {
+  Deno,
+  Blob,
+  crypto,
+  alert,
+  confirm,
+  prompt,
+  setInterval,
+  setTimeout,
+  File,
+  FormData,
+  Headers,
+  Request,
+  Response,
+  fetch,
+};
+`;
+    assertEquals(
+      output.getFileText("src/_dnt.shims.ts").substring(0, expectedText.length),
+      expectedText,
     );
+    output.assertExists("esm/_dnt.shims.js");
   });
 });
 
