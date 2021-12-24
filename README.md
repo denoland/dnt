@@ -186,7 +186,7 @@ Set any of these properties to `true` (distribution and test) or `"dev"` (test o
 - `deno` - Shim the `Deno` namespace.
 - `timers` - Shim the global `setTimeout` and `setInterval` functions with Deno and browser compatible versions.
 - `prompts` - Shim the global `confirm`, `alert`, and `prompt` functions.
-- `blob` - Shim the `Blob` global with the one from the "buffer" module.
+- `blob` - Shim the `Blob` global with the one from the `"buffer"` module.
 - `crypto` - Shim the `crypto` global.
 - `undici` - Shim `fetch`, `File`, `FormData`, `Headers`, `Request`, and `Response` by using the "undici" package (https://www.npmjs.com/package/undici).
 
