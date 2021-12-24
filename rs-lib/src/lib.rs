@@ -96,7 +96,7 @@ pub struct MappedSpecifier {
 
 #[cfg_attr(feature = "serialization", derive(serde::Deserialize))]
 #[cfg_attr(feature = "serialization", serde(rename_all = "camelCase"))]
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 pub struct GlobalName {
   /// Name to use as the global name.
   pub name: String,
@@ -108,7 +108,7 @@ pub struct GlobalName {
 
 #[cfg_attr(feature = "serialization", derive(serde::Deserialize))]
 #[cfg_attr(feature = "serialization", serde(rename_all = "camelCase"))]
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 pub struct Shim {
   /// Information about the npm package to use for this shim.
   pub package: MappedSpecifier,
