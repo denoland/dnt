@@ -8,6 +8,7 @@ use std::future::Future;
 use anyhow::Result;
 use dnt::MappedSpecifier;
 use dnt::ModuleSpecifier;
+use dnt::Shim;
 use serde::Deserialize;
 use utils::set_panic_hook;
 use wasm_bindgen::prelude::*;
@@ -51,7 +52,8 @@ impl dnt::Loader for JsLoader {
 pub struct TransformOptions {
   pub entry_points: Vec<String>,
   pub test_entry_points: Vec<String>,
-  pub shim_package_name: String,
+  pub shims: Vec<Shim>,
+  pub test_shims: Vec<Shim>,
   pub mappings: HashMap<ModuleSpecifier, MappedSpecifier>,
   pub redirects: HashMap<ModuleSpecifier, ModuleSpecifier>,
 }
@@ -64,7 +66,8 @@ pub async fn transform(options: JsValue) -> Result<JsValue, JsValue> {
   let result = dnt::transform(dnt::TransformOptions {
     entry_points: parse_module_specifiers(options.entry_points)?,
     test_entry_points: parse_module_specifiers(options.test_entry_points)?,
-    shim_package_name: options.shim_package_name,
+    shims: options.shims,
+    test_shims: options.test_shims,
     loader: Some(Box::new(JsLoader {})),
     specifier_mappings: options.mappings,
     redirects: options.redirects,

@@ -20,3 +20,7 @@ export function addAsync(a: number, b: number) {
     }, 100);
   });
 }
+
+export function other() {
+  return fetch;
+}

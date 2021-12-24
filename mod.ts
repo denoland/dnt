@@ -8,6 +8,7 @@ import {
   SourceMapOptions,
 } from "./lib/compiler.ts";
 import { colors, createProjectSync, path, ts } from "./lib/mod.deps.ts";
+import { ShimOptions, shimOptionsToTransformShims } from "./lib/shims.ts";
 import { getNpmIgnoreText } from "./lib/npm_ignore.ts";
 import { PackageJsonObject } from "./lib/types.ts";
 import { glob, runNpmCommand } from "./lib/utils.ts";
@@ -21,6 +22,8 @@ import * as compilerTransforms from "./lib/compiler_transforms.ts";
 import { getPackageJson } from "./lib/package_json.ts";
 import { ScriptTarget } from "./lib/compiler.ts";
 import { getTestRunnerCode } from "./lib/test_runner/get_test_runner_code.ts";
+
+export type { ShimOptions } from "./lib/shims.ts";
 
 export interface EntryPoint {
   /**
@@ -39,6 +42,8 @@ export interface BuildOptions {
   entryPoints: (string | EntryPoint)[];
   /** Directory to output to. */
   outDir: string;
+  /** Shims to use. */
+  shims: ShimOptions;
   /** Type check the output.
    * @default true
    */
@@ -63,11 +68,6 @@ export interface BuildOptions {
   rootTestDir?: string;
   /** Glob pattern to use to find tests files. Defaults to `deno test`'s pattern. */
   testPattern?: string;
-  /** Package to use for shimming the `Deno` namespace. Defaults to `deno.ns` */
-  shimPackage?: {
-    name: string;
-    version: string;
-  };
   /** Specifiers to map from and to a bare specifier with optional version. */
   mappings?: SpecifierMappings;
   /**
@@ -131,11 +131,6 @@ export async function build(options: BuildOptions): Promise<void> {
   });
 
   await Deno.permissions.request({ name: "write", path: options.outDir });
-
-  const shimPackage = options.shimPackage ?? {
-    name: "deno.ns",
-    version: "0.8.0",
-  };
 
   log("Transforming...");
   const transformOutput = await transformEntryPoints();
@@ -347,7 +342,6 @@ export async function build(options: BuildOptions): Promise<void> {
   function createPackageJson() {
     const packageJsonObj = getPackageJson({
       entryPoints,
-      shimPackage,
       transformOutput,
       package: options.package,
       testEnabled: options.test,
@@ -374,6 +368,7 @@ export async function build(options: BuildOptions): Promise<void> {
   }
 
   async function transformEntryPoints(): Promise<TransformOutput> {
+    const { shims, testShims } = shimOptionsToTransformShims(options.shims);
     return transform({
       entryPoints: entryPoints.map((e) => e.path),
       testEntryPoints: options.test
@@ -383,7 +378,8 @@ export async function build(options: BuildOptions): Promise<void> {
           excludeDirs: [options.outDir],
         })
         : [],
-      shimPackageName: shimPackage.name,
+      shims,
+      testShims,
       mappings: options.mappings,
       redirects: options.redirects,
     });
@@ -401,9 +397,14 @@ export async function build(options: BuildOptions): Promise<void> {
     writeFile(
       path.join(options.outDir, "test_runner.js"),
       getTestRunnerCode({
-        shimPackageName: shimPackage.name,
+        shimPackageName: "@deno/shim-deno",
         testEntryPoints: transformOutput.test.entryPoints,
-        testShimUsed: transformOutput.test.shimUsed,
+        testShimUsed: transformOutput.test.dependencies.some((s) =>
+          s.name === "@deno/shim-deno"
+        ) ||
+          transformOutput.main.dependencies.some((s) =>
+            s.name === "@deno/shim-deno"
+          ),
         includeCjs: options.cjs,
       }),
     );

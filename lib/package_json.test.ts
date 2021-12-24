@@ -18,7 +18,6 @@ Deno.test("single entrypoint", () => {
           name: "dep",
           version: "^1.0.0",
         }],
-        shimUsed: false,
         entryPoints: ["mod.ts"],
       },
       test: {
@@ -27,8 +26,10 @@ Deno.test("single entrypoint", () => {
         dependencies: [{
           name: "test-dep",
           version: "0.1.0",
+        }, {
+          name: "@deno/shim-deno",
+          version: "~0.1.0",
         }],
-        shimUsed: true,
       },
       warnings: [],
     },
@@ -39,10 +40,6 @@ Deno.test("single entrypoint", () => {
     package: {
       name: "package",
       version: "0.1.0",
-    },
-    shimPackage: {
-      name: "deno.ns",
-      version: "0.0.0",
     },
     testEnabled: true,
     includeCjs: true,
@@ -62,8 +59,8 @@ Deno.test("single entrypoint", () => {
     devDependencies: {
       "@types/node": versions.nodeTypes,
       "chalk": versions.chalk,
-      "deno.ns": "0.0.0",
       "test-dep": "0.1.0",
+      "@deno/shim-deno": "~0.1.0",
     },
     exports: {
       ".": {
@@ -80,13 +77,7 @@ Deno.test("single entrypoint", () => {
   assertEquals(
     getPackageJson({
       ...props,
-      transformOutput: {
-        ...props.transformOutput,
-        test: {
-          ...props.transformOutput.test,
-          shimUsed: false,
-        },
-      },
+      transformOutput: props.transformOutput,
       testEnabled: false,
     }),
     {
@@ -125,10 +116,7 @@ Deno.test("single entrypoint", () => {
       dependencies: {
         dep: "^1.0.0",
       },
-      devDependencies: {
-        "deno.ns": "0.0.0",
-        "@types/node": versions.nodeTypes,
-      },
+      devDependencies: {},
       scripts: undefined,
       exports: {
         ".": {
@@ -156,10 +144,7 @@ Deno.test("single entrypoint", () => {
       dependencies: {
         dep: "^1.0.0",
       },
-      devDependencies: {
-        "deno.ns": "0.0.0",
-        "@types/node": versions.nodeTypes,
-      },
+      devDependencies: {},
       scripts: undefined,
       exports: {
         ".": {
@@ -190,10 +175,7 @@ Deno.test("single entrypoint", () => {
         tslib: versions.tsLib,
         dep: "^1.0.0",
       },
-      devDependencies: {
-        "deno.ns": "0.0.0",
-        "@types/node": versions.nodeTypes,
-      },
+      devDependencies: {},
       scripts: undefined,
       exports: {
         ".": {
@@ -211,15 +193,16 @@ Deno.test("multiple entrypoints", () => {
     transformOutput: {
       main: {
         files: [],
-        dependencies: [],
-        shimUsed: true,
+        dependencies: [{
+          name: "@deno/shim-deno",
+          version: "~0.1.0",
+        }],
         entryPoints: ["mod.ts", "other.ts"],
       },
       test: {
         entryPoints: [],
         files: [],
         dependencies: [],
-        shimUsed: false,
       },
       warnings: [],
     },
@@ -234,10 +217,6 @@ Deno.test("multiple entrypoints", () => {
       name: "package",
       version: "0.1.0",
     },
-    shimPackage: {
-      name: "deno.ns",
-      version: "0.0.0",
-    },
     testEnabled: false,
     includeCjs: true,
     includeDeclarations: true,
@@ -251,7 +230,7 @@ Deno.test("multiple entrypoints", () => {
     module: "./esm/mod.js",
     types: "./types/mod.d.ts",
     dependencies: {
-      "deno.ns": "0.0.0",
+      "@deno/shim-deno": "~0.1.0",
     },
     devDependencies: {
       "@types/node": versions.nodeTypes,
@@ -277,15 +256,16 @@ Deno.test("binary entrypoints", () => {
     transformOutput: {
       main: {
         files: [],
-        dependencies: [],
-        shimUsed: true,
+        dependencies: [{
+          name: "@deno/shim-deno",
+          version: "~0.1.0",
+        }],
         entryPoints: ["mod.ts", "bin.ts"],
       },
       test: {
         entryPoints: [],
         files: [],
         dependencies: [],
-        shimUsed: false,
       },
       warnings: [],
     },
@@ -300,10 +280,6 @@ Deno.test("binary entrypoints", () => {
     package: {
       name: "package",
       version: "0.1.0",
-    },
-    shimPackage: {
-      name: "deno.ns",
-      version: "0.0.0",
     },
     testEnabled: false,
     includeCjs: true,
@@ -321,7 +297,7 @@ Deno.test("binary entrypoints", () => {
       my_bin: "./esm/bin.js",
     },
     dependencies: {
-      "deno.ns": "0.0.0",
+      "@deno/shim-deno": "~0.1.0",
     },
     devDependencies: {
       "@types/node": versions.nodeTypes,

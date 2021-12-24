@@ -7,10 +7,6 @@ import { PackageJsonObject } from "./types.ts";
 export interface GetPackageJsonOptions {
   transformOutput: TransformOutput;
   entryPoints: EntryPoint[];
-  shimPackage: {
-    name: string;
-    version: string;
-  };
   package: PackageJsonObject;
   includeCjs: boolean | undefined;
   includeDeclarations: boolean | undefined;
@@ -21,7 +17,6 @@ export interface GetPackageJsonOptions {
 export function getPackageJson({
   transformOutput,
   entryPoints,
-  shimPackage,
   package: packageJsonObj,
   includeCjs,
   includeDeclarations,
@@ -48,12 +43,6 @@ export function getPackageJson({
     ...Object.fromEntries(
       transformOutput.main.dependencies.map((d) => [d.name, d.version]),
     ),
-    // add shim
-    ...(transformOutput.main.shimUsed
-      ? {
-        [shimPackage.name]: shimPackage.version,
-      }
-      : {}),
     // override with specified dependencies
     ...(packageJsonObj.dependencies ?? {}),
   };
@@ -73,19 +62,19 @@ export function getPackageJson({
     : {};
   const devDependencies = {
     ...(!Object.keys(dependencies).includes("@types/node") &&
-        (transformOutput.main.shimUsed || transformOutput.test.shimUsed)
+        // todo(dsherret): don't hardcode the package name here and come up with some better solution
+        (transformOutput.main.dependencies.some((d) =>
+          d.name === "@deno/shim-deno"
+        ) ||
+          (testEnabled &&
+            transformOutput.test.dependencies.some((d) =>
+              d.name === "@deno/shim-deno"
+            )))
       ? {
         "@types/node": "16.11.1",
       }
       : {}),
     ...testDevDependencies,
-    // add shim if not in dependencies
-    ...(transformOutput.test.shimUsed &&
-        !Object.keys(dependencies).includes(shimPackage.name)
-      ? {
-        [shimPackage.name]: shimPackage.version,
-      }
-      : {}),
     // override with specified dependencies
     ...(packageJsonObj.devDependencies ?? {}),
   };

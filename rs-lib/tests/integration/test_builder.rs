@@ -4,8 +4,10 @@ use std::collections::HashMap;
 
 use anyhow::Result;
 use deno_node_transform::transform;
+use deno_node_transform::GlobalName;
 use deno_node_transform::MappedSpecifier;
 use deno_node_transform::ModuleSpecifier;
+use deno_node_transform::Shim;
 use deno_node_transform::TransformOptions;
 use deno_node_transform::TransformOutput;
 
@@ -16,9 +18,10 @@ pub struct TestBuilder {
   entry_point: String,
   additional_entry_points: Vec<String>,
   test_entry_points: Vec<String>,
-  shim_package_name: Option<String>,
   specifier_mappings: HashMap<ModuleSpecifier, MappedSpecifier>,
   redirects: HashMap<ModuleSpecifier, ModuleSpecifier>,
+  shims: Vec<Shim>,
+  test_shims: Vec<Shim>,
 }
 
 impl TestBuilder {
@@ -29,9 +32,10 @@ impl TestBuilder {
       entry_point: "file:///mod.ts".to_string(),
       additional_entry_points: Vec::new(),
       test_entry_points: Vec::new(),
-      shim_package_name: None,
       specifier_mappings: Default::default(),
       redirects: Default::default(),
+      shims: Default::default(),
+      test_shims: Default::default(),
     }
   }
 
@@ -60,8 +64,47 @@ impl TestBuilder {
     self
   }
 
-  pub fn shim_package_name(&mut self, name: impl AsRef<str>) -> &mut Self {
-    self.shim_package_name = Some(name.as_ref().to_string());
+  pub fn add_default_shims(&mut self) -> &mut Self {
+    let deno_shim = Shim {
+      package: MappedSpecifier {
+        name: "@deno/shim-deno".to_string(),
+        version: Some("^0.1.0".to_string()),
+      },
+      global_names: vec![GlobalName {
+        name: "Deno".to_string(),
+        export_name: None,
+      }],
+    };
+    self.add_shim(deno_shim.clone());
+    self.add_test_shim(deno_shim);
+    let timers_shim = Shim {
+      package: MappedSpecifier {
+        name: "@deno/shim-timers".to_string(),
+        version: Some("^0.1.0".to_string()),
+      },
+      global_names: vec![
+        GlobalName {
+          name: "setTimeout".to_string(),
+          export_name: None,
+        },
+        GlobalName {
+          name: "setInterval".to_string(),
+          export_name: None,
+        },
+      ],
+    };
+    self.add_shim(timers_shim.clone());
+    self.add_test_shim(timers_shim);
+    self
+  }
+
+  pub fn add_shim(&mut self, shim: Shim) -> &mut Self {
+    self.shims.push(shim);
+    self
+  }
+
+  pub fn add_test_shim(&mut self, shim: Shim) -> &mut Self {
+    self.test_shims.push(shim);
     self
   }
 
@@ -109,11 +152,8 @@ impl TestBuilder {
         .iter()
         .map(|p| ModuleSpecifier::parse(p).unwrap())
         .collect(),
-      shim_package_name: self
-        .shim_package_name
-        .as_ref()
-        .map(ToOwned::to_owned)
-        .unwrap_or_else(|| "deno.ns".to_string()),
+      shims: self.shims.clone(),
+      test_shims: self.test_shims.clone(),
       loader: Some(Box::new(self.loader.clone())),
       specifier_mappings: self.specifier_mappings.clone(),
       redirects: self.redirects.clone(),
