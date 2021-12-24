@@ -17,7 +17,7 @@ export interface ShimOptions {
   timers?: boolean | "dev";
   /** Shim the global `confirm`, `alert`, and `prompt` functions. */
   prompts?: boolean | "dev";
-  /** Shim the `Blob` global with the one from the "buffer" module. */
+  /** Shim the `Blob` global with the one from the `"buffer"` module. */
   blob?: boolean | "dev";
   /** Shim the `crypto` global. */
   crypto?: boolean | "dev";

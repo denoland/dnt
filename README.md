@@ -134,11 +134,6 @@ await build({
   // ...etc...
   shims: {
     deno: true,
-    timers: false,
-    prompts: false,
-    blob: false,
-    crypto: false,
-    undici: false,
   },
 });
 ```
@@ -149,7 +144,7 @@ Then write a statement like so...
 Deno.readTextFileSync(...);
 ```
 
-...then dnt will create a shim file in the output, re-exporting the [@deno/shim-deno](https://github.com/denoland/node_deno_shims) npm shim package and change the Deno global be used as a property of this object.
+...dnt will create a shim file in the output, re-exporting the [@deno/shim-deno](https://github.com/denoland/node_deno_shims) npm shim package and change the Deno global be used as a property of this object.
 
 ```ts
 import * as dntShim from "./_dnt.shims.js";
@@ -175,7 +170,7 @@ await build({
 
 #### Preventing Shimming
 
-If you don't want shimming to occur, then you can set all the options to `false` in the build options. Maybe there are specific instances where you don't want shimming to happen though. To prevent it, add a `// dnt-shim-ignore` comment:
+To prevent shimming in specific instances, add a `// dnt-shim-ignore` comment:
 
 ```ts
 // dnt-shim-ignore
@@ -183,6 +178,17 @@ Deno.readTextFileSync(...);
 ```
 
 ...which will now output that code as-is.
+
+#### Built-In Shims
+
+Set any of these properties to `true` (distribution and test) or `"dev"` (test only) to use them.
+
+- `deno` - Shim the `Deno` namespace.
+- `timers` - Shim the global `setTimeout` and `setInterval` functions with Deno and browser compatible versions.
+- `prompts` - Shim the global `confirm`, `alert`, and `prompt` functions.
+- `blob` - Shim the `Blob` global with the one from the `"buffer"` module.
+- `crypto` - Shim the `crypto` global.
+- `undici` - Shim `fetch`, `File`, `FormData`, `Headers`, `Request`, and `Response` by using the "undici" package (https://www.npmjs.com/package/undici).
 
 #### Custom Shims (Advanced)
 
@@ -206,6 +212,9 @@ await build({
         name: "fetch",
         // use the default export of node-fetch
         exportName: "default",
+      }, {
+        name: "RequestInit",
+        typeOnly: true, // only used in type declarations
       }],
     }, {
       // this is what `blob: true` does internally
