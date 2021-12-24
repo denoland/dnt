@@ -3,6 +3,9 @@
 use std::path::PathBuf;
 
 use deno_node_transform::Dependency;
+use deno_node_transform::GlobalName;
+use deno_node_transform::MappedSpecifier;
+use deno_node_transform::Shim;
 use pretty_assertions::assert_eq;
 
 #[macro_use]
@@ -69,6 +72,52 @@ async fn transform_shims() {
     ),
   ])
   .await;
+}
+
+#[tokio::test]
+async fn transform_shim_custom_shims() {
+  let result = TestBuilder::new()
+    .with_loader(|loader| {
+      loader.add_local_file("/mod.ts", "fetch(); console.log(Blob);");
+    })
+    .add_shim(Shim {
+      package: MappedSpecifier {
+        name: "node-fetch".to_string(),
+        version: Some("~3.1.0".to_string()),
+      },
+      global_names: vec![GlobalName {
+        name: "fetch".to_string(),
+        export_name: Some("default".to_string()),
+      }],
+    })
+    .add_shim(Shim {
+      package: MappedSpecifier {
+        name: "buffer".to_string(),
+        version: None,
+      },
+      global_names: vec![GlobalName {
+        name: "Blob".to_string(),
+        export_name: None,
+      }],
+    })
+    .transform()
+    .await
+    .unwrap();
+
+  assert_files!(
+    result.main.files,
+    &[
+      ("_dnt.shims.ts", "export { default as fetch } from \"node-fetch\";\nexport { Blob } from \"buffer\";\n"),
+      ("mod.ts", "import * as dntGlobalShim from \"./_dnt.shims.js\";\ndntGlobalShim.fetch(); console.log(dntGlobalShim.Blob);"),
+    ]
+  );
+  assert_eq!(
+    result.main.dependencies,
+    vec![Dependency {
+      name: "node-fetch".to_string(),
+      version: "~3.1.0".to_string(),
+    }]
+  );
 }
 
 #[tokio::test]

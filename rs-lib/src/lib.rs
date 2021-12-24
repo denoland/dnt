@@ -97,11 +97,21 @@ pub struct MappedSpecifier {
 #[cfg_attr(feature = "serialization", derive(serde::Deserialize))]
 #[cfg_attr(feature = "serialization", serde(rename_all = "camelCase"))]
 #[derive(Clone)]
+pub struct GlobalName {
+  /// Name to use as the global name.
+  pub name: String,
+  /// Optional name of the export from the package.
+  pub export_name: Option<String>,
+}
+
+#[cfg_attr(feature = "serialization", derive(serde::Deserialize))]
+#[cfg_attr(feature = "serialization", serde(rename_all = "camelCase"))]
+#[derive(Clone)]
 pub struct Shim {
   /// Information about the npm package to use for this shim.
   pub package: MappedSpecifier,
   /// Names this shim provides that will be injected in global contexts.
-  pub global_names: Vec<String>,
+  pub global_names: Vec<GlobalName>,
 }
 
 pub struct TransformOptions {
@@ -167,7 +177,7 @@ pub async fn transform(options: TransformOptions) -> Result<TransformOutput> {
     shim_global_names: options
       .shims
       .iter()
-      .map(|s| s.global_names.iter().map(|s| s.as_str()))
+      .map(|s| s.global_names.iter().map(|s| s.name.as_str()))
       .flatten()
       .collect(),
     shims: &options.shims,
@@ -188,7 +198,7 @@ pub async fn transform(options: TransformOptions) -> Result<TransformOutput> {
     shim_global_names: options
       .test_shims
       .iter()
-      .map(|s| s.global_names.iter().map(|s| s.as_str()))
+      .map(|s| s.global_names.iter().map(|s| s.name.as_str()))
       .flatten()
       .collect(),
     shims: &options.test_shims,
@@ -312,7 +322,10 @@ pub async fn transform(options: TransformOptions) -> Result<TransformOutput> {
   // are found in the main environment. Only check for exact
   // matches in order to cause an npm install error if there
   // are two dependencies with the same name, but different versions.
-  test_env_context.environment.dependencies = test_env_context.environment.dependencies.into_iter()
+  test_env_context.environment.dependencies = test_env_context
+    .environment
+    .dependencies
+    .into_iter()
     .filter(|d| !main_env_context.environment.dependencies.contains(d))
     .collect();
 
@@ -384,7 +397,18 @@ fn check_add_shim_file_to_environment(
     for shim in shims {
       text.push_str(&format!(
         "export {{ {} }} from \"{}\";\n",
-        shim.global_names.join(", "),
+        shim
+          .global_names
+          .iter()
+          .map(|n| {
+            if let Some(export_name) = &n.export_name {
+              format!("{} as {}", export_name, n.name)
+            } else {
+              n.name.to_string()
+            }
+          })
+          .collect::<Vec<_>>()
+          .join(", "),
         shim.package.name
       ));
     }

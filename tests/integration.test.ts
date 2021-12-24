@@ -336,6 +336,66 @@ Deno.test("should build shim project", async () => {
   });
 });
 
+Deno.test("should build shim project when using node-fetch", async () => {
+  // try a custom shim
+  await runTest("shim_project", {
+    entryPoints: ["mod.ts"],
+    outDir: "./npm",
+    cjs: false,
+    shims: {
+      ...getAllShimOptions(true),
+      undici: false,
+      custom: [{
+        package: {
+          name: "undici",
+          version: versions.undici,
+        },
+        globalNames: [
+          // without fetch
+          "File",
+          "FormData",
+          "Headers",
+          "Request",
+          "Response",
+        ],
+      }, {
+        package: {
+          name: "node-fetch",
+          version: "~3.1.0",
+        },
+        globalNames: [{
+          name: "fetch",
+          exportName: "default",
+        }],
+      }],
+    },
+    package: {
+      name: "shim-package",
+      version: "1.0.0",
+    },
+  }, (output) => {
+    assertEquals(output.packageJson.dependencies, {
+      "@deno/shim-crypto": versions.cryptoShim,
+      "@deno/shim-deno": versions.denoShim,
+      "@deno/shim-prompts": versions.promptsShim,
+      "@deno/shim-timers": versions.timersShim,
+      "undici": versions.undici,
+      "node-fetch": "~3.1.0",
+    });
+    assertEquals(
+      output.getFileText("esm/_dnt.shims.js"),
+      `export { Deno } from "@deno/shim-deno";
+export { Blob } from "buffer";
+export { crypto } from "@deno/shim-crypto";
+export { alert, confirm, prompt } from "@deno/shim-prompts";
+export { setInterval, setTimeout } from "@deno/shim-timers";
+export { File, FormData, Headers, Request, Response } from "undici";
+export { default as fetch } from "node-fetch";
+`,
+    );
+  });
+});
+
 Deno.test("should build polyfill project", async () => {
   await runTest("polyfill_project", {
     entryPoints: ["mod.ts"],

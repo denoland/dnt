@@ -4,6 +4,7 @@ use std::collections::HashMap;
 
 use anyhow::Result;
 use deno_node_transform::transform;
+use deno_node_transform::GlobalName;
 use deno_node_transform::MappedSpecifier;
 use deno_node_transform::ModuleSpecifier;
 use deno_node_transform::Shim;
@@ -69,7 +70,10 @@ impl TestBuilder {
         name: "@deno/shim-deno".to_string(),
         version: Some("^0.1.0".to_string()),
       },
-      global_names: vec!["Deno".to_string()],
+      global_names: vec![GlobalName {
+        name: "Deno".to_string(),
+        export_name: None,
+      }],
     };
     self.add_shim(deno_shim.clone());
     self.add_test_shim(deno_shim);
@@ -78,7 +82,16 @@ impl TestBuilder {
         name: "@deno/shim-timers".to_string(),
         version: Some("^0.1.0".to_string()),
       },
-      global_names: vec!["setTimeout".to_string(), "setInterval".to_string()],
+      global_names: vec![
+        GlobalName {
+          name: "setTimeout".to_string(),
+          export_name: None,
+        },
+        GlobalName {
+          name: "setInterval".to_string(),
+          export_name: None,
+        },
+      ],
     };
     self.add_shim(timers_shim.clone());
     self.add_test_shim(timers_shim);

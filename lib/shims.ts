@@ -55,7 +55,7 @@ export function shimOptionsToTransformShims(options: ShimOptions) {
     testShims,
   };
 
-  function add(option: boolean | "dev", getShim: () => Shim) {
+  function add(option: boolean | "dev" | undefined, getShim: () => Shim) {
     if (option === true) {
       shims.push(getShim());
       testShims.push(getShim());

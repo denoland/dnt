@@ -26,18 +26,27 @@ export interface MappedSpecifier {
   version?: string;
 }
 
+export interface GlobalName {
+  /** Name to use as the global name. */
+  name: string;
+  /** Name of the export from the package.
+   * @remarks Defaults to the name. Specify `"default"` to use the default export.
+   */
+  exportName?: string;
+}
+
 export interface Shim {
   /** Information about the npm package or bare specifier to import. */
   package: MappedSpecifier;
   /** Named exports from the shim to use as globals. */
-  globalNames: string[];
+  globalNames: (GlobalName | string)[];
 }
 
 export interface TransformOptions {
   entryPoints: string[];
   testEntryPoints?: string[];
-  shims: Shim[];
-  testShims: Shim[];
+  shims?: Shim[];
+  testShims?: Shim[];
   mappings?: SpecifierMappings;
   redirects?: Redirects;
 }
@@ -85,6 +94,8 @@ export function transform(options: TransformOptions): Promise<TransformOutput> {
     ),
     entryPoints: options.entryPoints.map(valueToUrl),
     testEntryPoints: (options.testEntryPoints ?? []).map(valueToUrl),
+    shims: (options.shims ?? []).map(mapShim),
+    testShims: (options.testShims ?? []).map(mapShim),
   };
   return wasmFuncs.transform(newOptions);
 }
@@ -98,5 +109,22 @@ function valueToUrl(value: string) {
     return value;
   } else {
     return path.toFileUrl(path.resolve(value)).toString();
+  }
+}
+
+function mapShim(value: Shim): Shim {
+  return {
+    ...value,
+    globalNames: value.globalNames.map(mapToGlobalName),
+  };
+}
+
+function mapToGlobalName(value: string | GlobalName): GlobalName {
+  if (typeof value === "string") {
+    return {
+      name: value,
+    };
+  } else {
+    return value;
   }
 }

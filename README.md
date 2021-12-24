@@ -192,18 +192,23 @@ For example:
 
 ```ts
 await build({
+  cjs: false, // node-fetch 3+ only supports ESM
   // ...etc...
   shims: {
     // ...etc...
     custom: [{
       package: {
-        name: "@deno/shim-prompts",
-        version: "~0.1.0",
+        name: "node-fetch",
+        version: "~3.1.0",
       },
-      // these are the packages named exports to use and the global
-      // names that will be shimmed
-      globalNames: ["alert", "confirm", "prompt"],
+      globalNames: [{
+        // for the `fetch` global...
+        name: "fetch",
+        // use the default export of node-fetch
+        exportName: "default",
+      }],
     }, {
+      // this is what `blob: true` does internally
       package: {
         name: "buffer", // uses node's "buffer" module
       },
@@ -211,6 +216,7 @@ await build({
     }],
     // shims to only use in the tests
     customDev: [{
+      // this is what `timers: "dev"` does internally
       package: {
         name: "@deno/shim-timers",
         version: "~0.1.0",
