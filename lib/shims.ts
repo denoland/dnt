@@ -43,6 +43,8 @@ export interface ShimOptions {
    * won't actually use it.
    */
   weakRef?: ShimValue;
+  /** Shim `WebSocket` with the `ws` package (https://www.npmjs.com/package/ws). */
+  webSocket?: boolean | "dev";
   /** Custom shims to use. */
   custom?: Shim[];
   /** Custom shims to use only for the test code. */
@@ -72,6 +74,7 @@ export function shimOptionsToTransformShims(options: ShimOptions) {
   add(options.domException, getDomExceptionShim);
   add(options.undici, getUndiciShim);
   add(options.weakRef, getWeakRefShim);
+  add(options.webSocket, getWebSocketShim);
 
   if (options.custom) {
     shims.push(...options.custom);
@@ -235,6 +238,19 @@ function getWeakRefShim(): Shim {
       version: "~0.1.0",
     },
     globalNames: ["WeakRef", typeOnly("WeakRefConstructor")],
+  };
+}
+
+function getWebSocketShim(): Shim {
+  return {
+    package: {
+      name: "ws",
+      version: "^8.4.0",
+    },
+    globalNames: [{
+      name: "WebSocket",
+      exportName: "default",
+    }],
   };
 }
 
