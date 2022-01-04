@@ -1,7 +1,7 @@
 // Copyright 2018-2021 the Deno authors. All rights reserved. MIT license.
 
-import * as path from "https://deno.land/std@0.109.0/path/mod.ts";
-import { encode } from "https://deno.land/std@0.109.0/encoding/base64.ts";
+import * as path from "https://deno.land/std@0.119.0/path/mod.ts";
+import { encode } from "https://deno.land/std@0.119.0/encoding/base64.ts";
 
 const rootDir = path.dirname(path.fromFileUrl(import.meta.url));
 await buildWasm();

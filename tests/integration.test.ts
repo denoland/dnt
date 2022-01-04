@@ -3,11 +3,11 @@
 import {
   assertEquals,
   assertRejects,
-} from "https://deno.land/std@0.109.0/testing/asserts.ts";
+} from "https://deno.land/std@0.119.0/testing/asserts.ts";
 import { build, BuildOptions, ShimOptions } from "../mod.ts";
 
 const versions = {
-  denoShim: "~0.1.0",
+  denoShim: "~0.1.1",
   cryptoShim: "~0.1.0",
   promptsShim: "~0.1.0",
   timersShim: "~0.1.0",
@@ -65,12 +65,12 @@ Deno.test("should build test project", async () => {
       `src/
 esm/mod.test.js
 umd/mod.test.js
-esm/deps/deno_land_std_0_109_0/fmt/colors.js
-umd/deps/deno_land_std_0_109_0/fmt/colors.js
-esm/deps/deno_land_std_0_109_0/testing/_diff.js
-umd/deps/deno_land_std_0_109_0/testing/_diff.js
-esm/deps/deno_land_std_0_109_0/testing/asserts.js
-umd/deps/deno_land_std_0_109_0/testing/asserts.js
+esm/deps/deno_land_std_0_119_0/fmt/colors.js
+umd/deps/deno_land_std_0_119_0/fmt/colors.js
+esm/deps/deno_land_std_0_119_0/testing/_diff.js
+umd/deps/deno_land_std_0_119_0/testing/_diff.js
+esm/deps/deno_land_std_0_119_0/testing/asserts.js
+umd/deps/deno_land_std_0_119_0/testing/asserts.js
 esm/_dnt.test_shims.js
 umd/_dnt.test_shims.js
 test_runner.js
@@ -245,12 +245,12 @@ Deno.test("should build with source maps", async () => {
       output.npmIgnore,
       `esm/mod.test.js
 umd/mod.test.js
-esm/deps/deno_land_std_0_109_0/fmt/colors.js
-umd/deps/deno_land_std_0_109_0/fmt/colors.js
-esm/deps/deno_land_std_0_109_0/testing/_diff.js
-umd/deps/deno_land_std_0_109_0/testing/_diff.js
-esm/deps/deno_land_std_0_109_0/testing/asserts.js
-umd/deps/deno_land_std_0_109_0/testing/asserts.js
+esm/deps/deno_land_std_0_119_0/fmt/colors.js
+umd/deps/deno_land_std_0_119_0/fmt/colors.js
+esm/deps/deno_land_std_0_119_0/testing/_diff.js
+umd/deps/deno_land_std_0_119_0/testing/_diff.js
+esm/deps/deno_land_std_0_119_0/testing/asserts.js
+umd/deps/deno_land_std_0_119_0/testing/asserts.js
 esm/_dnt.test_shims.js
 umd/_dnt.test_shims.js
 test_runner.js
