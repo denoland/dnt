@@ -93,7 +93,7 @@ pub struct MappedSpecifier {
   /// Version of the specifier. Leave this blank to not have a
   /// dependency (ex. Node modules like "fs")
   pub version: Option<String>,
-  /// Sub path within the npm package to use in the module specifier.
+  /// Sub path of the npm package to use in the module specifier.
   pub sub_path: Option<String>,
 }
 
