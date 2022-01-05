@@ -80,12 +80,14 @@ async fn transform_shims() {
 async fn transform_shim_custom_shims() {
   let result = TestBuilder::new()
     .with_loader(|loader| {
-      loader.add_local_file("/mod.ts", "fetch(); console.log(Blob);");
+      loader
+        .add_local_file("/mod.ts", "fetch(); console.log(Blob); fetchTest();");
     })
     .add_shim(Shim {
       package: MappedSpecifier {
         name: "node-fetch".to_string(),
         version: Some("~3.1.0".to_string()),
+        sub_path: None,
       },
       global_names: vec![GlobalName {
         name: "fetch".to_string(),
@@ -95,8 +97,21 @@ async fn transform_shim_custom_shims() {
     })
     .add_shim(Shim {
       package: MappedSpecifier {
+        name: "node-fetch".to_string(),
+        version: Some("~3.1.0".to_string()),
+        sub_path: Some("test".to_string()),
+      },
+      global_names: vec![GlobalName {
+        name: "fetchTest".to_string(),
+        export_name: Some("fetchTestName".to_string()),
+        type_only: false,
+      }],
+    })
+    .add_shim(Shim {
+      package: MappedSpecifier {
         name: "buffer".to_string(),
         version: None,
+        sub_path: None,
       },
       global_names: vec![
         GlobalName {
@@ -115,6 +130,7 @@ async fn transform_shim_custom_shims() {
       package: MappedSpecifier {
         name: "type-only".to_string(),
         version: None,
+        sub_path: None,
       },
       global_names: vec![GlobalName {
         name: "TypeOnly".to_string(),
@@ -135,12 +151,15 @@ async fn transform_shim_custom_shims() {
           concat!(
             "import { default as fetch } from \"node-fetch\";\n",
             "export { default as fetch } from \"node-fetch\";\n",
+            "import { fetchTestName as fetchTest } from \"node-fetch/test\";\n",
+            "export { fetchTestName as fetchTest } from \"node-fetch/test\";\n",
             "import { Blob } from \"buffer\";\n",
             "export { Blob, type Other } from \"buffer\";\n",
             "export { type TypeOnly } from \"type-only\";\n",
             "\n",
             "const dntGlobals = {\n",
             "  fetch,\n",
+            "  fetchTest,\n",
             "  Blob,\n",
             "};\n",
             "export const dntGlobalThis = createMergeProxy(globalThis, dntGlobals);\n",
@@ -153,7 +172,11 @@ async fn transform_shim_custom_shims() {
       ),
       (
         "mod.ts",
-        "import * as dntShim from \"./_dnt.shims.js\";\ndntShim.fetch(); console.log(dntShim.Blob);".to_string()
+        concat!(
+          "import * as dntShim from \"./_dnt.shims.js\";\n",
+          "dntShim.fetch(); console.log(dntShim.Blob); dntShim.fetchTest();"
+        )
+        .to_string()
       ),
     ]
   );
@@ -834,7 +857,10 @@ async fn transform_specifier_mappings() {
           "/mod.ts",
           concat!(
             "import * as remote from 'http://localhost/mod.ts';\n",
-            "import * as local from './file.ts';\n"
+            "import * as local from './file.ts';\n",
+            "import * as entryA from 'http://localhost/mod/entryA.ts';\n",
+            "import * as entryB from 'http://localhost/mod/entryB.ts';\n",
+            "import * as entryC from 'http://localhost/mod/entryC.ts';\n",
           ),
         )
         .add_remote_file(
@@ -846,24 +872,56 @@ async fn transform_specifier_mappings() {
       "http://localhost/mod.ts",
       "remote-module",
       Some("1.0.0"),
+      None,
     )
-    .add_specifier_mapping("file:///file.ts", "local-module", None)
+    .add_specifier_mapping("file:///file.ts", "local-module", None, None)
+    .add_specifier_mapping(
+      "http://localhost/mod/entryA.ts",
+      "mod",
+      Some("~0.1.0"),
+      None,
+    )
+    .add_specifier_mapping(
+      "http://localhost/mod/entryB.ts",
+      "mod",
+      Some("~0.1.0"),
+      Some("entryB"),
+    )
+    .add_specifier_mapping(
+      "http://localhost/mod/entryC.ts",
+      "mod",
+      Some("~0.1.0"),
+      Some("other/entryC.js"),
+    )
     .transform()
     .await
     .unwrap();
 
   assert_files!(
     result.main.files,
-    &[
-      ("mod.ts", "import * as remote from 'remote-module';\nimport * as local from 'local-module';\n"),
-    ]
+    &[(
+      "mod.ts",
+      concat!(
+        "import * as remote from 'remote-module';\n",
+        "import * as local from 'local-module';\n",
+        "import * as entryA from 'mod';\n",
+        "import * as entryB from 'mod/entryB';\n",
+        "import * as entryC from 'mod/other/entryC.js';\n",
+      )
+    )]
   );
   assert_eq!(
     result.main.dependencies,
-    &[Dependency {
-      name: "remote-module".to_string(),
-      version: "1.0.0".to_string(),
-    },]
+    &[
+      Dependency {
+        name: "mod".to_string(),
+        version: "~0.1.0".to_string(),
+      },
+      Dependency {
+        name: "remote-module".to_string(),
+        version: "1.0.0".to_string(),
+      }
+    ]
   );
 }
 
@@ -873,8 +931,18 @@ async fn transform_not_found_mappings() {
     .with_loader(|loader| {
       loader.add_local_file("/mod.ts", "test");
     })
-    .add_specifier_mapping("http://localhost/mod.ts", "local-module", None)
-    .add_specifier_mapping("http://localhost/mod2.ts", "local-module2", None)
+    .add_specifier_mapping(
+      "http://localhost/mod.ts",
+      "local-module",
+      None,
+      None,
+    )
+    .add_specifier_mapping(
+      "http://localhost/mod2.ts",
+      "local-module2",
+      None,
+      None,
+    )
     .transform()
     .await
     .err()

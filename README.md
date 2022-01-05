@@ -261,6 +261,37 @@ This will:
 
 Note that dnt will error if you specify a mapping and it is not found in the code. This is done to prevent the scenario where a remote specifier's version is bumped and the mapping isn't updated.
 
+#### Specifying npm sub path
+
+Say an npm package called `example` had a sub-path at `sub_path.js`. To specify this sub path should be used on a module specifier you may do the following:
+
+```ts
+await build({
+  // ...etc...
+  mappings: {
+    "https://deno.land/x/example@11.0.0/sub_path.ts": {
+      name: "example",
+      version: "^1.0.0",
+      subPath: "sub_path.js", // note this
+    },
+  },
+});
+```
+
+This would cause the following:
+
+```ts
+import * as mod from "https://deno.land/x/example@11.0.0/sub_path.ts";
+```
+
+To go to...
+
+```ts
+import * as mod from "example/sub_path.js";
+```
+
+...with a dependency on `"example": "^1.0.0"`.
+
 ### Multiple Entry Points
 
 To do this, specify multiple entry points like so (ex. an entry point at `.` and another at `./internal`):
