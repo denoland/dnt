@@ -484,6 +484,28 @@ Deno.test("should handle json modules", async () => {
   });
 });
 
+Deno.test("should build project with another package manager", async () => {
+  await runTest("test_project", {
+    entryPoints: ["mod.ts"],
+    outDir: "./npm",
+    shims: {
+      ...getAllShimOptions(false),
+      deno: "dev",
+    },
+    package: {
+      name: "add",
+      version: "1.0.0",
+    },
+    packageManager: "yarn",
+    typeCheck: false,
+    cjs: false,
+    declaration: false,
+  }, (output) => {
+    output.assertExists("yarn.lock");
+    output.assertNotExists("package-lock.json");
+  });
+});
+
 export interface Output {
   packageJson: any;
   npmIgnore: string;

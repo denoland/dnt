@@ -85,6 +85,10 @@ export interface BuildOptions {
   redirects?: Redirects;
   /** Package.json output. You may override dependencies and dev dependencies in here. */
   package: PackageJsonObject;
+  /** Package manager used to install dependencies and run npm scripts.
+   * @default npm
+   */
+  packageManager?: string;
   /** Optional compiler options. */
   compilerOptions?: {
     /** Uses tslib to import helper functions once per project instead of including them per-file if necessary.
@@ -119,6 +123,7 @@ export async function build(options: BuildOptions): Promise<void> {
     test: options.test ?? true,
     declaration: options.declaration ?? true,
   };
+  const packageManager = options.packageManager ?? "npm";
   const entryPoints: EntryPoint[] = options.entryPoints.map((e, i) => {
     if (typeof e === "string") {
       return {
@@ -154,6 +159,7 @@ export async function build(options: BuildOptions): Promise<void> {
   // npm install in order to prepare for checking TS diagnostics
   log("Running npm install...");
   const npmInstallPromise = runNpmCommand({
+    bin: packageManager,
     args: ["install"],
     cwd: options.outDir,
   });
@@ -310,6 +316,7 @@ export async function build(options: BuildOptions): Promise<void> {
     log("Running tests...");
     createTestLauncherScript();
     await runNpmCommand({
+      bin: packageManager,
       args: ["run", "test"],
       cwd: options.outDir,
     });
