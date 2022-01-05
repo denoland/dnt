@@ -1,6 +1,6 @@
 // Copyright 2018-2022 the Deno authors. All rights reserved. MIT license.
 
-import type { Shim } from "../transform.ts";
+import type { GlobalName, Shim } from "../transform.ts";
 
 /** Provide `true` to use the shim in both the distributed and test code,
  * `"dev"` to only use it in the test code, or `false` to not use the shim
@@ -79,9 +79,46 @@ function getCryptoShim(): Shim {
   return {
     package: {
       name: "@deno/shim-crypto",
-      version: "~0.1.0",
+      version: "~0.2.0",
     },
-    globalNames: ["crypto"],
+    globalNames: [
+      "crypto",
+      typeOnly("Crypto"),
+      typeOnly("SubtleCrypto"),
+      typeOnly("AlgorithmIdentifier"),
+      typeOnly("Algorithm"),
+      typeOnly("RsaOaepParams"),
+      typeOnly("BufferSource"),
+      typeOnly("AesCtrParams"),
+      typeOnly("AesCbcParams"),
+      typeOnly("AesGcmParams"),
+      typeOnly("CryptoKey"),
+      typeOnly("KeyAlgorithm"),
+      typeOnly("KeyType"),
+      typeOnly("KeyUsage"),
+      typeOnly("EcdhKeyDeriveParams"),
+      typeOnly("HkdfParams"),
+      typeOnly("HashAlgorithmIdentifier"),
+      typeOnly("Pbkdf2Params"),
+      typeOnly("AesDerivedKeyParams"),
+      typeOnly("HmacImportParams"),
+      typeOnly("JsonWebKey"),
+      typeOnly("RsaOtherPrimesInfo"),
+      typeOnly("KeyFormat"),
+      typeOnly("RsaHashedKeyGenParams"),
+      typeOnly("RsaKeyGenParams"),
+      typeOnly("BigInteger"),
+      typeOnly("EcKeyGenParams"),
+      typeOnly("NamedCurve"),
+      typeOnly("CryptoKeyPair"),
+      typeOnly("AesKeyGenParams"),
+      typeOnly("HmacKeyGenParams"),
+      typeOnly("RsaHashedImportParams"),
+      typeOnly("EcKeyImportParams"),
+      typeOnly("AesKeyAlgorithm"),
+      typeOnly("RsaPssParams"),
+      typeOnly("EcdsaParams"),
+    ],
   };
 }
 
@@ -128,5 +165,12 @@ function getUndiciShim(): Shim {
       "Request",
       "Response",
     ],
+  };
+}
+
+function typeOnly(name: string): GlobalName {
+  return {
+    name,
+    typeOnly: true,
   };
 }
