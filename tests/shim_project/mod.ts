@@ -24,3 +24,19 @@ export function addAsync(a: number, b: number) {
 export function other() {
   return fetch;
 }
+
+export async function getCryptoKeyPair(
+  keyUsages: KeyUsage[],
+): Promise<CryptoKeyPair> {
+  const keyPair = await crypto.subtle.generateKey(
+    {
+      name: "RSA-OAEP",
+      modulusLength: 4096,
+      publicExponent: new Uint8Array([1, 0, 1]),
+      hash: "SHA-256",
+    },
+    true,
+    keyUsages,
+  );
+  return keyPair;
+}

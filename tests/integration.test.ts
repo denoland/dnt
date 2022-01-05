@@ -8,7 +8,7 @@ import { build, BuildOptions, ShimOptions } from "../mod.ts";
 
 const versions = {
   denoShim: "~0.1.1",
-  cryptoShim: "~0.1.0",
+  cryptoShim: "~0.2.0",
   promptsShim: "~0.1.0",
   timersShim: "~0.1.0",
   undici: "^4.12.1",
@@ -390,7 +390,7 @@ export { Deno } from "@deno/shim-deno";
 import { Blob } from "buffer";
 export { Blob } from "buffer";
 import { crypto } from "@deno/shim-crypto";
-export { crypto } from "@deno/shim-crypto";
+export { crypto, type Crypto, type SubtleCrypto, type AlgorithmIdentifier, type Algorithm, type RsaOaepParams, type BufferSource, type AesCtrParams, type AesCbcParams, type AesGcmParams, type CryptoKey, type KeyAlgorithm, type KeyType, type KeyUsage, type EcdhKeyDeriveParams, type HkdfParams, type HashAlgorithmIdentifier, type Pbkdf2Params, type AesDerivedKeyParams, type HmacImportParams, type JsonWebKey, type RsaOtherPrimesInfo, type KeyFormat, type RsaHashedKeyGenParams, type RsaKeyGenParams, type BigInteger, type EcKeyGenParams, type NamedCurve, type CryptoKeyPair, type AesKeyGenParams, type HmacKeyGenParams, type RsaHashedImportParams, type EcKeyImportParams, type AesKeyAlgorithm, type RsaPssParams, type EcdsaParams } from "@deno/shim-crypto";
 import { alert, confirm, prompt } from "@deno/shim-prompts";
 export { alert, confirm, prompt } from "@deno/shim-prompts";
 import { setInterval, setTimeout } from "@deno/shim-timers";
