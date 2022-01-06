@@ -65,6 +65,8 @@ function runTest(options: {
     return startText + `esm/mod.test.js
 umd/mod.test.js
 test_runner.js
+yarn.lock
+pnpm-lock.yaml
 `;
   }
 }
