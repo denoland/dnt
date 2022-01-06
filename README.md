@@ -452,8 +452,7 @@ await build({
 
 ### Using Another Package Manager
 
-For some reasons you may want to use another Node.js package manager, such as Yarn or pnpm.
-You can override the `packageManager` option in build options. Default value is `npm`.
+For some reasons you may want to use another Node.js package manager, such as Yarn or pnpm. You can override the `packageManager` option in build options. Default value is `npm`.
 
 If you're using Yarn:
 
