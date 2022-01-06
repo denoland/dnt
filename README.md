@@ -450,6 +450,28 @@ await build({
 
 1. Ensure the workflow will run on tag creation. For example, see [Trigger GitHub Action Only on New Tags](https://stackoverflow.com/q/61891328/188246)).
 
+### Using Another Package Manager
+
+For some reasons you may want to use another Node.js package manager, such as Yarn or pnpm. You can override the `packageManager` option in build options. Default value is `npm`.
+
+For example:
+
+```ts
+await build({
+  // ...etc...
+  packageManager: "yarn", // or "pnpm"
+});
+```
+
+You can even specify an absolute path to the executable file of package manager:
+
+```ts
+await build({
+  // ...etc...
+  packageManager: "/usr/bin/pnpm",
+});
+```
+
 ## JS API Example
 
 For only the Deno to canonical TypeScript transform which may be useful for bundlers, use the following:

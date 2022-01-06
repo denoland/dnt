@@ -23,12 +23,13 @@ export async function glob(options: {
   return paths;
 }
 
-export function runNpmCommand({ args, cwd }: {
+export function runNpmCommand({ bin, args, cwd }: {
+  bin: string;
   args: string[];
   cwd: string;
 }) {
   return runCommand({
-    cmd: ["npm", ...args],
+    cmd: [bin, ...args],
     cwd,
   });
 }

@@ -17,6 +17,7 @@ export function getNpmIgnoreText(options: {
   for (const fileName of getTestFileNames()) {
     lines.push(fileName);
   }
+  lines.push("yarn.lock", "pnpm-lock.yaml");
   return Array.from(lines).join("\n") + "\n";
 
   function* getTestFileNames() {

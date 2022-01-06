@@ -74,6 +74,8 @@ umd/deps/deno_land_std_0_119_0/testing/asserts.js
 esm/_dnt.test_shims.js
 umd/_dnt.test_shims.js
 test_runner.js
+yarn.lock
+pnpm-lock.yaml
 `,
     );
   });
@@ -117,6 +119,8 @@ Deno.test("should build with all options off", async () => {
       output.npmIgnore,
       `src/
 test_runner.js
+yarn.lock
+pnpm-lock.yaml
 `,
     );
   });
@@ -254,6 +258,8 @@ umd/deps/deno_land_std_0_119_0/testing/asserts.js
 esm/_dnt.test_shims.js
 umd/_dnt.test_shims.js
 test_runner.js
+yarn.lock
+pnpm-lock.yaml
 `,
     );
   });
@@ -311,6 +317,8 @@ umd/mod.test.js
 esm/_dnt.test_shims.js
 umd/_dnt.test_shims.js
 test_runner.js
+yarn.lock
+pnpm-lock.yaml
 `,
     );
   });
@@ -520,6 +528,28 @@ Deno.test("should handle json modules", async () => {
   }, (output) => {
     output.assertNotExists("esm/data.json");
     output.assertExists("esm/data.js");
+  });
+});
+
+Deno.test("should build project with another package manager", async () => {
+  await runTest("test_project", {
+    entryPoints: ["mod.ts"],
+    outDir: "./npm",
+    shims: {
+      ...getAllShimOptions(false),
+      deno: "dev",
+    },
+    package: {
+      name: "add",
+      version: "1.0.0",
+    },
+    packageManager: "yarn",
+    typeCheck: false,
+    cjs: false,
+    declaration: false,
+  }, (output) => {
+    output.assertExists("yarn.lock");
+    output.assertNotExists("package-lock.json");
   });
 });
 
