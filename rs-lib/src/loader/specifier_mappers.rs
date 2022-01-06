@@ -51,6 +51,7 @@ impl SpecifierMapper for SkypackMapper {
       .map(|captures| MappedSpecifier {
         name: captures.get(1).unwrap().as_str().to_string(),
         version: Some(captures.get(2).unwrap().as_str().to_string()),
+        sub_path: None,
       })
   }
 }
@@ -64,6 +65,7 @@ impl SpecifierMapper for EsmShMapper {
       .map(|captures| MappedSpecifier {
         name: captures.get(1).unwrap().as_str().to_string(),
         version: Some(captures.get(2).unwrap().as_str().to_string()),
+        sub_path: None,
       })
   }
 }
@@ -92,6 +94,7 @@ impl SpecifierMapper for NodeSpecifierMapper {
       Some(MappedSpecifier {
         name: self.to_specifier.clone(),
         version: None,
+        sub_path: None,
       })
     } else {
       None

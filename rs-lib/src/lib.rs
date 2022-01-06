@@ -85,13 +85,26 @@ pub struct TransformOutputEnvironment {
 }
 
 #[cfg_attr(feature = "serialization", derive(serde::Deserialize))]
+#[cfg_attr(feature = "serialization", serde(rename_all = "camelCase"))]
 #[derive(Clone, Debug)]
 pub struct MappedSpecifier {
   /// Name being mapped to.
   pub name: String,
   /// Version of the specifier. Leave this blank to not have a
-  /// dependency (ex. Node modules like "path")
+  /// dependency (ex. Node modules like "fs")
   pub version: Option<String>,
+  /// Sub path of the npm package to use in the module specifier.
+  pub sub_path: Option<String>,
+}
+
+impl MappedSpecifier {
+  pub(crate) fn module_specifier_text(&self) -> String {
+    if let Some(path) = &self.sub_path {
+      format!("{}/{}", self.name, path)
+    } else {
+      self.name.clone()
+    }
+  }
 }
 
 #[cfg_attr(feature = "serialization", derive(serde::Deserialize))]
@@ -159,7 +172,7 @@ pub async fn transform(options: TransformOptions) -> Result<TransformOutput> {
     .mapped
     .iter()
     .chain(specifiers.test.mapped.iter())
-    .map(|m| (m.0.clone(), m.1.name.clone()))
+    .map(|m| (m.0.clone(), m.1.module_specifier_text()))
     .collect();
 
   // todo: parallelize
@@ -418,7 +431,7 @@ fn check_add_shim_file_to_environment(
             .map(get_specifer_text)
             .collect::<Vec<_>>()
             .join(", "),
-          shim.package.name
+          shim.package.module_specifier_text(),
         ));
       }
 
@@ -436,7 +449,7 @@ fn check_add_shim_file_to_environment(
           })
           .collect::<Vec<_>>()
           .join(", "),
-        shim.package.name
+        shim.package.module_specifier_text(),
       ));
     }
 
@@ -486,6 +499,7 @@ fn get_dependencies(
     })
     .collect::<Vec<_>>();
   dependencies.sort_by(|a, b| a.name.cmp(&b.name));
+  dependencies.dedup(); // only works after sorting
   dependencies
 }
 

@@ -69,6 +69,7 @@ impl TestBuilder {
       package: MappedSpecifier {
         name: "@deno/shim-deno".to_string(),
         version: Some("^0.1.0".to_string()),
+        sub_path: None,
       },
       global_names: vec![GlobalName {
         name: "Deno".to_string(),
@@ -82,6 +83,7 @@ impl TestBuilder {
       package: MappedSpecifier {
         name: "@deno/shim-timers".to_string(),
         version: Some("^0.1.0".to_string()),
+        sub_path: None,
       },
       global_names: vec![
         GlobalName {
@@ -116,12 +118,14 @@ impl TestBuilder {
     specifier: impl AsRef<str>,
     bare_specifier: impl AsRef<str>,
     version: Option<&str>,
+    path: Option<&str>,
   ) -> &mut Self {
     self.specifier_mappings.insert(
       ModuleSpecifier::parse(specifier.as_ref()).unwrap(),
       MappedSpecifier {
         name: bare_specifier.as_ref().to_string(),
         version: version.map(|v| v.to_string()),
+        sub_path: path.map(|v| v.to_string()),
       },
     );
     self

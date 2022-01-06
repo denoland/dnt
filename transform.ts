@@ -22,8 +22,16 @@ export interface MappedSpecifier {
   /** Version to use in the package.json file.
    *
    * Not specifying a version will exclude it from the package.json file.
+   * This is useful for built-in modules such as "fs".
    */
   version?: string;
+  /** Sub path of the npm package to use in the module specifier.
+   *
+   * @remarks This should not include the package name and should not
+   * include a leading slash. It will be concatenated to the package
+   * name in the module specifier like so: `<package-name>/<sub-path>`
+   */
+  subPath?: string;
 }
 
 export interface GlobalName {
