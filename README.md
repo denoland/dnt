@@ -454,21 +454,12 @@ await build({
 
 For some reasons you may want to use another Node.js package manager, such as Yarn or pnpm. You can override the `packageManager` option in build options. Default value is `npm`.
 
-If you're using Yarn:
+For example:
 
 ```ts
 await build({
   // ...etc...
-  packageManager: "yarn",
-});
-```
-
-If you're using pnpm:
-
-```ts
-await build({
-  // ...etc...
-  packageManager: "pnpm",
+  packageManager: "yarn", // or "pnpm"
 });
 ```
 
