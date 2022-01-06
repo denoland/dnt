@@ -79,3 +79,9 @@ export function getTopLevelAwait(sourceFile: ts.SourceFile) {
   }
   return undefined;
 }
+
+export function transformCodeToTarget(code: string, target: ts.ScriptTarget) {
+  return ts.transpile(code, {
+    target,
+  });
+}
