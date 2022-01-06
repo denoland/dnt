@@ -460,7 +460,7 @@ If you're using Yarn:
 ```ts
 await build({
   // ...etc...
-  packageManager: 'yarn',
+  packageManager: "yarn",
 });
 ```
 
@@ -469,7 +469,7 @@ If you're using pnpm:
 ```ts
 await build({
   // ...etc...
-  packageManager: 'pnpm',
+  packageManager: "pnpm",
 });
 ```
 
@@ -478,7 +478,7 @@ You can even specify an absolute path to the executable file of package manager:
 ```ts
 await build({
   // ...etc...
-  packageManager: '/usr/bin/pnpm',
+  packageManager: "/usr/bin/pnpm",
 });
 ```
 
