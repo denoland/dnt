@@ -86,9 +86,10 @@ export interface BuildOptions {
   /** Package.json output. You may override dependencies and dev dependencies in here. */
   package: PackageJsonObject;
   /** Package manager used to install dependencies and run npm scripts.
-   * @default npm
+   * This also can be an absolute path to the executable file of package manager.
+   * @default "npm"
    */
-  packageManager?: string;
+  packageManager?: "npm" | "yarn" | "pnpm" | string;
   /** Optional compiler options. */
   compilerOptions?: {
     /** Uses tslib to import helper functions once per project instead of including them per-file if necessary.
