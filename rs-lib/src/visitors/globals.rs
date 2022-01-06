@@ -10,8 +10,6 @@ use deno_ast::swc::utils::ident::IdentLike;
 use deno_ast::view::*;
 
 use super::analyze::get_top_level_decls;
-use super::analyze::is_directly_in_condition;
-use super::analyze::is_in_left_hand_assignment;
 use super::analyze::is_in_type;
 use crate::text_changes::TextChange;
 
@@ -92,10 +90,11 @@ fn visit_children(node: Node, import_name: &str, context: &mut Context) {
       if ident_text == "globalThis"
         && !should_ignore_global_this(ident, context)
       {
-        context.text_changes.push(TextChange {
-          span: ident.span(),
-          new_text: format!("{}.dntGlobalThis", import_name.to_string()),
-        });
+        context.text_changes.push(get_global_this_text_change(
+          ident,
+          import_name,
+          context,
+        ));
         context.import_shim = true;
         return;
       }
@@ -111,16 +110,17 @@ fn visit_children(node: Node, import_name: &str, context: &mut Context) {
             new_text: "globalThis".to_string(),
           });
         } else {
-          context.text_changes.push(TextChange {
-            span: ident.span(),
-            new_text: format!("{}.dntGlobalThis", import_name.to_string()),
-          });
+          context.text_changes.push(get_global_this_text_change(
+            ident,
+            import_name,
+            context,
+          ));
           context.import_shim = true;
         }
         return;
       }
 
-      // check if Deno should be imported
+      // check if global should be imported
       for &name in context.shim_global_names.iter() {
         if ident_text == name
           && !context.top_level_decls.contains(name)
@@ -138,11 +138,48 @@ fn visit_children(node: Node, import_name: &str, context: &mut Context) {
   }
 }
 
+fn get_global_this_text_change(
+  ident: &Ident,
+  import_name: &str,
+  context: &Context,
+) -> TextChange {
+  if is_in_type(ident.into()) {
+    match ident.parent() {
+      Node::TsQualifiedName(parent) => {
+        let replace_span = match parent.parent() {
+          Node::TsTypeQuery(query) => query.span(), // remove the "typeof"
+          _ => parent.span(),
+        };
+        TextChange {
+          span: replace_span,
+          new_text: format!(
+            "{}.dntGlobalThisType[\"{}\"]",
+            import_name.to_string(),
+            // doesn't seem exactly right... will wait for a bug to open
+            parent.right.text_fast(context.program),
+          ),
+        }
+      }
+      Node::TsTypeQuery(_) => TextChange {
+        span: ident.span(),
+        new_text: format!("{}.dntGlobalThis", import_name.to_string()),
+      },
+      _ => TextChange {
+        span: ident.span(),
+        new_text: format!("{}.dntGlobalThisType", import_name.to_string()),
+      },
+    }
+  } else {
+    TextChange {
+      span: ident.span(),
+      new_text: format!("{}.dntGlobalThis", import_name.to_string()),
+    }
+  }
+}
+
 fn should_ignore_global_this(ident: &Ident, context: &Context) -> bool {
   if has_ignore_comment(ident.into(), context)
     || is_declaration_ident(ident.into())
-    || is_directly_in_condition(ident.into())
-    || is_in_type(ident.into())
   {
     return true;
   }
@@ -174,10 +211,7 @@ fn should_ignore_global_this(ident: &Ident, context: &Context) -> bool {
 }
 
 fn should_ignore(node: Node, context: &Context) -> bool {
-  has_ignore_comment(node, context)
-    || is_in_left_hand_assignment(node)
-    || is_declaration_ident(node)
-    || is_directly_in_condition(node)
+  has_ignore_comment(node, context) || is_declaration_ident(node)
 }
 
 fn has_ignore_comment(node: Node, context: &Context) -> bool {

@@ -22,12 +22,15 @@ export function addAsync(a: number, b: number) {
 }
 
 export function other() {
+  type test1 = typeof globalThis.fetch;
+  type test2 = typeof globalThis;
+  type test3 = test2["fetch"];
   return fetch;
 }
 
 export async function getCryptoKeyPair(
   keyUsages: KeyUsage[],
-): Promise<CryptoKeyPair> {
+): Promise<globalThis.CryptoKeyPair> {
   const keyPair = await crypto.subtle.generateKey(
     {
       name: "RSA-OAEP",

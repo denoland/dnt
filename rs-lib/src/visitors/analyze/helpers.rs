@@ -5,27 +5,6 @@ use deno_ast::view::*;
 
 // todo(dsherret): unit tests
 
-pub fn is_directly_in_condition(node: Node) -> bool {
-  match node.parent() {
-    Some(Node::BinExpr(_)) => true,
-    Some(Node::IfStmt(_)) => true,
-    Some(Node::UnaryExpr(expr)) => expr.op() == UnaryOp::TypeOf,
-    Some(Node::CondExpr(cond_expr)) => {
-      cond_expr.test.span().contains(node.span())
-    }
-    _ => false,
-  }
-}
-
-pub fn is_in_left_hand_assignment(node: Node) -> bool {
-  for ancestor in node.ancestors() {
-    if let Node::AssignExpr(expr) = ancestor {
-      return expr.left.span().contains(node.span());
-    }
-  }
-  false
-}
-
 pub fn is_in_type(mut node: Node) -> bool {
   // todo: add unit tests and investigate if there's something in swc that does this?
   while let Some(parent) = node.parent() {
