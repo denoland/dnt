@@ -60,6 +60,7 @@ async fn transform_shims() {
         "const decl03 = setInterval;\n",
         "const decl04: typeof setTimeout = setTimeout;\n",
         "setTimeout(() => {}, 100);\n",
+        "if ('test' in Deno) {}\n",
       ),
       concat!(
         r#"import * as dntShim from "./_dnt.shims.js";"#,
@@ -68,6 +69,7 @@ async fn transform_shims() {
         "const decl03 = dntShim.setInterval;\n",
         "const decl04: typeof dntShim.setTimeout = dntShim.setTimeout;\n",
         "dntShim.setTimeout(() => {}, 100);\n",
+        "if ('test' in dntShim.Deno) {}\n",
       ),
     ),
   ])
@@ -141,6 +143,11 @@ async fn transform_shim_custom_shims() {
             "  fetch,\n",
             "  Blob,\n",
             "};\n",
+            "export const dntGlobalThis = createMergeProxy(globalThis, dntGlobals);\n",
+            "export type dntGlobalThisType = Omit<typeof dntGlobals, keyof typeof dntGlobals> & typeof dntGlobals & {\n",
+            "  Other: Other,\n",
+            "  TypeOnly: TypeOnly,\n",
+            "};"
           ).to_string(),
         ),
       ),
@@ -196,6 +203,12 @@ async fn transform_global_this_shim() {
       "globalThis.Deno = 5;",
       "true ? globalThis : globalThis;",
       "typeof globalThis.Deno;",
+      "'Deno' in globalThis;",
+      "typeof globalThis;",
+      "globalThis == null;",
+      "globalThis ? true : false;",
+      "type Test1 = typeof globalThis;",
+      "type Test2 = typeof globalThis.Window;",
     ),
     concat!(
       r#"import * as dntShim from "./_dnt.shims.js";"#,
@@ -206,7 +219,13 @@ async fn transform_global_this_shim() {
       r#"globalThis["test"]();"#,
       "dntShim.dntGlobalThis.Deno = 5;",
       "true ? dntShim.dntGlobalThis : dntShim.dntGlobalThis;",
-      "typeof dntShim.dntGlobalThis.Deno;"
+      "typeof dntShim.dntGlobalThis.Deno;",
+      "'Deno' in dntShim.dntGlobalThis;",
+      "typeof dntShim.dntGlobalThis;",
+      "dntShim.dntGlobalThis == null;",
+      "dntShim.dntGlobalThis ? true : false;",
+      "type Test1 = typeof dntShim.dntGlobalThis;",
+      "type Test2 = dntShim.dntGlobalThisType[\"Window\"];",
     ),
   )])
   .await;
@@ -262,10 +281,6 @@ async fn no_shim_situations() {
     "export { Deno as test } from 'test';",
     "try {} catch (Deno) {}",
     "function test(Deno) {}",
-    "typeof globalThis;",
-    "globalThis == null;",
-    "globalThis ? true : false;",
-    "type Test = typeof globalThis;",
     "interface Response {} function test(r: Response) {}",
   ])
   .await;
@@ -1079,6 +1094,9 @@ async fn test_entry_points() {
             "  setTimeout,\n",
             "  setInterval,\n",
             "};\n",
+            "export const dntGlobalThis = createMergeProxy(globalThis, dntGlobals);\n",
+            "export type dntGlobalThisType = Omit<typeof dntGlobals, keyof typeof dntGlobals> & typeof dntGlobals & {\n",
+            "};"
           )
           .to_string(),
         ),
@@ -1436,7 +1454,7 @@ async fn json_module_re_export() {
 }
 
 fn get_shim_file_text(mut text: String) -> String {
-  text.push_str("\nexport const dntGlobalThis = createMergeProxy(globalThis, dntGlobals);\n\n");
+  text.push_str("\n");
   text.push_str(
     &include_str!("../src/scripts/createMergeProxy.ts")
       .replace("export function", "function"),
