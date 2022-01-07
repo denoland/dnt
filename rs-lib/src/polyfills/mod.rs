@@ -9,6 +9,7 @@ use crate::ScriptTarget;
 mod error_cause;
 mod object_has_own;
 mod string_replace_all;
+mod weak_ref;
 
 pub trait Polyfill {
   fn use_for_target(&self, target: ScriptTarget) -> bool;
@@ -33,6 +34,7 @@ fn all_polyfills() -> Vec<Box<dyn Polyfill>> {
     Box::new(object_has_own::ObjectHasOwnPolyfill),
     Box::new(error_cause::ErrorCausePolyfill),
     Box::new(string_replace_all::StringReplaceAllPolyfill),
+    Box::new(weak_ref::WeakRefPolyfill),
   ]
 }
 
