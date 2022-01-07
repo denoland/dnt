@@ -5,6 +5,7 @@ use std::path::PathBuf;
 use deno_node_transform::Dependency;
 use deno_node_transform::GlobalName;
 use deno_node_transform::MappedSpecifier;
+use deno_node_transform::ScriptTarget;
 use deno_node_transform::Shim;
 use pretty_assertions::assert_eq;
 
@@ -1261,7 +1262,7 @@ async fn test_entry_points_same_module_multiple_places() {
 }
 
 #[tokio::test]
-async fn polyfills() {
+async fn polyfills_all() {
   let result = TestBuilder::new()
     .with_loader(|loader| {
       loader
@@ -1273,6 +1274,7 @@ async fn polyfills() {
             "} catch (err) {\n",
             "  err.cause = new Error();\n",
             "}\n",
+            "''.replaceAll('test', 'other');\n",
           ),
         )
         .add_local_file("/mod.test.ts", "import * as mod from './mod.ts';");
@@ -1294,6 +1296,7 @@ async fn polyfills() {
           "} catch (err) {\n",
           "  err.cause = new Error();\n",
           "}\n",
+          "''.replaceAll('test', 'other');\n",
         ),
       ),
       (
@@ -1301,6 +1304,7 @@ async fn polyfills() {
         concat!(
           include_str!("../src/polyfills/scripts/object-has-own.ts"),
           include_str!("../src/polyfills/scripts/error-cause.ts"),
+          include_str!("../src/polyfills/scripts/string-replaceAll.ts"),
         )
       ),
     ]
@@ -1312,6 +1316,56 @@ async fn polyfills() {
     &[("mod.test.ts", concat!("import * as mod from './mod.js';",),)]
   );
   assert_eq!(result.test.entry_points, &[PathBuf::from("mod.test.ts")]);
+}
+
+#[tokio::test]
+async fn polyfills_string_replaceall_target() {
+  test_string_replace_all_polyfill(ScriptTarget::ES2020, true).await;
+  test_string_replace_all_polyfill(ScriptTarget::ES2021, false).await;
+}
+
+async fn test_string_replace_all_polyfill(
+  target: ScriptTarget,
+  should_have_polyfill: bool,
+) {
+  let result = TestBuilder::new()
+    .with_loader(|loader| {
+      loader
+        .add_local_file("/mod.ts", "''.replaceAll('test', 'other');\n")
+        .add_local_file("/mod.test.ts", "import * as mod from './mod.ts';");
+    })
+    .add_test_entry_point("file:///mod.test.ts")
+    .set_target(target)
+    .transform()
+    .await
+    .unwrap();
+
+  if should_have_polyfill {
+    assert_files!(
+      result.main.files,
+      &[
+        (
+          "mod.ts",
+          concat!(
+            "import './_dnt.polyfills.js';\n",
+            "''.replaceAll('test', 'other');\n",
+          ),
+        ),
+        (
+          "_dnt.polyfills.ts",
+          concat!(include_str!(
+            "../src/polyfills/scripts/string-replaceAll.ts"
+          ),)
+        ),
+      ]
+    );
+  } else {
+    assert_files!(
+      result.main.files,
+      &[("mod.ts", "''.replaceAll('test', 'other');\n",)]
+    );
+  }
+  assert_eq!(result.main.entry_points, &[PathBuf::from("mod.ts")]);
 }
 
 #[tokio::test]

@@ -8,6 +8,7 @@ use std::future::Future;
 use anyhow::Result;
 use dnt::MappedSpecifier;
 use dnt::ModuleSpecifier;
+use dnt::ScriptTarget;
 use dnt::Shim;
 use serde::Deserialize;
 use utils::set_panic_hook;
@@ -56,6 +57,7 @@ pub struct TransformOptions {
   pub test_shims: Vec<Shim>,
   pub mappings: HashMap<ModuleSpecifier, MappedSpecifier>,
   pub redirects: HashMap<ModuleSpecifier, ModuleSpecifier>,
+  pub target: ScriptTarget,
 }
 
 #[wasm_bindgen]
@@ -71,6 +73,7 @@ pub async fn transform(options: JsValue) -> Result<JsValue, JsValue> {
     loader: Some(Box::new(JsLoader {})),
     specifier_mappings: options.mappings,
     redirects: options.redirects,
+    target: options.target,
   })
   .await
   .map_err(|err| format!("{:?}", err))?; // need to include the anyhow context

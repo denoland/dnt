@@ -2,11 +2,11 @@ import {
   getCompilerScriptTarget,
   getCompilerSourceMapOptions,
   getTopLevelAwait,
-  ScriptTarget,
   SourceMapOptions,
 } from "./compiler.ts";
 import { ts } from "./mod.deps.ts";
 import { assertEquals, assertThrows } from "./test.deps.ts";
+import { ScriptTarget } from "./types.ts";
 
 Deno.test("script target should have expected outputs", () => {
   const cases: {
@@ -29,7 +29,6 @@ Deno.test("script target should have expected outputs", () => {
     assertEquals(getCompilerScriptTarget(scriptTarget), cases[scriptTarget]);
   }
 
-  assertEquals(getCompilerScriptTarget(undefined), ts.ScriptTarget.ES2021);
   assertThrows(() => getCompilerScriptTarget("invalid" as any));
 });
 

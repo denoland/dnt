@@ -17,6 +17,7 @@ use mappings::Mappings;
 use mappings::SYNTHETIC_SPECIFIERS;
 use mappings::SYNTHETIC_TEST_SPECIFIERS;
 use polyfills::build_polyfill_file;
+use polyfills::polyfills_for_target;
 use polyfills::Polyfill;
 use specifiers::Specifiers;
 use text_changes::apply_text_changes;
@@ -129,6 +130,22 @@ pub struct Shim {
   pub global_names: Vec<GlobalName>,
 }
 
+// make sure to update `ScriptTarget` in the TS code when changing the names on this
+#[cfg_attr(feature = "serialization", derive(serde::Deserialize))]
+#[derive(Clone, Copy, Debug)]
+pub enum ScriptTarget {
+  ES3 = 0,
+  ES5 = 1,
+  ES2015 = 2,
+  ES2016 = 3,
+  ES2017 = 4,
+  ES2018 = 5,
+  ES2019 = 6,
+  ES2020 = 7,
+  ES2021 = 8,
+  Latest = 9,
+}
+
 pub struct TransformOptions {
   pub entry_points: Vec<ModuleSpecifier>,
   pub test_entry_points: Vec<ModuleSpecifier>,
@@ -140,11 +157,15 @@ pub struct TransformOptions {
   pub specifier_mappings: HashMap<ModuleSpecifier, MappedSpecifier>,
   /// Redirects one specifier to another specifier.
   pub redirects: HashMap<ModuleSpecifier, ModuleSpecifier>,
+  /// Version of ECMAScript that the final code will target.
+  /// This controls whether certain polyfills should occur.
+  pub target: ScriptTarget,
 }
 
 struct EnvironmentContext<'a> {
   environment: TransformOutputEnvironment,
-  polyfills: HashSet<Polyfill>,
+  searching_polyfills: Vec<Box<dyn Polyfill>>,
+  found_polyfills: Vec<Box<dyn Polyfill>>,
   shim_file_specifier: &'a ModuleSpecifier,
   shim_global_names: HashSet<&'a str>,
   shims: &'a Vec<Shim>,
@@ -187,7 +208,8 @@ pub async fn transform(options: TransformOptions) -> Result<TransformOutput> {
       dependencies: get_dependencies(specifiers.main.mapped),
       ..Default::default()
     },
-    polyfills: HashSet::new(),
+    searching_polyfills: polyfills_for_target(options.target),
+    found_polyfills: Default::default(),
     shim_file_specifier: &SYNTHETIC_SPECIFIERS.shims,
     shim_global_names: options
       .shims
@@ -208,7 +230,8 @@ pub async fn transform(options: TransformOptions) -> Result<TransformOutput> {
       dependencies: get_dependencies(specifiers.test.mapped),
       ..Default::default()
     },
-    polyfills: HashSet::new(),
+    searching_polyfills: polyfills_for_target(options.target),
+    found_polyfills: Default::default(),
     shim_file_specifier: &SYNTHETIC_TEST_SPECIFIERS.shims,
     shim_global_names: options
       .test_shims
@@ -244,7 +267,8 @@ pub async fn transform(options: TransformOptions) -> Result<TransformOutput> {
             warnings.extend(ignore_line_indexes.warnings);
 
             fill_polyfills(&mut FillPolyfillsParams {
-              polyfills: &mut env_context.polyfills,
+              found_polyfills: &mut env_context.found_polyfills,
+              searching_polyfills: &mut env_context.searching_polyfills,
               program: &program,
               top_level_context: parsed_source.top_level_context(),
             });
@@ -355,7 +379,8 @@ fn check_add_polyfill_file_to_environment(
   env_context: &mut EnvironmentContext,
   polyfill_file_path: &Path,
 ) {
-  if let Some(polyfill_file_text) = build_polyfill_file(&env_context.polyfills)
+  if let Some(polyfill_file_text) =
+    build_polyfill_file(&env_context.found_polyfills)
   {
     env_context.environment.files.push(OutputFile {
       file_path: polyfill_file_path.to_path_buf(),
