@@ -6,6 +6,7 @@ import {
   getTopLevelAwait,
   outputDiagnostics,
   SourceMapOptions,
+  transformCodeToTarget,
 } from "./lib/compiler.ts";
 import { colors, createProjectSync, path, ts } from "./lib/mod.deps.ts";
 import { ShimOptions, shimOptionsToTransformShims } from "./lib/shims.ts";
@@ -175,6 +176,9 @@ export async function build(options: BuildOptions): Promise<void> {
   const esmOutDir = path.join(options.outDir, "esm");
   const umdOutDir = path.join(options.outDir, "umd");
   const typesOutDir = path.join(options.outDir, "types");
+  const compilerScriptTarget = getCompilerScriptTarget(
+    options.compilerOptions?.target,
+  );
   const project = createProjectSync({
     compilerOptions: {
       outDir: typesOutDir,
@@ -203,7 +207,7 @@ export async function build(options: BuildOptions): Promise<void> {
       importsNotUsedAsValues: ts.ImportsNotUsedAsValues.Remove,
       module: ts.ModuleKind.ESNext,
       moduleResolution: ts.ModuleResolutionKind.NodeJs,
-      target: getCompilerScriptTarget(options.compilerOptions?.target),
+      target: compilerScriptTarget,
       allowSyntheticDefaultImports: true,
       importHelpers: options.compilerOptions?.importHelpers,
       ...getCompilerSourceMapOptions(options.compilerOptions?.sourceMap),
@@ -404,17 +408,20 @@ export async function build(options: BuildOptions): Promise<void> {
   function createTestLauncherScript() {
     writeFile(
       path.join(options.outDir, "test_runner.js"),
-      getTestRunnerCode({
-        shimPackageName: "@deno/shim-deno",
-        testEntryPoints: transformOutput.test.entryPoints,
-        testShimUsed: transformOutput.test.dependencies.some((s) =>
-          s.name === "@deno/shim-deno"
-        ) ||
-          transformOutput.main.dependencies.some((s) =>
+      transformCodeToTarget(
+        getTestRunnerCode({
+          shimPackageName: "@deno/shim-deno",
+          testEntryPoints: transformOutput.test.entryPoints,
+          testShimUsed: transformOutput.test.dependencies.some((s) =>
             s.name === "@deno/shim-deno"
-          ),
-        includeCjs: options.cjs,
-      }),
+          ) ||
+            transformOutput.main.dependencies.some((s) =>
+              s.name === "@deno/shim-deno"
+            ),
+          includeCjs: options.cjs,
+        }),
+        compilerScriptTarget,
+      ),
     );
   }
 
