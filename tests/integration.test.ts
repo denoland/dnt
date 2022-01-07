@@ -8,6 +8,7 @@ import { build, BuildOptions, ShimOptions } from "../mod.ts";
 
 const versions = {
   denoShim: "~0.1.1",
+  denoTestShim: "~0.2.0",
   cryptoShim: "~0.2.0",
   promptsShim: "~0.1.0",
   timersShim: "~0.1.0",
@@ -169,6 +170,34 @@ Deno.test("should build bin project", async () => {
       output.getFileText("esm/mod.js").substring(0, expectedText.length),
       expectedText,
     );
+  });
+});
+
+Deno.test("should run tests when using @deno/shim-deno-test shim", async () => {
+  await runTest("test_project", {
+    entryPoints: ["mod.ts"],
+    outDir: "./npm",
+    shims: {
+      ...getAllShimOptions(false),
+      deno: {
+        test: "dev",
+      },
+    },
+    package: {
+      name: "add",
+      version: "1.0.0",
+    },
+    compilerOptions: {
+      importHelpers: true,
+    },
+  }, (output) => {
+    output.assertNotExists("umd/mod.js.map");
+    output.assertNotExists("esm/mod.js.map");
+    assertEquals(output.packageJson.devDependencies, {
+      "@types/node": versions.nodeTypes,
+      chalk: versions.chalk,
+      "@deno/shim-deno-test": versions.denoTestShim,
+    });
   });
 });
 
@@ -489,7 +518,7 @@ Deno.test("should build polyfill project", async () => {
   });
 });
 
-Deno.test("should build and test node files project", async () => {
+Deno.test("should build and test redirects files project", async () => {
   await runTest("redirects_project", {
     entryPoints: ["mod.ts"],
     outDir: "./npm",

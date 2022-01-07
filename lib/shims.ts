@@ -2,7 +2,15 @@
 
 import type { GlobalName, Shim } from "../transform.ts";
 
-/** Provide `true` to use the shim in both the distributed and test code,
+/** Provide `true` to use the shim in both the distributed code and test code,
+ * `"dev"` to only use it in the test code, or `false` to not use the shim
+ * at all.
+ *
+ * @remarks Defaults to `false`.
+ */
+export type ShimValue = boolean | "dev";
+
+/** Provide `true` to use the shim in both the distributed code and test code,
  * `"dev"` to only use it in the test code, or `false` to not use the shim
  * at all.
  *
@@ -10,32 +18,45 @@ import type { GlobalName, Shim } from "../transform.ts";
  */
 export interface ShimOptions {
   /** Shim the `Deno` namespace. */
-  deno?: boolean | "dev";
+  deno?: ShimValue | {
+    test: ShimValue;
+  };
   /** Shim the global `setTimeout` and `setInterval` functions with
    * Deno and browser compatible versions.
    */
-  timers?: boolean | "dev";
+  timers?: ShimValue;
   /** Shim the global `confirm`, `alert`, and `prompt` functions. */
-  prompts?: boolean | "dev";
+  prompts?: ShimValue;
   /** Shim the `Blob` global with the one from the `"buffer"` module. */
-  blob?: boolean | "dev";
+  blob?: ShimValue;
   /** Shim the `crypto` global. */
-  crypto?: boolean | "dev";
+  crypto?: ShimValue;
   /** Shim `fetch`, `File`, `FormData`, `Headers`, `Request`, and `Response` by
    * using the "undici" package (https://www.npmjs.com/package/undici).
    */
-  undici?: boolean | "dev";
+  undici?: ShimValue;
   /** Custom shims to use. */
   custom?: Shim[];
   /** Custom shims to use only for the test code. */
   customDev?: Shim[];
 }
 
+export interface DenoShimOptions {
+  /** Only import the `Deno` namespace for `Deno.test`.
+   * This may be useful for environments
+   */
+  test: boolean | "dev";
+}
+
 export function shimOptionsToTransformShims(options: ShimOptions) {
   const shims: Shim[] = [];
   const testShims: Shim[] = [];
 
-  add(options.deno, getDenoShim);
+  if (typeof options.deno === "object") {
+    add(options.deno.test, getDenoTestShim);
+  } else {
+    add(options.deno, getDenoShim);
+  }
   add(options.blob, getBlobShim);
   add(options.crypto, getCryptoShim);
   add(options.prompts, getPromptsShim);
@@ -70,6 +91,16 @@ function getDenoShim(): Shim {
     package: {
       name: "@deno/shim-deno",
       version: "~0.1.1",
+    },
+    globalNames: ["Deno"],
+  };
+}
+
+function getDenoTestShim(): Shim {
+  return {
+    package: {
+      name: "@deno/shim-deno-test",
+      version: "~0.2.0",
     },
     globalNames: ["Deno"],
   };

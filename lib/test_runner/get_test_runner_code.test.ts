@@ -10,8 +10,7 @@ const runTestDefinitionsCode = runTestDefinitions.toString()
 Deno.test("gets code when no shim used", () => {
   const code = getTestRunnerCode({
     testEntryPoints: ["./test.ts"],
-    shimPackageName: "test-shim-package",
-    testShimUsed: false,
+    denoTestShimPackageName: undefined,
     includeCjs: true,
   });
   assertEquals(
@@ -53,8 +52,7 @@ main();
 Deno.test("gets code when shim used", () => {
   const code = getTestRunnerCode({
     testEntryPoints: ["./1.test.ts", "./2.test.ts"],
-    shimPackageName: "test-shim-package",
-    testShimUsed: true,
+    denoTestShimPackageName: "test-shim-package/test-internals",
     includeCjs: true,
   });
   assertEquals(
@@ -102,8 +100,7 @@ main();
 Deno.test("gets code when cjs is not used", () => {
   const code = getTestRunnerCode({
     testEntryPoints: ["./test.ts"],
-    shimPackageName: "test-shim-package",
-    testShimUsed: false,
+    denoTestShimPackageName: undefined,
     includeCjs: false,
   });
   assertEquals(

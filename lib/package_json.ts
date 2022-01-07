@@ -64,11 +64,11 @@ export function getPackageJson({
     ...(!Object.keys(dependencies).includes("@types/node") &&
         // todo(dsherret): don't hardcode the package name here and come up with some better solution
         (transformOutput.main.dependencies.some((d) =>
-          d.name === "@deno/shim-deno"
+          d.name === "@deno/shim-deno" || d.name === "@deno/shim-deno-test"
         ) ||
           (testEnabled &&
             transformOutput.test.dependencies.some((d) =>
-              d.name === "@deno/shim-deno"
+              d.name === "@deno/shim-deno" || d.name === "@deno/shim-deno-test"
             )))
       ? {
         "@types/node": "16.11.1",

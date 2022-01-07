@@ -45,10 +45,10 @@ There are several steps done in a pipeline:
        license: "MIT",
        repository: {
          type: "git",
-         url: "git+https://github.com/username/package.git",
+         url: "git+https://github.com/username/repo.git",
        },
        bugs: {
-         url: "https://github.com/username/package/issues",
+         url: "https://github.com/username/repo/issues",
        },
      },
    });
@@ -189,6 +189,23 @@ Set any of these properties to `true` (distribution and test) or `"dev"` (test o
 - `blob` - Shim the `Blob` global with the one from the `"buffer"` module.
 - `crypto` - Shim the `crypto` global.
 - `undici` - Shim `fetch`, `File`, `FormData`, `Headers`, `Request`, and `Response` by using the "undici" package (https://www.npmjs.com/package/undici).
+
+##### `Deno.test`-only shim
+
+If you only want to shim `Deno.test` then provide the following:
+
+```ts
+await build({
+  // ...etc...
+  shims: {
+    deno: {
+      test: "dev",
+    },
+  },
+});
+```
+
+This may be useful in Node v14 and below where the full deno shim doesn't always work. See the section on Node v14 below for more details
 
 #### Custom Shims (Advanced)
 
@@ -372,6 +389,8 @@ await build({
 
 Then within the file, use `// dnt-shim-ignore` directives to disable shimming if you desire.
 
+A redirect file should be written similar to how you write Deno code (ex. use extensions on imports), except you can also import built-in node modules such as `import fs from "fs";` (just remember to include an `@types/node` dev dependency, if necessary).
+
 ### Pre & Post Build Steps
 
 Since the file you're calling is a script, simply add statements before and after the `await build({ ... })` statement:
@@ -483,7 +502,7 @@ await build({
 
 ### Using Another Package Manager
 
-For some reasons you may want to use another Node.js package manager, such as Yarn or pnpm. You can override the `packageManager` option in build options. Default value is `npm`.
+You may want to use another Node.js package manager instead of npm, such as Yarn or pnpm. To do this, override the `packageManager` option in the build options.
 
 For example:
 
@@ -494,7 +513,7 @@ await build({
 });
 ```
 
-You can even specify an absolute path to the executable file of package manager:
+You can even specify an absolute path to the executable file of the package manager:
 
 ```ts
 await build({
@@ -502,6 +521,14 @@ await build({
   packageManager: "/usr/bin/pnpm",
 });
 ```
+
+### Node v14 and Below
+
+dnt should be able to target old versions of Node by specifying a `{ compilerOption: { target: ... }}` value in the build options (see [Node Target Mapping](https://github.com/microsoft/TypeScript/wiki/Node-Target-Mapping) for what target maps to what Node version). A problem though is that certain shims might not work in old versions of Node.
+
+If wanting to target a version of Node v14 and below, its recommend to use the `Deno.test`-only shim (described above) and then making use of the "redirects" feature to write Node-only files where you can handle differences. Alternatively, see if changes to the shim libraries might make it run on old versions of Node. Unfortunately, certain features are impossible or infeasible to get working.
+
+See [this thread](https://github.com/denoland/node_deno_shims/issues/15) in node_deno_shims for more details.
 
 ## JS API Example
 
