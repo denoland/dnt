@@ -7,6 +7,7 @@ use deno_node_transform::transform;
 use deno_node_transform::GlobalName;
 use deno_node_transform::MappedSpecifier;
 use deno_node_transform::ModuleSpecifier;
+use deno_node_transform::ScriptTarget;
 use deno_node_transform::Shim;
 use deno_node_transform::TransformOptions;
 use deno_node_transform::TransformOutput;
@@ -22,6 +23,7 @@ pub struct TestBuilder {
   redirects: HashMap<ModuleSpecifier, ModuleSpecifier>,
   shims: Vec<Shim>,
   test_shims: Vec<Shim>,
+  target: ScriptTarget,
 }
 
 impl TestBuilder {
@@ -36,6 +38,7 @@ impl TestBuilder {
       redirects: Default::default(),
       shims: Default::default(),
       test_shims: Default::default(),
+      target: ScriptTarget::ES5,
     }
   }
 
@@ -143,6 +146,11 @@ impl TestBuilder {
     self
   }
 
+  pub fn set_target(&mut self, target: ScriptTarget) -> &mut Self {
+    self.target = target;
+    self
+  }
+
   pub async fn transform(&self) -> Result<TransformOutput> {
     let mut entry_points =
       vec![ModuleSpecifier::parse(&self.entry_point).unwrap()];
@@ -164,6 +172,7 @@ impl TestBuilder {
       loader: Some(Box::new(self.loader.clone())),
       specifier_mappings: self.specifier_mappings.clone(),
       redirects: self.redirects.clone(),
+      target: self.target,
     })
     .await
   }

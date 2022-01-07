@@ -11,7 +11,7 @@ import {
 import { colors, createProjectSync, path, ts } from "./lib/mod.deps.ts";
 import { ShimOptions, shimOptionsToTransformShims } from "./lib/shims.ts";
 import { getNpmIgnoreText } from "./lib/npm_ignore.ts";
-import { PackageJsonObject } from "./lib/types.ts";
+import { PackageJsonObject, ScriptTarget } from "./lib/types.ts";
 import { glob, runNpmCommand } from "./lib/utils.ts";
 import {
   Redirects,
@@ -21,7 +21,6 @@ import {
 } from "./transform.ts";
 import * as compilerTransforms from "./lib/compiler_transforms.ts";
 import { getPackageJson } from "./lib/package_json.ts";
-import { ScriptTarget } from "./lib/compiler.ts";
 import { getTestRunnerCode } from "./lib/test_runner/get_test_runner_code.ts";
 
 export type { ShimOptions } from "./lib/shims.ts";
@@ -126,6 +125,7 @@ export async function build(options: BuildOptions): Promise<void> {
     declaration: options.declaration ?? true,
   };
   const packageManager = options.packageManager ?? "npm";
+  const scriptTarget = options.compilerOptions?.target ?? "ES2021";
   const entryPoints: EntryPoint[] = options.entryPoints.map((e, i) => {
     if (typeof e === "string") {
       return {
@@ -176,9 +176,7 @@ export async function build(options: BuildOptions): Promise<void> {
   const esmOutDir = path.join(options.outDir, "esm");
   const umdOutDir = path.join(options.outDir, "umd");
   const typesOutDir = path.join(options.outDir, "types");
-  const compilerScriptTarget = getCompilerScriptTarget(
-    options.compilerOptions?.target,
-  );
+  const compilerScriptTarget = getCompilerScriptTarget(scriptTarget);
   const project = createProjectSync({
     compilerOptions: {
       outDir: typesOutDir,
@@ -394,6 +392,7 @@ export async function build(options: BuildOptions): Promise<void> {
       testShims,
       mappings: options.mappings,
       redirects: options.redirects,
+      target: scriptTarget,
     });
   }
 

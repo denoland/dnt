@@ -1,6 +1,7 @@
 // Copyright 2018-2022 the Deno authors. All rights reserved. MIT license.
 
 import { path, ts } from "./mod.deps.ts";
+import { ScriptTarget } from "./types.ts";
 
 export function outputDiagnostics(diagnostics: readonly ts.Diagnostic[]) {
   console.error(ts.formatDiagnosticsWithColorAndContext(diagnostics, {
@@ -10,19 +11,7 @@ export function outputDiagnostics(diagnostics: readonly ts.Diagnostic[]) {
   }));
 }
 
-export type ScriptTarget =
-  | "ES3"
-  | "ES5"
-  | "ES2015"
-  | "ES2016"
-  | "ES2017"
-  | "ES2018"
-  | "ES2019"
-  | "ES2020"
-  | "ES2021"
-  | "Latest";
-
-export function getCompilerScriptTarget(target: ScriptTarget | undefined) {
+export function getCompilerScriptTarget(target: ScriptTarget) {
   switch (target) {
     case "ES3":
       return ts.ScriptTarget.ES3;
@@ -40,8 +29,6 @@ export function getCompilerScriptTarget(target: ScriptTarget | undefined) {
       return ts.ScriptTarget.ES2019;
     case "ES2020":
       return ts.ScriptTarget.ES2020;
-    case null:
-    case undefined:
     case "ES2021":
       return ts.ScriptTarget.ES2021;
     case "Latest":

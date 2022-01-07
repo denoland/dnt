@@ -3,6 +3,7 @@
 import { path } from "./lib/transform.deps.ts";
 import init, * as wasmFuncs from "./lib/pkg/dnt_wasm.js";
 import { source } from "./lib/pkg/dnt_wasm_bg.ts";
+import { ScriptTarget } from "./lib/types.ts";
 
 await init(source);
 
@@ -59,6 +60,7 @@ export interface TransformOptions {
   testShims?: Shim[];
   mappings?: SpecifierMappings;
   redirects?: Redirects;
+  target: ScriptTarget;
 }
 
 export interface Dependency {
@@ -106,6 +108,7 @@ export function transform(options: TransformOptions): Promise<TransformOutput> {
     testEntryPoints: (options.testEntryPoints ?? []).map(valueToUrl),
     shims: (options.shims ?? []).map(mapShim),
     testShims: (options.testShims ?? []).map(mapShim),
+    target: options.target,
   };
   return wasmFuncs.transform(newOptions);
 }
