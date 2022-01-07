@@ -12,7 +12,7 @@ pub struct StringReplaceAllPolyfill;
 
 impl Polyfill for StringReplaceAllPolyfill {
   fn use_for_target(&self, target: ScriptTarget) -> bool {
-    target as u32 <= ScriptTarget::ES2020 as u32
+    (target as u32) < (ScriptTarget::ES2021 as u32)
   }
 
   fn visit_node(&self, node: Node, context: &PolyfillVisitContext) -> bool {
@@ -29,6 +29,6 @@ impl Polyfill for StringReplaceAllPolyfill {
   }
 
   fn get_file_text(&self) -> &'static str {
-    include_str!("./scripts/string-replaceAll.ts")
+    include_str!("./scripts/es2021.string-replaceAll.ts")
   }
 }

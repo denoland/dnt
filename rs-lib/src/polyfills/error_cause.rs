@@ -25,6 +25,6 @@ impl Polyfill for ErrorCausePolyfill {
   }
 
   fn get_file_text(&self) -> &'static str {
-    include_str!("./scripts/error-cause.ts")
+    include_str!("./scripts/esnext.error-cause.ts")
   }
 }

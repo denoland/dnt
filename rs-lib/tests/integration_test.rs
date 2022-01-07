@@ -1275,6 +1275,7 @@ async fn polyfills_all() {
             "  err.cause = new Error();\n",
             "}\n",
             "''.replaceAll('test', 'other');\n",
+            "console.log(WeakRef);\n",
           ),
         )
         .add_local_file("/mod.test.ts", "import * as mod from './mod.ts';");
@@ -1297,14 +1298,16 @@ async fn polyfills_all() {
           "  err.cause = new Error();\n",
           "}\n",
           "''.replaceAll('test', 'other');\n",
+          "console.log(WeakRef);\n",
         ),
       ),
       (
         "_dnt.polyfills.ts",
         concat!(
-          include_str!("../src/polyfills/scripts/object-has-own.ts"),
-          include_str!("../src/polyfills/scripts/error-cause.ts"),
-          include_str!("../src/polyfills/scripts/string-replaceAll.ts"),
+          include_str!("../src/polyfills/scripts/esnext.object-has-own.ts"),
+          include_str!("../src/polyfills/scripts/esnext.error-cause.ts"),
+          include_str!("../src/polyfills/scripts/es2021.string-replaceAll.ts"),
+          include_str!("../src/polyfills/scripts/es2021.weak-ref.ts"),
         )
       ),
     ]
@@ -1354,7 +1357,7 @@ async fn test_string_replace_all_polyfill(
         (
           "_dnt.polyfills.ts",
           concat!(include_str!(
-            "../src/polyfills/scripts/string-replaceAll.ts"
+            "../src/polyfills/scripts/es2021.string-replaceAll.ts"
           ),)
         ),
       ]
@@ -1396,7 +1399,7 @@ async fn polyfills_test_files() {
       ),
       (
         "_dnt.test_polyfills.ts",
-        include_str!("../src/polyfills/scripts/object-has-own.ts"),
+        include_str!("../src/polyfills/scripts/esnext.object-has-own.ts"),
       )
     ]
   );
@@ -1454,7 +1457,7 @@ async fn redirects_general() {
       ("myFunction.ts", "export function myFunction() {}",),
       (
         "_dnt.polyfills.ts",
-        include_str!("../src/polyfills/scripts/object-has-own.ts")
+        include_str!("../src/polyfills/scripts/esnext.object-has-own.ts")
       ),
     ]
   );

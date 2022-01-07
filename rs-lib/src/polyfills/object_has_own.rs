@@ -20,7 +20,7 @@ impl Polyfill for ObjectHasOwnPolyfill {
     if let Node::CallExpr(expr) = node {
       if let Node::MemberExpr(callee) = expr.callee.as_node() {
         if callee.text_fast(context.program) == "Object.hasOwn"
-          && callee.obj.span().ctxt() == context.top_level_context
+          && callee.obj.span().ctxt == context.top_level_context
         {
           return true;
         }
@@ -30,6 +30,6 @@ impl Polyfill for ObjectHasOwnPolyfill {
   }
 
   fn get_file_text(&self) -> &'static str {
-    include_str!("./scripts/object-has-own.ts")
+    include_str!("./scripts/esnext.object-has-own.ts")
   }
 }

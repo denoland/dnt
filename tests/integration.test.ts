@@ -188,6 +188,7 @@ Deno.test("should run tests when using @deno/shim-deno-test shim", async () => {
       version: "1.0.0",
     },
     compilerOptions: {
+      target: "ES2019", // node 12
       importHelpers: true,
     },
   }, (output) => {
