@@ -406,23 +406,28 @@ export async function build(options: BuildOptions): Promise<void> {
   }
 
   function createTestLauncherScript() {
+    const denoTestShimPackage = getDependencyByName("@deno/shim-deno-test") ??
+      getDependencyByName("@deno/shim-deno");
     writeFile(
       path.join(options.outDir, "test_runner.js"),
       transformCodeToTarget(
         getTestRunnerCode({
-          shimPackageName: "@deno/shim-deno",
+          denoTestShimPackageName: denoTestShimPackage == null
+            ? undefined
+            : denoTestShimPackage.name === "@deno/shim-deno"
+            ? "@deno/shim-deno/test-internals"
+            : denoTestShimPackage.name,
           testEntryPoints: transformOutput.test.entryPoints,
-          testShimUsed: transformOutput.test.dependencies.some((s) =>
-            s.name === "@deno/shim-deno"
-          ) ||
-            transformOutput.main.dependencies.some((s) =>
-              s.name === "@deno/shim-deno"
-            ),
           includeCjs: options.cjs,
         }),
         compilerScriptTarget,
       ),
     );
+
+    function getDependencyByName(name: string) {
+      return transformOutput.test.dependencies.find((d) => d.name === name) ??
+        transformOutput.main.dependencies.find((d) => d.name === name);
+    }
   }
 
   function getTestPattern() {

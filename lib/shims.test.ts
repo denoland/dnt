@@ -65,3 +65,16 @@ Deno.test("should get when all undefined", () => {
   assertEquals(result.shims.length, 0);
   assertEquals(result.testShims.length, 0);
 });
+
+Deno.test("should get for inner deno namespace", () => {
+  const result = shimOptionsToTransformShims({
+    deno: {
+      test: true,
+    },
+  });
+
+  assertEquals(result.shims.length, 1);
+  assertEquals(result.shims[0].package.name, "@deno/shim-deno-test");
+  assertEquals(result.testShims.length, 1);
+  assertEquals(result.testShims[0].package.name, "@deno/shim-deno-test");
+});

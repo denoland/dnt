@@ -5,16 +5,15 @@ import { runTestDefinitions } from "./test_runner.ts";
 
 export function getTestRunnerCode(options: {
   testEntryPoints: string[];
-  testShimUsed: boolean;
-  shimPackageName: string;
+  denoTestShimPackageName: string | undefined;
   includeCjs: boolean | undefined;
 }) {
   const writer = createWriter();
   writer.writeLine(`const chalk = require("chalk");`)
     .writeLine(`const process = require("process");`);
-  if (options.testShimUsed) {
+  if (options.denoTestShimPackageName != null) {
     writer.writeLine(
-      `const { testDefinitions } = require("${options.shimPackageName}/test-internals");`,
+      `const { testDefinitions } = require("${options.denoTestShimPackageName}");`,
     );
   }
   writer.blankLine();
@@ -45,7 +44,7 @@ export function getTestRunnerCode(options: {
           );
           writer.writeLine(`process.chdir(__dirname + "/umd");`);
           writer.writeLine(`require(umdPath);`);
-          if (options.testShimUsed) {
+          if (options.denoTestShimPackageName != null) {
             writer.writeLine(
               "await runTestDefinitions(testDefinitions.splice(0, testDefinitions.length), testContext);",
             );
@@ -59,7 +58,7 @@ export function getTestRunnerCode(options: {
           `console.log("\\nRunning tests in " + chalk.underline(esmPath) + "...\\n");`,
         );
         writer.writeLine(`await import(esmPath);`);
-        if (options.testShimUsed) {
+        if (options.denoTestShimPackageName != null) {
           writer.writeLine(
             "await runTestDefinitions(testDefinitions.splice(0, testDefinitions.length), testContext);",
           );
@@ -68,7 +67,7 @@ export function getTestRunnerCode(options: {
   });
   writer.blankLine();
 
-  if (options.testShimUsed) {
+  if (options.denoTestShimPackageName != null) {
     writer.writeLine(`${getRunTestDefinitionsCode()}`);
     writer.blankLine();
   }
