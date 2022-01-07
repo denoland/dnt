@@ -16,7 +16,9 @@ impl Polyfill for WeakRefPolyfill {
 
   fn visit_node(&self, node: Node, context: &PolyfillVisitContext) -> bool {
     if let Node::Ident(ident) = node {
-      if ident.inner.span.ctxt == context.top_level_context && ident.text_fast(context.program) == "WeakRef" {
+      if ident.inner.span.ctxt == context.top_level_context
+        && ident.text_fast(context.program) == "WeakRef"
+      {
         return true;
       }
     }

@@ -32,7 +32,7 @@ if (globalThis.WeakRef == null) {
     }
 
     deref(): T | undefined {
-      throw new Error("WeakRef is not supported in Node 14 and below.")
+      throw new Error("WeakRef is not supported in Node 14 and below.");
     }
   };
 }
