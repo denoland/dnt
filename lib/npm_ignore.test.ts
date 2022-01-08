@@ -64,6 +64,7 @@ function runTest(options: {
     const startText = options.expectHasSrcFolder ? "src/\n" : "";
     return startText + `esm/mod.test.js
 umd/mod.test.js
+types/mod.test.d.ts
 test_runner.js
 yarn.lock
 pnpm-lock.yaml
