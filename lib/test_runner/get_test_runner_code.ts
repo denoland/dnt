@@ -43,7 +43,12 @@ export function getTestRunnerCode(options: {
             `console.log("Running tests in " + chalk.underline(umdPath) + "...\\n");`,
           );
           writer.writeLine(`process.chdir(__dirname + "/umd");`);
-          writer.writeLine(`require(umdPath);`);
+          writer.writeLine("try").block(() => {
+            writer.writeLine(`require(umdPath);`);
+          }).write("catch(err)").block(() => {
+            writer.writeLine("console.error(err)");
+            writer.writeLine("process.exit(1)");
+          });
           if (options.denoTestShimPackageName != null) {
             writer.writeLine(
               "await runTestDefinitions(testDefinitions.splice(0, testDefinitions.length), testContext);",
