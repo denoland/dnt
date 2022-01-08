@@ -35,7 +35,12 @@ async function main() {
     const umdPath = "./umd/" + filePath;
     console.log("Running tests in " + chalk.underline(umdPath) + "...\\n");
     process.chdir(__dirname + "/umd");
-    require(umdPath);
+    try {
+      require(umdPath);
+    } catch(err) {
+      console.error(err);
+      process.exit(1);
+    }
 
     const esmPath = "./esm/" + filePath;
     process.chdir(__dirname + "/esm");
@@ -79,7 +84,12 @@ async function main() {
     const umdPath = "./umd/" + filePath;
     console.log("Running tests in " + chalk.underline(umdPath) + "...\\n");
     process.chdir(__dirname + "/umd");
-    require(umdPath);
+    try {
+      require(umdPath);
+    } catch(err) {
+      console.error(err);
+      process.exit(1);
+    }
     await runTestDefinitions(testDefinitions.splice(0, testDefinitions.length), testContext);
 
     const esmPath = "./esm/" + filePath;
