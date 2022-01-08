@@ -22,14 +22,11 @@ export function getNpmIgnoreText(options: {
 
   function* getTestFileNames() {
     for (const file of options.testFiles) {
-      // ignore test declaration files as they won't show up in the emit
-      if (/\.d\.ts$/i.test(file.filePath)) {
-        continue;
-      }
-
       const filePath = file.filePath.replace(/\.ts$/i, ".js");
+      const dtsFilePath = file.filePath.replace(/\.ts$/i, ".d.ts");
       yield `esm/${filePath}`;
       yield `umd/${filePath}`;
+      yield `types/${dtsFilePath}`;
     }
     yield "test_runner.js";
   }
