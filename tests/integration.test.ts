@@ -179,7 +179,10 @@ Deno.test("should build bin project", async () => {
   });
 });
 
-Deno.test("should run tests when using @deno/shim-deno-test shim", async () => {
+// todo: re-enable when adding WeakRef shim
+Deno.test("should run tests when using @deno/shim-deno-test shim", {
+  ignore: true,
+}, async () => {
   await runTest("test_project", {
     entryPoints: ["mod.ts"],
     outDir: "./npm",
