@@ -6,11 +6,13 @@ use std::collections::HashSet;
 use std::path::Path;
 use std::path::PathBuf;
 
+use analyze::get_top_level_decls;
 use anyhow::Context;
 use anyhow::Result;
 #[macro_use]
 extern crate lazy_static;
 
+use analyze::get_ignore_line_indexes;
 use graph::ModuleGraphOptions;
 use graph::ModuleRef;
 use mappings::Mappings;
@@ -26,7 +28,6 @@ use utils::get_relative_specifier;
 use visitors::fill_polyfills;
 use visitors::get_deno_comment_directive_text_changes;
 use visitors::get_global_text_changes;
-use visitors::get_ignore_line_indexes;
 use visitors::get_import_exports_text_changes;
 use visitors::FillPolyfillsParams;
 use visitors::GetGlobalTextChangesParams;
@@ -40,6 +41,7 @@ pub use utils::url_to_file_path;
 use crate::declaration_file_resolution::TypesDependency;
 use crate::utils::strip_bom;
 
+mod analyze;
 mod declaration_file_resolution;
 mod graph;
 mod loader;
@@ -262,8 +264,11 @@ pub async fn transform(options: TransformOptions) -> Result<TransformOutput> {
 
         let text_changes = parsed_source
           .with_view(|program| -> Result<Vec<TextChange>> {
+            let top_level_context = parsed_source.top_level_context();
             let ignore_line_indexes =
               get_ignore_line_indexes(parsed_source.specifier(), &program);
+            let top_level_decls =
+              get_top_level_decls(&program, top_level_context);
             warnings.extend(ignore_line_indexes.warnings);
 
             fill_polyfills(&mut FillPolyfillsParams {
@@ -271,6 +276,7 @@ pub async fn transform(options: TransformOptions) -> Result<TransformOutput> {
               searching_polyfills: &mut env_context.searching_polyfills,
               program: &program,
               top_level_context: parsed_source.top_level_context(),
+              top_level_decls: &top_level_decls,
             });
 
             let mut text_changes = Vec::new();
@@ -284,10 +290,11 @@ pub async fn transform(options: TransformOptions) -> Result<TransformOutput> {
               let result =
                 get_global_text_changes(&GetGlobalTextChangesParams {
                   program: &program,
-                  top_level_context: parsed_source.top_level_context(),
+                  top_level_context,
                   shim_specifier: &shim_relative_specifier,
                   shim_global_names: &env_context.shim_global_names,
                   ignore_line_indexes: &ignore_line_indexes.line_indexes,
+                  top_level_decls: &top_level_decls,
                 });
               text_changes.extend(result.text_changes);
               if result.imported_shim {

@@ -9,8 +9,7 @@ use deno_ast::swc::common::SyntaxContext;
 use deno_ast::swc::utils::ident::IdentLike;
 use deno_ast::view::*;
 
-use super::analyze::get_top_level_decls;
-use super::analyze::is_in_type;
+use crate::analyze::is_in_type;
 use crate::text_changes::TextChange;
 
 pub struct GetGlobalTextChangesParams<'a> {
@@ -19,6 +18,7 @@ pub struct GetGlobalTextChangesParams<'a> {
   pub shim_specifier: &'a str,
   pub shim_global_names: &'a HashSet<&'a str>,
   pub ignore_line_indexes: &'a HashSet<usize>,
+  pub top_level_decls: &'a HashSet<String>,
 }
 
 pub struct GetGlobalTextChangesResult {
@@ -39,12 +39,10 @@ struct Context<'a> {
 pub fn get_global_text_changes(
   params: &GetGlobalTextChangesParams<'_>,
 ) -> GetGlobalTextChangesResult {
-  let top_level_decls =
-    get_top_level_decls(params.program, params.top_level_context);
   let mut context = Context {
     program: params.program,
     top_level_context: params.top_level_context,
-    top_level_decls: &top_level_decls,
+    top_level_decls: params.top_level_decls,
     shim_global_names: params.shim_global_names,
     import_shim: false,
     text_changes: Vec::new(),

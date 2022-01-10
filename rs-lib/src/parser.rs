@@ -13,11 +13,11 @@ use deno_ast::SourceTextInfo;
 use deno_graph::SourceParser;
 
 #[derive(Default)]
-pub struct ScopeAnalysisParser {}
+pub struct ScopeAnalysisParser;
 
 impl ScopeAnalysisParser {
   pub fn new() -> Self {
-    ScopeAnalysisParser {}
+    ScopeAnalysisParser
   }
 }
 
