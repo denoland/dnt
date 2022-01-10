@@ -1,5 +1,7 @@
 // Copyright 2018-2022 the Deno authors. All rights reserved. MIT license.
 
+use std::collections::HashSet;
+
 use deno_ast::swc::common::SyntaxContext;
 use deno_ast::view::Node;
 use deno_ast::view::Program;
@@ -19,6 +21,7 @@ pub trait Polyfill {
 pub struct PolyfillVisitContext<'a> {
   pub program: &'a Program<'a>,
   pub top_level_context: SyntaxContext,
+  pub top_level_decls: &'a HashSet<String>,
 }
 
 pub fn polyfills_for_target(target: ScriptTarget) -> Vec<Box<dyn Polyfill>> {
@@ -48,4 +51,50 @@ pub fn build_polyfill_file(polyfills: &[Box<dyn Polyfill>]) -> Option<String> {
   }
 
   Some(file_text)
+}
+
+#[cfg(test)]
+struct PolyfillTester {
+  create_polyfill: Box<dyn Fn() -> Box<dyn Polyfill>>,
+}
+
+#[cfg(test)]
+impl PolyfillTester {
+  pub fn new(create_polyfill: Box<dyn Fn() -> Box<dyn Polyfill>>) -> Self {
+    Self { create_polyfill }
+  }
+
+  pub fn matches(&self, text: &str) -> bool {
+    use deno_ast::MediaType;
+    use deno_ast::ModuleSpecifier;
+    use deno_graph::SourceParser;
+
+    use crate::analyze::get_top_level_decls;
+    use crate::parser::ScopeAnalysisParser;
+    use crate::visitors::fill_polyfills;
+    use crate::visitors::FillPolyfillsParams;
+
+    let parser = ScopeAnalysisParser::new();
+    let parsed_source = parser
+      .parse_module(
+        &ModuleSpecifier::parse("file://test.ts").unwrap(),
+        std::sync::Arc::new(text.to_string()),
+        MediaType::TypeScript,
+      )
+      .unwrap();
+    parsed_source.with_view(|program| {
+      let mut searching_polyfills = vec![(self.create_polyfill)()];
+      let mut found_polyfills = Vec::new();
+      let top_level_context = parsed_source.top_level_context();
+      let top_level_decls = get_top_level_decls(&program, top_level_context);
+      fill_polyfills(&mut FillPolyfillsParams {
+        program: &program,
+        top_level_context,
+        top_level_decls: &top_level_decls,
+        searching_polyfills: &mut searching_polyfills,
+        found_polyfills: &mut found_polyfills,
+      });
+      !found_polyfills.is_empty()
+    })
+  }
 }

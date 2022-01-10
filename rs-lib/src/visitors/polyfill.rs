@@ -1,5 +1,7 @@
 // Copyright 2018-2022 the Deno authors. All rights reserved. MIT license.
 
+use std::collections::HashSet;
+
 use deno_ast::swc::common::SyntaxContext;
 use deno_ast::view::*;
 
@@ -9,6 +11,7 @@ use crate::polyfills::PolyfillVisitContext;
 pub struct FillPolyfillsParams<'a> {
   pub program: &'a Program<'a>,
   pub top_level_context: SyntaxContext,
+  pub top_level_decls: &'a HashSet<String>,
   pub searching_polyfills: &'a mut Vec<Box<dyn Polyfill>>,
   pub found_polyfills: &'a mut Vec<Box<dyn Polyfill>>,
 }
@@ -24,6 +27,7 @@ pub fn fill_polyfills(params: &mut FillPolyfillsParams<'_>) {
     visit_context: PolyfillVisitContext {
       program: params.program,
       top_level_context: params.top_level_context,
+      top_level_decls: params.top_level_decls,
     },
     searching_polyfills: params.searching_polyfills,
     found_polyfills: params.found_polyfills,
