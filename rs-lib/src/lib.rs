@@ -62,8 +62,9 @@ pub struct OutputFile {
 }
 
 #[cfg_attr(feature = "serialization", derive(serde::Serialize))]
+#[cfg_attr(feature = "serialization", derive(serde::Deserialize))]
 #[cfg_attr(feature = "serialization", serde(rename_all = "camelCase"))]
-#[derive(Debug, PartialEq)]
+#[derive(Clone, Debug, PartialEq)]
 pub struct Dependency {
   pub name: String,
   pub version: String,
@@ -128,6 +129,8 @@ pub struct GlobalName {
 pub struct Shim {
   /// Information about the npm package to use for this shim.
   pub package: MappedSpecifier,
+  /// Npm package to include in the dev depedencies that has the type declarations.
+  pub types_package: Option<Dependency>,
   /// Names this shim provides that will be injected in global contexts.
   pub global_names: Vec<GlobalName>,
 }
@@ -364,6 +367,11 @@ pub async fn transform(options: TransformOptions) -> Result<TransformOutput> {
     mappings.get_file_path(&SYNTHETIC_TEST_SPECIFIERS.shims),
   );
 
+  add_shim_types_packages_to_test_environment(
+    &mut test_env_context.environment,
+    options.shims.iter().chain(options.test_shims.iter()),
+  );
+
   // Remove any dependencies from the test environment that
   // are found in the main environment. Only check for exact
   // matches in order to cause an npm install error if there
@@ -380,6 +388,17 @@ pub async fn transform(options: TransformOptions) -> Result<TransformOutput> {
     test: test_env_context.environment,
     warnings,
   })
+}
+
+fn add_shim_types_packages_to_test_environment<'a>(
+  test_output_env: &mut TransformOutputEnvironment,
+  all_shims: impl Iterator<Item = &'a Shim>,
+) {
+  for shim in all_shims {
+    if let Some(types_package) = &shim.types_package {
+      test_output_env.dependencies.push(types_package.clone())
+    }
+  }
 }
 
 fn check_add_polyfill_file_to_environment(

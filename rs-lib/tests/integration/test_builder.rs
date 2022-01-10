@@ -74,6 +74,7 @@ impl TestBuilder {
         version: Some("^0.1.0".to_string()),
         sub_path: None,
       },
+      types_package: None,
       global_names: vec![GlobalName {
         name: "Deno".to_string(),
         export_name: None,
@@ -88,6 +89,7 @@ impl TestBuilder {
         version: Some("^0.1.0".to_string()),
         sub_path: None,
       },
+      types_package: None,
       global_names: vec![
         GlobalName {
           name: "setTimeout".to_string(),

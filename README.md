@@ -188,6 +188,7 @@ Set any of these properties to `true` (distribution and test) or `"dev"` (test o
 - `prompts` - Shim the global `confirm`, `alert`, and `prompt` functions.
 - `blob` - Shim the `Blob` global with the one from the `"buffer"` module.
 - `crypto` - Shim the `crypto` global.
+- `domException` - Shim the `DOMException` global using the "domexception" package (https://www.npmjs.com/package/domexception)
 - `undici` - Shim `fetch`, `File`, `FormData`, `Headers`, `Request`, and `Response` by using the "undici" package (https://www.npmjs.com/package/undici).
 
 ##### `Deno.test`-only shim
@@ -239,6 +240,20 @@ await build({
         name: "buffer", // uses node's "buffer" module
       },
       globalNames: ["Blob"],
+    }, {
+      // this is what `domException: true` does internally
+      package: {
+        name: "domexception",
+        version: "^4.0.0",
+      },
+      typesPackage: {
+        name: "@types/domexception",
+        version: "^2.0.1",
+      },
+      globalNames: [{
+        name: "DOMException",
+        exportName: "default",
+      }],
     }],
     // shims to only use in the tests
     customDev: [{

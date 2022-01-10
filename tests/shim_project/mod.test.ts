@@ -1,6 +1,6 @@
 // Copyright 2018-2022 the Deno authors. All rights reserved. MIT license.
 
-import { addAsync, getCryptoKeyPair } from "./mod.ts";
+import { addAsync, getCryptoKeyPair, throwDomException } from "./mod.ts";
 
 Deno.test("should add in test project", async () => {
   const result = await addAsync(1, 2);
@@ -16,6 +16,18 @@ Deno.test("should get crypto key pair", async () => {
   ]);
   if (value.privateKey == null || value.publicKey == null) {
     throw new Error("Was null.");
+  }
+});
+
+Deno.test("should shim DOMException", () => {
+  let err: DOMException | undefined = undefined;
+  try {
+    throwDomException();
+  } catch (caughtErr) {
+    err = caughtErr as DOMException;
+  }
+  if (!(err instanceof DOMException)) {
+    throw new Error("Expected to throw DOMException.");
   }
 });
 
