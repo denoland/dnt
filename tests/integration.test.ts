@@ -10,6 +10,8 @@ const versions = {
   denoShim: "~0.1.1",
   denoTestShim: "~0.2.0",
   cryptoShim: "~0.2.0",
+  domExceptionShim: "^4.0.0",
+  domExceptionShimTypes: "^2.0.1",
   promptsShim: "~0.1.0",
   timersShim: "~0.1.0",
   undici: "^4.12.1",
@@ -385,7 +387,13 @@ Deno.test("should build shim project", async () => {
       "@deno/shim-deno": versions.denoShim,
       "@deno/shim-prompts": versions.promptsShim,
       "@deno/shim-timers": versions.timersShim,
+      "domexception": versions.domExceptionShim,
       "undici": versions.undici,
+    });
+    assertEquals(output.packageJson.devDependencies, {
+      "@types/domexception": versions.domExceptionShimTypes,
+      "@types/node": versions.nodeTypes,
+      "chalk": versions.chalk,
     });
   });
 });
@@ -436,6 +444,7 @@ Deno.test("should build shim project when using node-fetch", async () => {
       "@deno/shim-deno": versions.denoShim,
       "@deno/shim-prompts": versions.promptsShim,
       "@deno/shim-timers": versions.timersShim,
+      "domexception": versions.domExceptionShim,
       "undici": versions.undici,
       "node-fetch": "~3.1.0",
     });
@@ -449,6 +458,8 @@ import { alert, confirm, prompt } from "@deno/shim-prompts";
 export { alert, confirm, prompt } from "@deno/shim-prompts";
 import { setInterval, setTimeout } from "@deno/shim-timers";
 export { setInterval, setTimeout } from "@deno/shim-timers";
+import { default as DOMException } from "domexception";
+export { default as DOMException } from "domexception";
 import { File, FormData, Headers, Request, Response } from "undici";
 export { File, FormData, Headers, Request, Response } from "undici";
 import { default as fetch } from "node-fetch";
@@ -463,6 +474,7 @@ const dntGlobals = {
   prompt,
   setInterval,
   setTimeout,
+  DOMException,
   File,
   FormData,
   Headers,
@@ -666,6 +678,7 @@ function getAllShimOptions(value: boolean | "dev"): ShimOptions {
     prompts: value,
     blob: value,
     crypto: value,
+    domException: value,
     undici: value,
   };
 }

@@ -10,6 +10,7 @@ Deno.test("should get when all true", () => {
     prompts: true,
     blob: true,
     crypto: true,
+    domException: true,
     undici: true,
     custom: [{
       package: {
@@ -27,8 +28,8 @@ Deno.test("should get when all true", () => {
     }],
   });
 
-  assertEquals(result.shims.length, 7);
-  assertEquals(result.testShims.length, 8);
+  assertEquals(result.shims.length, 8);
+  assertEquals(result.testShims.length, 9);
 });
 
 Deno.test("should get when all dev", () => {
@@ -38,11 +39,12 @@ Deno.test("should get when all dev", () => {
     prompts: "dev",
     blob: "dev",
     crypto: "dev",
+    domException: "dev",
     undici: "dev",
   });
 
   assertEquals(result.shims.length, 0);
-  assertEquals(result.testShims.length, 6);
+  assertEquals(result.testShims.length, 7);
 });
 
 Deno.test("should get when all false", () => {
@@ -52,6 +54,7 @@ Deno.test("should get when all false", () => {
     prompts: false,
     blob: false,
     crypto: false,
+    domException: false,
     undici: false,
   });
 

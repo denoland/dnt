@@ -49,6 +49,8 @@ export interface GlobalName {
 export interface Shim {
   /** Information about the npm package or bare specifier to import. */
   package: MappedSpecifier;
+  /** Npm package to include in the dev depedencies that has the type declarations. */
+  typesPackage?: Dependency;
   /** Named exports from the shim to use as globals. */
   globalNames: (GlobalName | string)[];
 }
@@ -63,8 +65,11 @@ export interface TransformOptions {
   target: ScriptTarget;
 }
 
+/** Dependency in a package.json file. */
 export interface Dependency {
+  /** Name of the package. */
   name: string;
+  /** Version specifier (ex. `^1.0.0`). */
   version: string;
 }
 

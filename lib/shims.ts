@@ -31,6 +31,8 @@ export interface ShimOptions {
   blob?: ShimValue;
   /** Shim the `crypto` global. */
   crypto?: ShimValue;
+  /** Shim `DOMException` using the "domexception" package (https://www.npmjs.com/package/domexception) */
+  domException?: ShimValue;
   /** Shim `fetch`, `File`, `FormData`, `Headers`, `Request`, and `Response` by
    * using the "undici" package (https://www.npmjs.com/package/undici).
    */
@@ -61,6 +63,7 @@ export function shimOptionsToTransformShims(options: ShimOptions) {
   add(options.crypto, getCryptoShim);
   add(options.prompts, getPromptsShim);
   add(options.timers, getTimersShim);
+  add(options.domException, getDomExceptionShim);
   add(options.undici, getUndiciShim);
 
   if (options.custom) {
@@ -196,6 +199,23 @@ function getUndiciShim(): Shim {
       "Request",
       "Response",
     ],
+  };
+}
+
+function getDomExceptionShim(): Shim {
+  return {
+    package: {
+      name: "domexception",
+      version: "^4.0.0",
+    },
+    typesPackage: {
+      name: "@types/domexception",
+      version: "^2.0.1",
+    },
+    globalNames: [{
+      name: "DOMException",
+      exportName: "default",
+    }],
   };
 }
 

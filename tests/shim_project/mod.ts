@@ -43,3 +43,7 @@ export async function getCryptoKeyPair(
   );
   return keyPair;
 }
+
+export function throwDomException() {
+  throw new DOMException("My message", "Something");
+}

@@ -81,8 +81,10 @@ async fn transform_shims() {
 async fn transform_shim_custom_shims() {
   let result = TestBuilder::new()
     .with_loader(|loader| {
-      loader
-        .add_local_file("/mod.ts", "fetch(); console.log(Blob); fetchTest();");
+      loader.add_local_file(
+        "/mod.ts",
+        "fetch(); console.log(Blob); fetchTest(); DOMException;",
+      );
     })
     .add_shim(Shim {
       package: MappedSpecifier {
@@ -90,6 +92,7 @@ async fn transform_shim_custom_shims() {
         version: Some("~3.1.0".to_string()),
         sub_path: None,
       },
+      types_package: None,
       global_names: vec![GlobalName {
         name: "fetch".to_string(),
         export_name: Some("default".to_string()),
@@ -102,9 +105,26 @@ async fn transform_shim_custom_shims() {
         version: Some("~3.1.0".to_string()),
         sub_path: Some("test".to_string()),
       },
+      types_package: None,
       global_names: vec![GlobalName {
         name: "fetchTest".to_string(),
         export_name: Some("fetchTestName".to_string()),
+        type_only: false,
+      }],
+    })
+    .add_shim(Shim {
+      package: MappedSpecifier {
+        name: "domexception".to_string(),
+        version: Some("^4.0.0".to_string()),
+        sub_path: None,
+      },
+      types_package: Some(Dependency {
+        name: "@types/domexception".to_string(),
+        version: "^2.0.1".to_string(),
+      }),
+      global_names: vec![GlobalName {
+        name: "DOMException".to_string(),
+        export_name: Some("default".to_string()),
         type_only: false,
       }],
     })
@@ -114,6 +134,7 @@ async fn transform_shim_custom_shims() {
         version: None,
         sub_path: None,
       },
+      types_package: None,
       global_names: vec![
         GlobalName {
           name: "Blob".to_string(),
@@ -133,6 +154,7 @@ async fn transform_shim_custom_shims() {
         version: None,
         sub_path: None,
       },
+      types_package: None,
       global_names: vec![GlobalName {
         name: "TypeOnly".to_string(),
         export_name: None,
@@ -154,6 +176,8 @@ async fn transform_shim_custom_shims() {
             "export { default as fetch } from \"node-fetch\";\n",
             "import { fetchTestName as fetchTest } from \"node-fetch/test\";\n",
             "export { fetchTestName as fetchTest } from \"node-fetch/test\";\n",
+            "import { default as DOMException } from \"domexception\";\n",
+            "export { default as DOMException } from \"domexception\";\n",
             "import { Blob } from \"buffer\";\n",
             "export { Blob, type Other } from \"buffer\";\n",
             "export { type TypeOnly } from \"type-only\";\n",
@@ -161,6 +185,7 @@ async fn transform_shim_custom_shims() {
             "const dntGlobals = {\n",
             "  fetch,\n",
             "  fetchTest,\n",
+            "  DOMException,\n",
             "  Blob,\n",
             "};\n",
             "export const dntGlobalThis = createMergeProxy(globalThis, dntGlobals);\n",
@@ -175,7 +200,7 @@ async fn transform_shim_custom_shims() {
         "mod.ts",
         concat!(
           "import * as dntShim from \"./_dnt.shims.js\";\n",
-          "dntShim.fetch(); console.log(dntShim.Blob); dntShim.fetchTest();"
+          "dntShim.fetch(); console.log(dntShim.Blob); dntShim.fetchTest(); dntShim.DOMException;"
         )
         .to_string()
       ),
@@ -183,9 +208,22 @@ async fn transform_shim_custom_shims() {
   );
   assert_eq!(
     result.main.dependencies,
+    vec![
+      Dependency {
+        name: "node-fetch".to_string(),
+        version: "~3.1.0".to_string(),
+      },
+      Dependency {
+        name: "domexception".to_string(),
+        version: "^4.0.0".to_string(),
+      }
+    ]
+  );
+  assert_eq!(
+    result.test.dependencies,
     vec![Dependency {
-      name: "node-fetch".to_string(),
-      version: "~3.1.0".to_string(),
+      name: "@types/domexception".to_string(),
+      version: "^2.0.1".to_string(),
     }]
   );
 }
