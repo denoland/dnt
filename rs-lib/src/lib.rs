@@ -460,20 +460,21 @@ fn check_add_shim_file_to_environment(
 
   fn build_shim_file(shims: &[Shim]) -> String {
     fn get_specifer_text(n: &GlobalName) -> String {
-      if let Some(export_name) = &n.export_name {
+      let name_text = if let Some(export_name) = &n.export_name {
         format!("{} as {}", export_name, n.name)
       } else {
         n.name.to_string()
+      };
+      if n.type_only {
+        format!("type {}", name_text)
+      } else {
+        name_text
       }
     }
 
     let mut text = String::new();
     for shim in shims.iter() {
-      let declaration_names = shim
-        .global_names
-        .iter()
-        .filter(|n| !n.type_only)
-        .collect::<Vec<_>>();
+      let declaration_names = shim.global_names.iter().collect::<Vec<_>>();
       if !declaration_names.is_empty() {
         text.push_str(&format!(
           "import {{ {} }} from \"{}\";\n",
@@ -491,13 +492,7 @@ fn check_add_shim_file_to_environment(
         shim
           .global_names
           .iter()
-          .map(|n| {
-            if n.type_only {
-              format!("type {}", get_specifer_text(n))
-            } else {
-              get_specifer_text(n)
-            }
-          })
+          .map(get_specifer_text)
           .collect::<Vec<_>>()
           .join(", "),
         shim.package.module_specifier_text(),

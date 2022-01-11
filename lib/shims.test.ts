@@ -12,6 +12,7 @@ Deno.test("should get when all true", () => {
     crypto: true,
     domException: true,
     undici: true,
+    weakRef: true,
     custom: [{
       package: {
         name: "main",
@@ -28,8 +29,8 @@ Deno.test("should get when all true", () => {
     }],
   });
 
-  assertEquals(result.shims.length, 8);
-  assertEquals(result.testShims.length, 9);
+  assertEquals(result.shims.length, 9);
+  assertEquals(result.testShims.length, 10);
 });
 
 Deno.test("should get when all dev", () => {
@@ -41,10 +42,11 @@ Deno.test("should get when all dev", () => {
     crypto: "dev",
     domException: "dev",
     undici: "dev",
+    weakRef: "dev",
   });
 
   assertEquals(result.shims.length, 0);
-  assertEquals(result.testShims.length, 7);
+  assertEquals(result.testShims.length, 8);
 });
 
 Deno.test("should get when all false", () => {
@@ -56,6 +58,7 @@ Deno.test("should get when all false", () => {
     crypto: false,
     domException: false,
     undici: false,
+    weakRef: false,
   });
 
   assertEquals(result.shims.length, 0);
