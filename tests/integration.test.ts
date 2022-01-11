@@ -14,20 +14,21 @@ const versions = {
   domExceptionShimTypes: "^2.0.1",
   promptsShim: "~0.1.0",
   timersShim: "~0.1.0",
+  weakRefSham: "~0.1.0",
   undici: "^4.12.1",
   chalk: "4.1.2",
   nodeTypes: "16.11.1",
   tsLib: "2.3.1",
 };
 
-// todo: re-enable when adding WeakRef shim
-Deno.test("should build test project", { ignore: true }, async () => {
+Deno.test("should build test project", async () => {
   await runTest("test_project", {
     entryPoints: ["mod.ts"],
     outDir: "./npm",
     shims: {
       ...getAllShimOptions(false),
       deno: "dev",
+      weakRef: true,
     },
     package: {
       name: "add",
@@ -62,6 +63,7 @@ Deno.test("should build test project", { ignore: true }, async () => {
         "@types/node": versions.nodeTypes,
         chalk: versions.chalk,
         "@deno/shim-deno": versions.denoShim,
+        "@deno/sham-weakref": versions.weakRefSham,
       },
     });
     assertEquals(
@@ -181,10 +183,7 @@ Deno.test("should build bin project", async () => {
   });
 });
 
-// todo: re-enable when adding WeakRef shim
-Deno.test("should run tests when using @deno/shim-deno-test shim", {
-  ignore: true,
-}, async () => {
+Deno.test("should run tests when using @deno/shim-deno-test shim", async () => {
   await runTest("test_project", {
     entryPoints: ["mod.ts"],
     outDir: "./npm",
@@ -193,6 +192,7 @@ Deno.test("should run tests when using @deno/shim-deno-test shim", {
       deno: {
         test: "dev",
       },
+      weakRef: true,
     },
     package: {
       name: "add",
@@ -209,6 +209,7 @@ Deno.test("should run tests when using @deno/shim-deno-test shim", {
       "@types/node": versions.nodeTypes,
       chalk: versions.chalk,
       "@deno/shim-deno-test": versions.denoTestShim,
+      "@deno/sham-weakref": versions.weakRefSham,
     });
   });
 });
@@ -452,7 +453,7 @@ Deno.test("should build shim project when using node-fetch", async () => {
 export { Deno } from "@deno/shim-deno";
 import { Blob } from "buffer";
 export { Blob } from "buffer";
-import { crypto } from "@deno/shim-crypto";
+import { crypto, type Crypto, type SubtleCrypto, type AlgorithmIdentifier, type Algorithm, type RsaOaepParams, type BufferSource, type AesCtrParams, type AesCbcParams, type AesGcmParams, type CryptoKey, type KeyAlgorithm, type KeyType, type KeyUsage, type EcdhKeyDeriveParams, type HkdfParams, type HashAlgorithmIdentifier, type Pbkdf2Params, type AesDerivedKeyParams, type HmacImportParams, type JsonWebKey, type RsaOtherPrimesInfo, type KeyFormat, type RsaHashedKeyGenParams, type RsaKeyGenParams, type BigInteger, type EcKeyGenParams, type NamedCurve, type CryptoKeyPair, type AesKeyGenParams, type HmacKeyGenParams, type RsaHashedImportParams, type EcKeyImportParams, type AesKeyAlgorithm, type RsaPssParams, type EcdsaParams } from "@deno/shim-crypto";
 export { crypto, type Crypto, type SubtleCrypto, type AlgorithmIdentifier, type Algorithm, type RsaOaepParams, type BufferSource, type AesCtrParams, type AesCbcParams, type AesGcmParams, type CryptoKey, type KeyAlgorithm, type KeyType, type KeyUsage, type EcdhKeyDeriveParams, type HkdfParams, type HashAlgorithmIdentifier, type Pbkdf2Params, type AesDerivedKeyParams, type HmacImportParams, type JsonWebKey, type RsaOtherPrimesInfo, type KeyFormat, type RsaHashedKeyGenParams, type RsaKeyGenParams, type BigInteger, type EcKeyGenParams, type NamedCurve, type CryptoKeyPair, type AesKeyGenParams, type HmacKeyGenParams, type RsaHashedImportParams, type EcKeyImportParams, type AesKeyAlgorithm, type RsaPssParams, type EcdsaParams } from "@deno/shim-crypto";
 import { alert, confirm, prompt } from "@deno/shim-prompts";
 export { alert, confirm, prompt } from "@deno/shim-prompts";
@@ -462,7 +463,7 @@ import { default as DOMException } from "domexception";
 export { default as DOMException } from "domexception";
 import { File, FormData, Headers, Request, Response } from "undici";
 export { File, FormData, Headers, Request, Response } from "undici";
-import { default as fetch } from "node-fetch";
+import { default as fetch, type RequestInit } from "node-fetch";
 export { default as fetch, type RequestInit } from "node-fetch";
 
 const dntGlobals = {
