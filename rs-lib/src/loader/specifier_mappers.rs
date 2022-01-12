@@ -38,8 +38,8 @@ pub fn get_all_specifier_mappers() -> Vec<Box<dyn SpecifierMapper>> {
 
 lazy_static! {
   // good enough for a first pass
-  static ref SKYPACK_MAPPING_RE: Regex = Regex::new(r"^https://cdn\.skypack\.dev/(@?[^@?]+)@([0-9\.\^~\-A-Za-z]+)").unwrap();
-  static ref ESMSH_MAPPING_RE: Regex = Regex::new(r"^https://esm\.sh/(@?[^@?]+)@([0-9\.\^~\-A-Za-z]+)$").unwrap();
+  static ref SKYPACK_MAPPING_RE: Regex = Regex::new(r"^https://cdn\.skypack\.dev/(@?[^@?]+)@([0-9.\^~\-A-Za-z]+)(?:/([^#?]+))?").unwrap();
+  static ref ESMSH_MAPPING_RE: Regex = Regex::new(r"^https://esm\.sh/(@?[^@?]+)@([0-9.\^~\-A-Za-z]+)(?:/([^#?]+))?$").unwrap();
 }
 
 struct SkypackMapper {}
@@ -51,7 +51,7 @@ impl SpecifierMapper for SkypackMapper {
       .map(|captures| MappedSpecifier {
         name: captures.get(1).unwrap().as_str().to_string(),
         version: Some(captures.get(2).unwrap().as_str().to_string()),
-        sub_path: None,
+        sub_path: captures.get(3).map(|m| m.as_str().to_owned()),
       })
   }
 }
@@ -65,7 +65,7 @@ impl SpecifierMapper for EsmShMapper {
       .map(|captures| MappedSpecifier {
         name: captures.get(1).unwrap().as_str().to_string(),
         version: Some(captures.get(2).unwrap().as_str().to_string()),
-        sub_path: None,
+        sub_path: captures.get(3).map(|m| m.as_str().to_owned()),
       })
   }
 }

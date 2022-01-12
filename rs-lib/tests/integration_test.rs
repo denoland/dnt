@@ -1036,6 +1036,8 @@ async fn skypack_esm_module_mapping() {
             // custom esm.sh stuff like this should download the dependency
             "import package4 from 'https://esm.sh/swr?deps=react@16.14.0';\n",
             "import package5 from 'https://esm.sh/test@1.2.5?deps=react@16.14.0';\n",
+            "import package6 from 'https://cdn.skypack.dev/preact@^10.5.0/hooks?dts';\n",
+            "import package7 from 'https://esm.sh/react-dom@17.0.2/server';\n",
           ),
         )
         .add_remote_file_with_headers(
@@ -1062,7 +1064,9 @@ async fn skypack_esm_module_mapping() {
           "import package2 from '@scope/package-name';\n",
           "import package3 from 'react';\n",
           "import package4 from './deps/esm_sh/swr.js';\n",
-          "import package5 from './deps/esm_sh/test_1.2.5.js';\n"
+          "import package5 from './deps/esm_sh/test_1.2.5.js';\n",
+          "import package6 from 'preact/hooks';\n",
+          "import package7 from 'react-dom/server';\n",
         )
       ),
       ("deps/esm_sh/swr.ts", "",),
@@ -1084,6 +1088,10 @@ async fn skypack_esm_module_mapping() {
         name: "react".to_string(),
         version: "17.0.2".to_string(),
       },
+      Dependency {
+        name: "react-dom".to_string(),
+        version: "17.0.2".to_string(),
+      }
     ]
   );
 }
