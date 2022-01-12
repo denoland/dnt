@@ -190,6 +190,7 @@ Set any of these properties to `true` (distribution and test) or `"dev"` (test o
 - `crypto` - Shim the `crypto` global.
 - `domException` - Shim the `DOMException` global using the "domexception" package (https://www.npmjs.com/package/domexception)
 - `undici` - Shim `fetch`, `File`, `FormData`, `Headers`, `Request`, and `Response` by using the "undici" package (https://www.npmjs.com/package/undici).
+- `weakRef` - Sham for the `WeakRef` global, which uses `globalThis.WeakRef` when it exists. The sham will throw at runtime when calling `deref()` and `WeakRef` doesn't globally exist, so this is only intended to help type check code that won't actually use it.
 
 ##### `Deno.test`-only shim
 
@@ -232,14 +233,17 @@ await build({
         exportName: "default",
       }, {
         name: "RequestInit",
-        typeOnly: true, // only used in type declarations
+        kind: "typeOnly", // only used in type declarations
       }],
     }, {
       // this is what `blob: true` does internally
       package: {
         name: "buffer", // uses node's "buffer" module
       },
-      globalNames: ["Blob"],
+      globalNames: [{
+        name: "Blob",
+        kind: "class",
+      }],
     }, {
       // this is what `domException: true` does internally
       package: {
@@ -252,6 +256,7 @@ await build({
       },
       globalNames: [{
         name: "DOMException",
+        kind: "class",
         exportName: "default",
       }],
     }],
@@ -262,7 +267,13 @@ await build({
         name: "@deno/shim-timers",
         version: "~0.1.0",
       },
-      globalNames: ["setTimeout", "setInterval"],
+      globalNames: [{
+        name: "setTimeout",
+        kind: "value",
+      }, {
+        name: "setInterval",
+        kind: "value",
+      }],
     }],
   },
 });

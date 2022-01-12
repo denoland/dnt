@@ -453,7 +453,7 @@ Deno.test("should build shim project when using node-fetch", async () => {
 export { Deno } from "@deno/shim-deno";
 import { Blob } from "buffer";
 export { Blob } from "buffer";
-import { crypto, type Crypto, type SubtleCrypto, type AlgorithmIdentifier, type Algorithm, type RsaOaepParams, type BufferSource, type AesCtrParams, type AesCbcParams, type AesGcmParams, type CryptoKey, type KeyAlgorithm, type KeyType, type KeyUsage, type EcdhKeyDeriveParams, type HkdfParams, type HashAlgorithmIdentifier, type Pbkdf2Params, type AesDerivedKeyParams, type HmacImportParams, type JsonWebKey, type RsaOtherPrimesInfo, type KeyFormat, type RsaHashedKeyGenParams, type RsaKeyGenParams, type BigInteger, type EcKeyGenParams, type NamedCurve, type CryptoKeyPair, type AesKeyGenParams, type HmacKeyGenParams, type RsaHashedImportParams, type EcKeyImportParams, type AesKeyAlgorithm, type RsaPssParams, type EcdsaParams } from "@deno/shim-crypto";
+import { crypto } from "@deno/shim-crypto";
 export { crypto, type Crypto, type SubtleCrypto, type AlgorithmIdentifier, type Algorithm, type RsaOaepParams, type BufferSource, type AesCtrParams, type AesCbcParams, type AesGcmParams, type CryptoKey, type KeyAlgorithm, type KeyType, type KeyUsage, type EcdhKeyDeriveParams, type HkdfParams, type HashAlgorithmIdentifier, type Pbkdf2Params, type AesDerivedKeyParams, type HmacImportParams, type JsonWebKey, type RsaOtherPrimesInfo, type KeyFormat, type RsaHashedKeyGenParams, type RsaKeyGenParams, type BigInteger, type EcKeyGenParams, type NamedCurve, type CryptoKeyPair, type AesKeyGenParams, type HmacKeyGenParams, type RsaHashedImportParams, type EcKeyImportParams, type AesKeyAlgorithm, type RsaPssParams, type EcdsaParams } from "@deno/shim-crypto";
 import { alert, confirm, prompt } from "@deno/shim-prompts";
 export { alert, confirm, prompt } from "@deno/shim-prompts";
@@ -463,7 +463,7 @@ import { default as DOMException } from "domexception";
 export { default as DOMException } from "domexception";
 import { File, FormData, Headers, Request, Response } from "undici";
 export { File, FormData, Headers, Request, Response } from "undici";
-import { default as fetch, type RequestInit } from "node-fetch";
+import { default as fetch } from "node-fetch";
 export { default as fetch, type RequestInit } from "node-fetch";
 
 const dntGlobals = {
@@ -484,44 +484,6 @@ const dntGlobals = {
   fetch,
 };
 export const dntGlobalThis = createMergeProxy(globalThis, dntGlobals);
-export type dntGlobalThisType = Omit<typeof dntGlobals, keyof typeof dntGlobals> & typeof dntGlobals & {
-  Crypto: Crypto,
-  SubtleCrypto: SubtleCrypto,
-  AlgorithmIdentifier: AlgorithmIdentifier,
-  Algorithm: Algorithm,
-  RsaOaepParams: RsaOaepParams,
-  BufferSource: BufferSource,
-  AesCtrParams: AesCtrParams,
-  AesCbcParams: AesCbcParams,
-  AesGcmParams: AesGcmParams,
-  CryptoKey: CryptoKey,
-  KeyAlgorithm: KeyAlgorithm,
-  KeyType: KeyType,
-  KeyUsage: KeyUsage,
-  EcdhKeyDeriveParams: EcdhKeyDeriveParams,
-  HkdfParams: HkdfParams,
-  HashAlgorithmIdentifier: HashAlgorithmIdentifier,
-  Pbkdf2Params: Pbkdf2Params,
-  AesDerivedKeyParams: AesDerivedKeyParams,
-  HmacImportParams: HmacImportParams,
-  JsonWebKey: JsonWebKey,
-  RsaOtherPrimesInfo: RsaOtherPrimesInfo,
-  KeyFormat: KeyFormat,
-  RsaHashedKeyGenParams: RsaHashedKeyGenParams,
-  RsaKeyGenParams: RsaKeyGenParams,
-  BigInteger: BigInteger,
-  EcKeyGenParams: EcKeyGenParams,
-  NamedCurve: NamedCurve,
-  CryptoKeyPair: CryptoKeyPair,
-  AesKeyGenParams: AesKeyGenParams,
-  HmacKeyGenParams: HmacKeyGenParams,
-  RsaHashedImportParams: RsaHashedImportParams,
-  EcKeyImportParams: EcKeyImportParams,
-  AesKeyAlgorithm: AesKeyAlgorithm,
-  RsaPssParams: RsaPssParams,
-  EcdsaParams: EcdsaParams,
-  RequestInit: RequestInit,
-};
 `;
     assertEquals(
       output.getFileText("src/_dnt.shims.ts").substring(0, expectedText.length),
