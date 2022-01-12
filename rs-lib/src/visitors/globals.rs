@@ -84,35 +84,32 @@ fn visit_children(node: Node, import_name: &str, context: &mut Context) {
     let ident_text = ident.text_fast(context.program);
 
     if is_top_level_context {
-      // check to replace globalThis
-      if ident_text == "globalThis"
-        && !should_ignore_global_this(ident, context)
-      {
-        context.text_changes.push(get_global_this_text_change(
-          ident,
-          import_name,
-          context,
-        ));
-        context.import_shim = true;
+      // change `window` -> `globalThis`
+      if ident_text == "window" {
+        if !context.top_level_decls.contains("window")
+          && !has_ignore_comment(ident.into(), context)
+        {
+          if let Some(text_change) =
+            get_global_this_text_change(ident, import_name, context)
+          {
+            context.text_changes.push(text_change);
+            context.import_shim = true;
+          } else {
+            context.text_changes.push(TextChange {
+              span: ident.span(),
+              new_text: "globalThis".to_string(),
+            });
+          }
+        }
         return;
       }
 
-      // change `window` -> `globalThis`
-      if ident_text == "window"
-        && !context.top_level_decls.contains("window")
-        && !has_ignore_comment(ident.into(), context)
-      {
-        if should_ignore_global_this(ident, context) {
-          context.text_changes.push(TextChange {
-            span: ident.span(),
-            new_text: "globalThis".to_string(),
-          });
-        } else {
-          context.text_changes.push(get_global_this_text_change(
-            ident,
-            import_name,
-            context,
-          ));
+      // check to replace globalThis
+      if ident_text == "globalThis" {
+        if let Some(text_change) =
+          get_global_this_text_change(ident, import_name, context)
+        {
+          context.text_changes.push(text_change);
           context.import_shim = true;
         }
         return;
@@ -140,38 +137,35 @@ fn get_global_this_text_change(
   ident: &Ident,
   import_name: &str,
   context: &Context,
-) -> TextChange {
+) -> Option<TextChange> {
+  if should_ignore_global_this(ident, context) {
+    return None;
+  }
   if is_in_type(ident.into()) {
     match ident.parent() {
       Node::TsQualifiedName(parent) => {
-        let replace_span = match parent.parent() {
-          Node::TsTypeQuery(query) => query.span(), // remove the "typeof"
-          _ => parent.span(),
-        };
-        TextChange {
-          span: replace_span,
-          new_text: format!(
-            "{}.dntGlobalThisType[\"{}\"]",
-            import_name.to_string(),
-            // doesn't seem exactly right... will wait for a bug to open
-            parent.right.text_fast(context.program),
-          ),
+        let right_name = parent.right.text_fast(context.program);
+        if context.shim_global_names.contains(&right_name) {
+          Some(TextChange {
+            span: parent.span(),
+            new_text: format!(
+              "{}.{}",
+              import_name.to_string(),
+              // doesn't seem exactly right... will wait for a bug to open
+              parent.right.text_fast(context.program),
+            ),
+          })
+        } else {
+          None
         }
       }
-      Node::TsTypeQuery(_) => TextChange {
-        span: ident.span(),
-        new_text: format!("{}.dntGlobalThis", import_name.to_string()),
-      },
-      _ => TextChange {
-        span: ident.span(),
-        new_text: format!("{}.dntGlobalThisType", import_name.to_string()),
-      },
+      _ => None,
     }
   } else {
-    TextChange {
+    Some(TextChange {
       span: ident.span(),
       new_text: format!("{}.dntGlobalThis", import_name.to_string()),
-    }
+    })
   }
 }
 

@@ -474,7 +474,11 @@ fn check_add_shim_file_to_environment(
 
     let mut text = String::new();
     for shim in shims.iter() {
-      let declaration_names = shim.global_names.iter().collect::<Vec<_>>();
+      let declaration_names = shim
+        .global_names
+        .iter()
+        .filter(|n| !n.type_only)
+        .collect::<Vec<_>>();
       if !declaration_names.is_empty() {
         text.push_str(&format!(
           "import {{ {} }} from \"{}\";\n",
@@ -510,14 +514,7 @@ fn check_add_shim_file_to_environment(
       }
     }
     text.push_str("};\n");
-    text.push_str("export const dntGlobalThis = createMergeProxy(globalThis, dntGlobals);\n");
-    text.push_str("export type dntGlobalThisType = Omit<typeof dntGlobals, keyof typeof dntGlobals> & typeof dntGlobals & {\n");
-    for global_name in shims.iter().map(|s| s.global_names.iter()).flatten() {
-      if global_name.type_only {
-        text.push_str(&format!("  {0}: {0},\n", global_name.name));
-      }
-    }
-    text.push_str("};\n");
+    text.push_str("export const dntGlobalThis = createMergeProxy(globalThis, dntGlobals);\n\n");
 
     text.push_str(
       &include_str!("scripts/createMergeProxy.ts")

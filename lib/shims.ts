@@ -37,9 +37,9 @@ export interface ShimOptions {
    * using the "undici" package (https://www.npmjs.com/package/undici).
    */
   undici?: ShimValue;
-  /** Use a sham for the `WeakRef` global, which uses `globalThis.WeakRef`
-   * when it exists. The sham will throw at runtime when `WeakRef` doesn't
-   * globally exist, so this is only intended to help type check code that
+  /** Use a sham for the `WeakRef` global, which uses `globalThis.WeakRef` when
+   * it exists. The sham will throw at runtime when calling `deref()` and `WeakRef`
+   * doesn't globally exist, so this is only intended to help type check code that
    * won't actually use it.
    */
   weakRef?: ShimValue;
@@ -205,6 +205,10 @@ function getUndiciShim(): Shim {
       "Headers",
       "Request",
       "Response",
+      typeOnly("BodyInit"),
+      typeOnly("HeadersInit"),
+      typeOnly("RequestInit"),
+      typeOnly("ResponseInit"),
     ],
   };
 }

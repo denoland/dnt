@@ -178,9 +178,8 @@ async fn transform_shim_custom_shims() {
             "export { fetchTestName as fetchTest } from \"node-fetch/test\";\n",
             "import { default as DOMException } from \"domexception\";\n",
             "export { default as DOMException } from \"domexception\";\n",
-            "import { Blob, type Other } from \"buffer\";\n",
+            "import { Blob } from \"buffer\";\n",
             "export { Blob, type Other } from \"buffer\";\n",
-            "import { type TypeOnly } from \"type-only\";\n",
             "export { type TypeOnly } from \"type-only\";\n",
             "\n",
             "const dntGlobals = {\n",
@@ -190,10 +189,6 @@ async fn transform_shim_custom_shims() {
             "  Blob,\n",
             "};\n",
             "export const dntGlobalThis = createMergeProxy(globalThis, dntGlobals);\n",
-            "export type dntGlobalThisType = Omit<typeof dntGlobals, keyof typeof dntGlobals> & typeof dntGlobals & {\n",
-            "  Other: Other,\n",
-            "  TypeOnly: TypeOnly,\n",
-            "};"
           ).to_string(),
         ),
       ),
@@ -272,6 +267,8 @@ async fn transform_global_this_shim() {
       "globalThis ? true : false;",
       "type Test1 = typeof globalThis;",
       "type Test2 = typeof globalThis.Window;",
+      "type Test3 = typeof globalThis.Deno;",
+      "type Test4 = window.Something;",
     ),
     concat!(
       r#"import * as dntShim from "./_dnt.shims.js";"#,
@@ -287,8 +284,10 @@ async fn transform_global_this_shim() {
       "typeof dntShim.dntGlobalThis;",
       "dntShim.dntGlobalThis == null;",
       "dntShim.dntGlobalThis ? true : false;",
-      "type Test1 = typeof dntShim.dntGlobalThis;",
-      "type Test2 = dntShim.dntGlobalThisType[\"Window\"];",
+      "type Test1 = typeof globalThis;",
+      "type Test2 = typeof globalThis.Window;",
+      "type Test3 = typeof dntShim.Deno;",
+      "type Test4 = globalThis.Something;",
     ),
   )])
   .await;
@@ -1203,8 +1202,6 @@ async fn test_entry_points() {
             "  setInterval,\n",
             "};\n",
             "export const dntGlobalThis = createMergeProxy(globalThis, dntGlobals);\n",
-            "export type dntGlobalThisType = Omit<typeof dntGlobals, keyof typeof dntGlobals> & typeof dntGlobals & {\n",
-            "};"
           )
           .to_string(),
         ),
