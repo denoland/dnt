@@ -158,8 +158,8 @@ export async function build(options: BuildOptions): Promise<void> {
   createPackageJson();
   createNpmIgnore();
 
-  // npm install in order to prepare for checking TS diagnostics
-  log("Running npm install...");
+  // install dependencies in order to prepare for checking TS diagnostics
+  log(`Running ${packageManager} install...`);
   const npmInstallPromise = runNpmCommand({
     bin: packageManager,
     args: ["install"],
