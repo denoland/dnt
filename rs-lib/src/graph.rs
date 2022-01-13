@@ -117,6 +117,7 @@ impl ModuleGraph {
         None,
         None,
         Some(&source_parser),
+        None,
       )
       .await,
     };

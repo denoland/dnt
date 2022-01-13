@@ -1,7 +1,8 @@
 // Copyright 2018-2022 the Deno authors. All rights reserved. MIT license.
 
+use deno_ast::view::Callee;
+use deno_ast::view::Expr;
 use deno_ast::view::Node;
-use deno_ast::view::NodeTrait;
 use deno_ast::view::SpannedExt;
 
 use super::Polyfill;
@@ -17,7 +18,7 @@ impl Polyfill for StringReplaceAllPolyfill {
 
   fn visit_node(&self, node: Node, context: &PolyfillVisitContext) -> bool {
     if let Node::CallExpr(expr) = node {
-      if let Node::MemberExpr(callee) = expr.callee.as_node() {
+      if let Callee::Expr(Expr::Member(callee)) = expr.callee {
         if expr.args.len() == 2
           && callee.prop.text_fast(context.program) == "replaceAll"
         {
