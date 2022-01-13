@@ -75,7 +75,7 @@ fn visit_children(node: Node, context: &mut Context) -> Result<()> {
         }
       }
       Node::CallExpr(call_expr) => {
-        if call_expr.callee.text_fast(context.program) == "import" {
+        if matches!(call_expr.callee, Callee::Import(_)) {
           if let Some(Node::Str(src)) =
             call_expr.args.get(0).map(|a| a.expr.as_node())
           {

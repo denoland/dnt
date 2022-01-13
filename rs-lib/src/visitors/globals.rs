@@ -180,8 +180,8 @@ fn should_ignore_global_this(ident: &Ident, context: &Context) -> bool {
   // not like `globalThis.<globalName>`
   if let Some(parent_member_expr) = ident.parent().to::<MemberExpr>() {
     if parent_member_expr.obj.span().contains(ident.span()) {
-      match parent_member_expr.prop.into() {
-        Node::Ident(prop_ident) => {
+      match parent_member_expr.prop {
+        MemberProp::Ident(prop_ident) => {
           if !context
             .shim_global_names
             .contains(prop_ident.sym().as_ref())
@@ -189,12 +189,14 @@ fn should_ignore_global_this(ident: &Ident, context: &Context) -> bool {
             return true;
           }
         }
-        Node::Str(str) => {
-          if !context.shim_global_names.contains(str.value().as_ref()) {
-            return true;
+        MemberProp::Computed(computed) => {
+          if let Expr::Lit(Lit::Str(str)) = computed.expr {
+            if !context.shim_global_names.contains(str.value().as_ref()) {
+              return true;
+            }
           }
         }
-        _ => {}
+        MemberProp::PrivateName(_) => {}
       }
     }
   }
