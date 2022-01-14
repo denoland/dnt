@@ -9,8 +9,6 @@ use std::path::PathBuf;
 use analyze::get_top_level_decls;
 use anyhow::Context;
 use anyhow::Result;
-#[macro_use]
-extern crate lazy_static;
 
 use analyze::get_ignore_line_indexes;
 use graph::ModuleGraphOptions;

@@ -9,6 +9,7 @@ use std::path::PathBuf;
 use anyhow::Result;
 use deno_ast::MediaType;
 use deno_ast::ModuleSpecifier;
+use once_cell::sync::Lazy;
 
 use crate::graph::ModuleGraph;
 use crate::specifiers::Specifiers;
@@ -19,19 +20,16 @@ pub struct SyntheticSpecifiers {
   pub shims: ModuleSpecifier,
 }
 
-lazy_static! {
-  pub static ref SYNTHETIC_SPECIFIERS: SyntheticSpecifiers =
-    SyntheticSpecifiers {
-      polyfills: ModuleSpecifier::parse("dnt://_dnt.polyfills.ts").unwrap(),
-      shims: ModuleSpecifier::parse("dnt://_dnt.shims.ts").unwrap(),
-    };
-  pub static ref SYNTHETIC_TEST_SPECIFIERS: SyntheticSpecifiers =
-    SyntheticSpecifiers {
-      polyfills: ModuleSpecifier::parse("dnt://_dnt.test_polyfills.ts")
-        .unwrap(),
-      shims: ModuleSpecifier::parse("dnt://_dnt.test_shims.ts").unwrap(),
-    };
-}
+pub static SYNTHETIC_SPECIFIERS: Lazy<SyntheticSpecifiers> =
+  Lazy::new(|| SyntheticSpecifiers {
+    polyfills: ModuleSpecifier::parse("dnt://_dnt.polyfills.ts").unwrap(),
+    shims: ModuleSpecifier::parse("dnt://_dnt.shims.ts").unwrap(),
+  });
+pub static SYNTHETIC_TEST_SPECIFIERS: Lazy<SyntheticSpecifiers> =
+  Lazy::new(|| SyntheticSpecifiers {
+    polyfills: ModuleSpecifier::parse("dnt://_dnt.test_polyfills.ts").unwrap(),
+    shims: ModuleSpecifier::parse("dnt://_dnt.test_shims.ts").unwrap(),
+  });
 
 pub struct Mappings {
   inner: HashMap<ModuleSpecifier, PathBuf>,
