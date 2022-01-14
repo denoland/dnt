@@ -1,6 +1,7 @@
 // Copyright 2018-2022 the Deno authors. All rights reserved. MIT license.
 
 use deno_ast::ModuleSpecifier;
+use once_cell::sync::Lazy;
 use regex::Regex;
 
 use crate::MappedSpecifier;
@@ -36,11 +37,17 @@ pub fn get_all_specifier_mappers() -> Vec<Box<dyn SpecifierMapper>> {
   ]
 }
 
-lazy_static! {
-  // good enough for a first pass
-  static ref SKYPACK_MAPPING_RE: Regex = Regex::new(r"^https://cdn\.skypack\.dev/(@?[^@?]+)@([0-9.\^~\-A-Za-z]+)(?:/([^#?]+))?").unwrap();
-  static ref ESMSH_MAPPING_RE: Regex = Regex::new(r"^https://esm\.sh/(@?[^@?]+)@([0-9.\^~\-A-Za-z]+)(?:/([^#?]+))?$").unwrap();
-}
+// good enough for a first pass
+static SKYPACK_MAPPING_RE: Lazy<Regex> = Lazy::new(|| {
+  Regex::new(
+    r"^https://cdn\.skypack\.dev/(@?[^@?]+)@([0-9.\^~\-A-Za-z]+)(?:/([^#?]+))?",
+  )
+  .unwrap()
+});
+static ESMSH_MAPPING_RE: Lazy<Regex> = Lazy::new(|| {
+  Regex::new(r"^https://esm\.sh/(@?[^@?]+)@([0-9.\^~\-A-Za-z]+)(?:/([^#?]+))?$")
+    .unwrap()
+});
 
 struct SkypackMapper {}
 

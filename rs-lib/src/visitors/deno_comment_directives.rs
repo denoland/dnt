@@ -5,25 +5,24 @@ use deno_ast::swc::common::BytePos;
 use deno_ast::swc::common::Span;
 use deno_ast::swc::common::Spanned;
 use deno_ast::view::*;
+use once_cell::sync::Lazy;
 use regex::Regex;
 
 use crate::text_changes::TextChange;
 
 // lifted from deno_graph
-lazy_static! {
-  /// Matched the `@deno-types` pragma.
-  static ref DENO_TYPES_RE: Regex =
-    Regex::new(r#"(?i)^\s*@deno-types\s*=\s*(?:["']([^"']+)["']|(\S+))"#)
-      .unwrap();
-  /// Matches a `/// <reference ... />` comment reference.
-  static ref TRIPLE_SLASH_REFERENCE_RE: Regex =
-    Regex::new(r"(?i)^/\s*<reference\s.*?/>").unwrap();
-  /// Matches a types reference, which for JavaScript files indicates the
-  /// location of types to use when type checking a program that includes it as
-  /// a dependency.
-  static ref TYPES_REFERENCE_RE: Regex =
-    Regex::new(r#"(?i)\stypes\s*=\s*["']([^"']*)["']"#).unwrap();
-}
+/// Matched the `@deno-types` pragma.
+static DENO_TYPES_RE: Lazy<Regex> = Lazy::new(|| {
+  Regex::new(r#"(?i)^\s*@deno-types\s*=\s*(?:["']([^"']+)["']|(\S+))"#).unwrap()
+});
+/// Matches a `/// <reference ... />` comment reference.
+static TRIPLE_SLASH_REFERENCE_RE: Lazy<Regex> =
+  Lazy::new(|| Regex::new(r"(?i)^/\s*<reference\s.*?/>").unwrap());
+/// Matches a types reference, which for JavaScript files indicates the
+/// location of types to use when type checking a program that includes it as
+/// a dependency.
+static TYPES_REFERENCE_RE: Lazy<Regex> =
+  Lazy::new(|| Regex::new(r#"(?i)\stypes\s*=\s*["']([^"']*)["']"#).unwrap());
 
 pub fn get_deno_comment_directive_text_changes(
   program: &Program,
