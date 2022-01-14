@@ -202,7 +202,7 @@ impl Mappings {
     self.inner.get(specifier).unwrap_or_else(|| {
       panic!(
         "Programming error. Could not find file path for specifier: {}",
-        specifier.to_string()
+        specifier
       )
     })
   }

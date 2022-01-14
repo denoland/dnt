@@ -163,6 +163,8 @@ pub struct TransformOptions {
   /// Version of ECMAScript that the final code will target.
   /// This controls whether certain polyfills should occur.
   pub target: ScriptTarget,
+  /// Optional import map.
+  pub import_map: Option<ModuleSpecifier>,
 }
 
 struct EnvironmentContext<'a> {
@@ -187,6 +189,7 @@ pub async fn transform(options: TransformOptions) -> Result<TransformOutput> {
       specifier_mappings: &options.specifier_mappings,
       redirects: &options.redirects,
       loader: options.loader,
+      import_map: options.import_map,
     })
     .await?;
 
