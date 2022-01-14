@@ -63,6 +63,8 @@ export interface TransformOptions {
   mappings?: SpecifierMappings;
   redirects?: Redirects;
   target: ScriptTarget;
+  /// Path or url to the import map.
+  importMap?: string;
 }
 
 /** Dependency in a package.json file. */
@@ -114,6 +116,9 @@ export function transform(options: TransformOptions): Promise<TransformOutput> {
     shims: (options.shims ?? []).map(mapShim),
     testShims: (options.testShims ?? []).map(mapShim),
     target: options.target,
+    importMap: options.importMap == null
+      ? undefined
+      : valueToUrl(options.importMap),
   };
   return wasmFuncs.transform(newOptions);
 }

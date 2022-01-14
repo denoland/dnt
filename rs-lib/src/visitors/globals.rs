@@ -150,7 +150,7 @@ fn get_global_this_text_change(
             span: parent.span(),
             new_text: format!(
               "{}.{}",
-              import_name.to_string(),
+              import_name,
               // doesn't seem exactly right... will wait for a bug to open
               parent.right.text_fast(context.program),
             ),
@@ -164,7 +164,7 @@ fn get_global_this_text_change(
   } else {
     Some(TextChange {
       span: ident.span(),
-      new_text: format!("{}.dntGlobalThis", import_name.to_string()),
+      new_text: format!("{}.dntGlobalThis", import_name),
     })
   }
 }

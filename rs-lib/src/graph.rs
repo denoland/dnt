@@ -11,6 +11,10 @@ use crate::parser::ScopeAnalysisParser;
 use crate::specifiers::get_specifiers;
 use crate::specifiers::Specifiers;
 use crate::MappedSpecifier;
+
+use anyhow::anyhow;
+use anyhow::bail;
+use anyhow::Context;
 use anyhow::Result;
 use deno_ast::MediaType;
 use deno_ast::ModuleSpecifier;
@@ -79,6 +83,7 @@ pub struct ModuleGraphOptions<'a> {
   pub loader: Option<Box<dyn Loader>>,
   pub specifier_mappings: &'a HashMap<ModuleSpecifier, MappedSpecifier>,
   pub redirects: &'a HashMap<ModuleSpecifier, ModuleSpecifier>,
+  pub import_map: Option<ModuleSpecifier>,
 }
 
 /// Wrapper around deno_graph::ModuleGraph.
@@ -90,13 +95,22 @@ impl ModuleGraph {
   pub async fn build_with_specifiers(
     options: ModuleGraphOptions<'_>,
   ) -> Result<(Self, Specifiers)> {
+    let loader = options.loader.unwrap_or_else(|| {
+      #[cfg(feature = "tokio-loader")]
+      return Box::new(crate::loader::DefaultLoader::new());
+      #[cfg(not(feature = "tokio-loader"))]
+      panic!("You must provide a loader or use the 'tokio-loader' feature.")
+    });
+    let resolver = match options.import_map {
+      Some(import_map_url) => Some(
+        ImportMapResolver::load(&import_map_url, &*loader)
+          .await
+          .context("Error loading import map.")?,
+      ),
+      None => None,
+    };
     let mut loader = SourceLoader::new(
-      options.loader.unwrap_or_else(|| {
-        #[cfg(feature = "tokio-loader")]
-        return Box::new(crate::loader::DefaultLoader::new());
-        #[cfg(not(feature = "tokio-loader"))]
-        panic!("You must provide a loader or use the 'tokio-loader' feature.")
-      }),
+      loader,
       // todo: support configuring this in the future
       get_all_specifier_mappers(),
       options.specifier_mappings,
@@ -114,7 +128,7 @@ impl ModuleGraph {
         false,
         None,
         &mut loader,
-        None,
+        resolver.as_ref().map(|r| r.as_resolver()),
         None,
         Some(&source_parser),
         None,
@@ -134,7 +148,7 @@ impl ModuleGraph {
           error_message.push_str(&format!(" ({})", error.specifier()));
         }
       }
-      anyhow::bail!("{}", error_message);
+      bail!("{}", error_message);
     }
 
     let loader_specifiers = loader.into_specifiers();
@@ -145,7 +159,7 @@ impl ModuleGraph {
       .filter(|s| !loader_specifiers.redirects.contains_key(s))
       .collect::<Vec<_>>();
     if !not_found_redirects.is_empty() {
-      anyhow::bail!(
+      bail!(
         "The following specifiers were indicated to be redirected, but were not found:\n{}",
         format_specifiers_for_message(not_found_redirects),
       );
@@ -164,7 +178,7 @@ impl ModuleGraph {
       .filter(|s| !specifiers.has_mapped(s))
       .collect::<Vec<_>>();
     if !not_found_specifiers.is_empty() {
-      anyhow::bail!(
+      bail!(
         "The following specifiers were indicated to be mapped, but were not found:\n{}",
         format_specifiers_for_message(not_found_specifiers),
       );
@@ -243,4 +257,45 @@ fn format_specifiers_for_message(
     .map(|s| format!("  * {}", s))
     .collect::<Vec<_>>()
     .join("\n")
+}
+
+#[derive(Debug)]
+struct ImportMapResolver(import_map::ImportMap);
+
+impl ImportMapResolver {
+  pub async fn load(
+    import_map_url: &ModuleSpecifier,
+    loader: &dyn Loader,
+  ) -> Result<Self> {
+    let response = loader
+      .load(import_map_url.clone())
+      .await?
+      .ok_or_else(|| anyhow!("Could not find {}", import_map_url))?;
+    let result = import_map::ImportMap::from_json_with_diagnostics(
+      import_map_url,
+      &response.content,
+    )?;
+    // if !result.diagnostics.is_empty() {
+    //   todo: surface diagnostics maybe? It seems like this should not be hard error according to import map spec
+    //   bail!("Import map diagnostics:\n{}", result.diagnostics.into_iter().map(|d| format!("  - {}", d)).collect::<Vec<_>>().join("\n"));
+    //}
+    Ok(ImportMapResolver(result.import_map))
+  }
+
+  pub fn as_resolver(&self) -> &dyn deno_graph::source::Resolver {
+    self
+  }
+}
+
+impl deno_graph::source::Resolver for ImportMapResolver {
+  fn resolve(
+    &self,
+    specifier: &str,
+    referrer: &ModuleSpecifier,
+  ) -> Result<ModuleSpecifier> {
+    self
+      .0
+      .resolve(specifier, referrer)
+      .map_err(|err| err.into())
+  }
 }

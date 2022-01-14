@@ -24,6 +24,7 @@ pub struct TestBuilder {
   shims: Vec<Shim>,
   test_shims: Vec<Shim>,
   target: ScriptTarget,
+  import_map: Option<ModuleSpecifier>,
 }
 
 impl TestBuilder {
@@ -39,6 +40,7 @@ impl TestBuilder {
       shims: Default::default(),
       test_shims: Default::default(),
       target: ScriptTarget::ES5,
+      import_map: None,
     }
   }
 
@@ -64,6 +66,11 @@ impl TestBuilder {
 
   pub fn add_test_entry_point(&mut self, value: impl AsRef<str>) -> &mut Self {
     self.test_entry_points.push(value.as_ref().to_string());
+    self
+  }
+
+  pub fn set_import_map(&mut self, url: impl AsRef<str>) -> &mut Self {
+    self.import_map = Some(ModuleSpecifier::parse(url.as_ref()).unwrap());
     self
   }
 
@@ -175,6 +182,7 @@ impl TestBuilder {
       specifier_mappings: self.specifier_mappings.clone(),
       redirects: self.redirects.clone(),
       target: self.target,
+      import_map: self.import_map.clone(),
     })
     .await
   }
