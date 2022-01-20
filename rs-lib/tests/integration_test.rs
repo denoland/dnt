@@ -1619,6 +1619,27 @@ async fn json_module_re_export() {
   );
 }
 
+#[tokio::test]
+async fn issue_104() {
+  let result = TestBuilder::new()
+    .with_loader(|loader| {
+      loader
+        .add_local_file("/mod.ts", "import type { other } from './test.ts'; import { test } from './test.ts'; test();")
+        .add_local_file("/test.ts", "export function test() {} export type other = string;");
+    })
+    .transform()
+    .await
+    .unwrap();
+
+  assert_files!(
+    result.main.files,
+    &[
+      ("mod.ts", "import type { other } from './test.js'; import { test } from './test.js'; test();"),
+      ("test.ts", "export function test() {} export type other = string;"),
+    ]
+  );
+}
+
 fn get_shim_file_text(mut text: String) -> String {
   text.push_str("\n");
   text.push_str(
