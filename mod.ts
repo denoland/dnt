@@ -85,6 +85,8 @@ export interface BuildOptions {
   redirects?: Redirects;
   /** Package.json output. You may override dependencies and dev dependencies in here. */
   package: PackageJsonObject;
+  /** Path or url to import map. */
+  importMap?: string;
   /** Package manager used to install dependencies and run npm scripts.
    * This also can be an absolute path to the executable file of package manager.
    * @default "npm"
@@ -393,6 +395,7 @@ export async function build(options: BuildOptions): Promise<void> {
       mappings: options.mappings,
       redirects: options.redirects,
       target: scriptTarget,
+      importMap: options.importMap,
     });
   }
 

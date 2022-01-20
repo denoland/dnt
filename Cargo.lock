@@ -250,6 +250,7 @@ dependencies = [
  "deno_ast",
  "deno_graph",
  "futures",
+ "import_map",
  "once_cell",
  "pathdiff",
  "pretty_assertions",
@@ -604,6 +605,18 @@ dependencies = [
 ]
 
 [[package]]
+name = "import_map"
+version = "0.6.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "7f64f821df8ee00a0fba2dde6296af519eff7d823542b057c1b8c40ca1d58f4c"
+dependencies = [
+ "indexmap",
+ "serde",
+ "serde_json",
+ "url",
+]
+
+[[package]]
 name = "indexmap"
 version = "1.7.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -611,6 +624,7 @@ checksum = "bc633605454125dec4b66843673f01c7df2b89479b32e0ed634e43a91cff62a5"
 dependencies = [
  "autocfg",
  "hashbrown",
+ "serde",
 ]
 
 [[package]]

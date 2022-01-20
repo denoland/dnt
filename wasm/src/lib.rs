@@ -58,6 +58,7 @@ pub struct TransformOptions {
   pub mappings: HashMap<ModuleSpecifier, MappedSpecifier>,
   pub redirects: HashMap<ModuleSpecifier, ModuleSpecifier>,
   pub target: ScriptTarget,
+  pub import_map: Option<ModuleSpecifier>,
 }
 
 #[wasm_bindgen]
@@ -74,6 +75,7 @@ pub async fn transform(options: JsValue) -> Result<JsValue, JsValue> {
     specifier_mappings: options.mappings,
     redirects: options.redirects,
     target: options.target,
+    import_map: options.import_map,
   })
   .await
   .map_err(|err| format!("{:?}", err))?; // need to include the anyhow context

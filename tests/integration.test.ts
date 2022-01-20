@@ -574,6 +574,25 @@ Deno.test("should build project with another package manager", async () => {
   });
 });
 
+Deno.test("should build the import map project", async () => {
+  await runTest("import_map_project", {
+    entryPoints: ["mod.ts"],
+    importMap: "./import_map.json",
+    testPattern: "**/*_testfile.ts",
+    outDir: "./npm",
+    shims: {
+      ...getAllShimOptions(false),
+      deno: "dev",
+    },
+    package: {
+      name: "add",
+      version: "1.0.0",
+    },
+    typeCheck: true,
+  }, (_output) => {
+  });
+});
+
 export interface Output {
   packageJson: any;
   npmIgnore: string;
@@ -584,13 +603,14 @@ export interface Output {
 
 async function runTest(
   project:
-    | "test_project"
-    | "tla_project"
+    | "import_map_project"
+    | "json_module_project"
     | "mappings_project"
-    | "shim_project"
     | "polyfill_project"
     | "redirects_project"
-    | "json_module_project",
+    | "shim_project"
+    | "test_project"
+    | "tla_project",
   options: BuildOptions,
   checkOutput?: (output: Output) => (Promise<void> | void),
 ) {
