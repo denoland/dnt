@@ -32,7 +32,7 @@ pub fn resolve_declaration_file_mappings(
   let mut type_dependencies = BTreeMap::new();
 
   for module in modules.iter().filter_map(|m| m.as_es_module()) {
-    fill_types_for_module(module, &mut type_dependencies)?;
+    fill_types_for_module(module_graph, module, &mut type_dependencies)?;
   }
 
   // get the resolved type dependencies
@@ -107,6 +107,7 @@ fn select_best_types_dep(
 }
 
 fn fill_types_for_module(
+  module_graph: &ModuleGraph,
   module: &EsModule,
   type_dependencies: &mut BTreeMap<ModuleSpecifier, HashSet<TypesDependency>>,
 ) -> Result<()> {
@@ -133,7 +134,9 @@ fn fill_types_for_module(
   for dep in module.dependencies.values() {
     if let Some(type_dep) = dep.get_type() {
       if let Some(code_dep) = dep.get_code() {
-        add_type_dependency(module, code_dep, type_dep, type_dependencies);
+        if is_declaration_file(module_graph.get(type_dep).media_type()) {
+          add_type_dependency(module, code_dep, type_dep, type_dependencies);
+        }
       }
     }
   }
@@ -153,5 +156,15 @@ fn fill_types_for_module(
         referrer: module.specifier.clone(),
         specifier: type_specifier.clone(),
       });
+  }
+}
+
+fn is_declaration_file(media_type: deno_ast::MediaType) -> bool {
+  // todo: use media_type.is_declaration() in deno_ast once available
+  use deno_ast::MediaType::*;
+  match media_type {
+    Dts | Dmts | Dcts => true,
+    JavaScript | Jsx | Mjs | Cjs | TypeScript | Mts | Cts | Tsx | Json
+    | Wasm | TsBuildInfo | SourceMap | Unknown => false,
   }
 }

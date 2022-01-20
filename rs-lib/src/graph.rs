@@ -197,7 +197,7 @@ impl ModuleGraph {
 
   pub fn get(&self, specifier: &ModuleSpecifier) -> ModuleRef<'_> {
     let module = self.graph.get(specifier).unwrap_or_else(|| {
-      panic!("Programming error. Did not find specifier: {}", specifier);
+      panic!("dnt bug - Did not find specifier: {}", specifier);
     });
     match module {
       Module::Es(m) => ModuleRef::Es(m),

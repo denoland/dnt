@@ -131,11 +131,16 @@ impl Mappings {
 
     for (code_specifier, d) in specifiers.types.iter() {
       let to = &d.selected.specifier;
-      let file_path = mappings.get(code_specifier).unwrap();
+      let file_path = mappings.get(code_specifier).unwrap_or_else(|| {
+        panic!(
+          "dnt bug - Could not find mapping for types code specifier {}",
+          code_specifier
+        );
+      });
       let new_file_path = file_path.with_extension("d.ts");
       if let Some(past_path) = mappings.insert(to.clone(), new_file_path) {
         panic!(
-          "Programming error: Already had path {} in map when adding declaration file for {}. Adding: {}",
+          "dnt bug - Already had path {} in map when adding declaration file for {}. Adding: {}",
           past_path.display(),
           code_specifier,
           to
@@ -149,10 +154,7 @@ impl Mappings {
         if let Some(path) = mappings.get(value).map(ToOwned::to_owned) {
           mappings.insert(key.clone(), path);
         } else {
-          panic!(
-            "Programming error: Could not find the mapping for {}",
-            value
-          );
+          panic!("dnt bug - Could not find the mapping for {}", value);
         }
       }
     }
@@ -201,7 +203,7 @@ impl Mappings {
   pub fn get_file_path(&self, specifier: &ModuleSpecifier) -> &PathBuf {
     self.inner.get(specifier).unwrap_or_else(|| {
       panic!(
-        "Programming error. Could not find file path for specifier: {}",
+        "dnt bug - Could not find file path for specifier: {}",
         specifier
       )
     })
