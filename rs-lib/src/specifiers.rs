@@ -6,11 +6,12 @@ use std::collections::HashSet;
 
 use anyhow::Result;
 use deno_ast::ModuleSpecifier;
+use deno_graph::Module;
+use deno_graph::Resolved;
 
 use crate::declaration_file_resolution::resolve_declaration_file_mappings;
 use crate::declaration_file_resolution::DeclarationFileResolution;
 use crate::graph::ModuleGraph;
-use crate::graph::ModuleRef;
 use crate::loader::LoaderSpecifiers;
 use crate::MappedSpecifier;
 
@@ -40,13 +41,13 @@ pub fn get_specifiers(
   entry_points: &[ModuleSpecifier],
   mut specifiers: LoaderSpecifiers,
   module_graph: &ModuleGraph,
-  modules: &[ModuleRef<'_>],
+  modules: &[&Module],
 ) -> Result<Specifiers> {
   let mut local_specifiers = Vec::new();
   let mut remote_specifiers = Vec::new();
 
-  let mut modules: BTreeMap<&ModuleSpecifier, ModuleRef<'_>> =
-    modules.iter().map(|m| (m.specifier(), *m)).collect();
+  let mut modules: BTreeMap<&ModuleSpecifier, &Module> =
+    modules.iter().map(|m| (&m.specifier, *m)).collect();
 
   let mut found_module_specifiers = Vec::new();
   let mut found_mapped_specifiers = BTreeMap::new();
@@ -54,7 +55,7 @@ pub fn get_specifiers(
   // search for all the non-test modules
   for entry_point in entry_points.iter() {
     let module = module_graph.get(entry_point);
-    let mut pending = vec![module.specifier()];
+    let mut pending = vec![&module.specifier];
 
     while !pending.is_empty() {
       if let Some(module) = pending
@@ -62,26 +63,25 @@ pub fn get_specifiers(
         .map(|s| modules.remove(&module_graph.resolve(s)))
         .flatten()
       {
-        if let Some(mapped_entry) = specifiers.mapped.remove(module.specifier())
+        if let Some(mapped_entry) = specifiers.mapped.remove(&module.specifier)
         {
           found_mapped_specifiers
-            .insert(module.specifier().clone(), mapped_entry);
+            .insert(module.specifier.clone(), mapped_entry);
         } else {
-          found_module_specifiers.push(module.specifier().clone());
+          found_module_specifiers.push(module.specifier.clone());
 
-          if let Some(deps) = module.maybe_dependencies() {
-            for dep in deps.values() {
-              if let Some(specifier) = dep.get_code() {
-                pending.push(specifier);
-              }
-              if let Some(specifier) = dep.get_type() {
-                pending.push(specifier);
-              }
+          for dep in module.dependencies.values() {
+            if let Some(specifier) = dep.get_code() {
+              pending.push(specifier);
+            }
+            if let Some(specifier) = dep.get_type() {
+              pending.push(specifier);
             }
           }
-          if let Some((_, Some(Ok(resolved)))) = module.maybe_types_dependency()
+          if let Some((_, Resolved::Ok { specifier, .. })) =
+            &module.maybe_types_dependency
           {
-            pending.push(&resolved.0);
+            pending.push(specifier);
           }
         }
       }
@@ -102,11 +102,11 @@ pub fn get_specifiers(
     .collect::<Vec<_>>();
 
   for module in all_modules.iter() {
-    match module.specifier().scheme().to_lowercase().as_str() {
-      "file" => local_specifiers.push(module.specifier().clone()),
-      "http" | "https" => remote_specifiers.push(module.specifier().clone()),
+    match module.specifier.scheme().to_lowercase().as_str() {
+      "file" => local_specifiers.push(module.specifier.clone()),
+      "http" | "https" => remote_specifiers.push(module.specifier.clone()),
       _ => {
-        anyhow::bail!("Unhandled scheme on url: {}", module.specifier());
+        anyhow::bail!("Unhandled scheme on url: {}", module.specifier);
       }
     }
   }
@@ -132,10 +132,7 @@ pub fn get_specifiers(
       .filter(|l| !declaration_specifiers.contains(&l))
       .collect(),
     types,
-    test_modules: test_modules
-      .values()
-      .map(|k| k.specifier().clone())
-      .collect(),
+    test_modules: test_modules.values().map(|k| k.specifier.clone()).collect(),
     main: EnvironmentSpecifiers {
       mapped: found_mapped_specifiers,
     },

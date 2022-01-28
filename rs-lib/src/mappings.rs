@@ -75,7 +75,7 @@ impl Mappings {
       Vec<(ModuleSpecifier, MediaType)>,
     )> = Vec::new();
     for remote_specifier in specifiers.remote.iter() {
-      let media_type = module_graph.get(remote_specifier).media_type();
+      let media_type = module_graph.get(remote_specifier).media_type;
       let mut found = false;
       for (root_specifier, specifiers) in root_remote_specifiers.iter_mut() {
         if let Some(relative_url) =

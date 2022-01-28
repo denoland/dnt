@@ -5,10 +5,11 @@ use std::collections::HashSet;
 
 use anyhow::Result;
 use deno_ast::ModuleSpecifier;
-use deno_graph::EsModule;
+use deno_graph::Module;
+use deno_graph::ModuleKind;
+use deno_graph::Resolved;
 
 use crate::graph::ModuleGraph;
-use crate::graph::ModuleRef;
 
 #[derive(Debug)]
 pub struct DeclarationFileResolution {
@@ -27,11 +28,11 @@ pub struct TypesDependency {
 
 pub fn resolve_declaration_file_mappings(
   module_graph: &ModuleGraph,
-  modules: &[ModuleRef<'_>],
+  modules: &[&Module],
 ) -> Result<BTreeMap<ModuleSpecifier, DeclarationFileResolution>> {
   let mut type_dependencies = BTreeMap::new();
 
-  for module in modules.iter().filter_map(|m| m.as_es_module()) {
+  for module in modules.iter().filter(|m| m.kind == ModuleKind::Esm) {
     fill_types_for_module(module_graph, module, &mut type_dependencies)?;
   }
 
@@ -89,12 +90,19 @@ fn select_best_types_dep(
         false
       } else if is_dep_referrer_code {
         true
-      } else {
+      } else if let Some(dep_source) =
+        &module_graph.get(&dep.specifier).maybe_source
+      {
         // as a last resort, use the declaration file that's the largest
-        let dep_file_len = module_graph.get(&dep.specifier).source().len();
-        let selected_dep_file_len =
-          module_graph.get(&selected_dep.specifier).source().len();
-        dep_file_len > selected_dep_file_len
+        if let Some(selected_source) =
+          &module_graph.get(&selected_dep.specifier).maybe_source
+        {
+          dep_source.len() > selected_source.len()
+        } else {
+          true
+        }
+      } else {
+        false
       }
     } else {
       false
@@ -108,18 +116,24 @@ fn select_best_types_dep(
 
 fn fill_types_for_module(
   module_graph: &ModuleGraph,
-  module: &EsModule,
+  module: &Module,
   type_dependencies: &mut BTreeMap<ModuleSpecifier, HashSet<TypesDependency>>,
 ) -> Result<()> {
   // check for the module specifying its type dependency
   match &module.maybe_types_dependency {
-    Some((text, Some(Err(err)))) => anyhow::bail!(
+    Some((text, Resolved::Err(err))) => anyhow::bail!(
       "Error resolving types for {} with reference {}. {}",
       module.specifier,
       text,
       err.to_string()
     ),
-    Some((_, Some(Ok((type_specifier, _))))) => {
+    Some((
+      _,
+      Resolved::Ok {
+        specifier: type_specifier,
+        ..
+      },
+    )) => {
       add_type_dependency(
         module,
         &module.specifier,
@@ -134,7 +148,7 @@ fn fill_types_for_module(
   for dep in module.dependencies.values() {
     if let Some(type_dep) = dep.get_type() {
       if let Some(code_dep) = dep.get_code() {
-        if is_declaration_file(module_graph.get(type_dep).media_type()) {
+        if is_declaration_file(module_graph.get(type_dep).media_type) {
           add_type_dependency(module, code_dep, type_dep, type_dependencies);
         }
       }
@@ -144,7 +158,7 @@ fn fill_types_for_module(
   return Ok(());
 
   fn add_type_dependency(
-    module: &EsModule,
+    module: &Module,
     code_specifier: &ModuleSpecifier,
     type_specifier: &ModuleSpecifier,
     type_dependencies: &mut BTreeMap<ModuleSpecifier, HashSet<TypesDependency>>,

@@ -517,9 +517,7 @@ await build({
      if: startsWith(github.ref, 'refs/tags/')
      env:
        NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
-     run: |
-       cd npm
-       npm publish
+     run: cd npm && npm publish
    ```
 
    Note that the build script always runs even when not publishing. This is to ensure your build and tests pass on each commit.
