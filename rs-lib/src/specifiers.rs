@@ -78,7 +78,8 @@ pub fn get_specifiers(
               pending.push(specifier);
             }
           }
-          if let Some((_, Resolved::Ok { specifier, .. })) = &module.maybe_types_dependency
+          if let Some((_, Resolved::Ok { specifier, .. })) =
+            &module.maybe_types_dependency
           {
             pending.push(specifier);
           }
@@ -131,10 +132,7 @@ pub fn get_specifiers(
       .filter(|l| !declaration_specifiers.contains(&l))
       .collect(),
     types,
-    test_modules: test_modules
-      .values()
-      .map(|k| k.specifier.clone())
-      .collect(),
+    test_modules: test_modules.values().map(|k| k.specifier.clone()).collect(),
     main: EnvironmentSpecifiers {
       mapped: found_mapped_specifiers,
     },

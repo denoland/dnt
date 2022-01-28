@@ -90,9 +90,13 @@ fn select_best_types_dep(
         false
       } else if is_dep_referrer_code {
         true
-      } else if let Some(dep_source) = &module_graph.get(&dep.specifier).maybe_source {
+      } else if let Some(dep_source) =
+        &module_graph.get(&dep.specifier).maybe_source
+      {
         // as a last resort, use the declaration file that's the largest
-        if let Some(selected_source) = &module_graph.get(&selected_dep.specifier).maybe_source {
+        if let Some(selected_source) =
+          &module_graph.get(&selected_dep.specifier).maybe_source
+        {
           dep_source.len() > selected_source.len()
         } else {
           true
@@ -123,7 +127,13 @@ fn fill_types_for_module(
       text,
       err.to_string()
     ),
-    Some((_, Resolved::Ok { specifier: type_specifier, .. })) => {
+    Some((
+      _,
+      Resolved::Ok {
+        specifier: type_specifier,
+        ..
+      },
+    )) => {
       add_type_dependency(
         module,
         &module.specifier,

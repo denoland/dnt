@@ -169,9 +169,7 @@ impl ModuleGraph {
   }
 
   pub fn all_modules(&self) -> Vec<&Module> {
-    self
-      .graph
-      .modules()
+    self.graph.modules()
   }
 }
 
@@ -198,10 +196,8 @@ impl ImportMapResolver {
       .load(import_map_url.clone())
       .await?
       .ok_or_else(|| anyhow!("Could not find {}", import_map_url))?;
-    let result = import_map::parse_from_json(
-      import_map_url,
-      &response.content,
-    )?;
+    let result =
+      import_map::parse_from_json(import_map_url, &response.content)?;
     // if !result.diagnostics.is_empty() {
     //   todo: surface diagnostics maybe? It seems like this should not be hard error according to import map spec
     //   bail!("Import map diagnostics:\n{}", result.diagnostics.into_iter().map(|d| format!("  - {}", d)).collect::<Vec<_>>().join("\n"));
