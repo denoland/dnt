@@ -8,11 +8,13 @@ use std::path::PathBuf;
 
 use analyze::get_top_level_decls;
 use anyhow::Context;
+use anyhow::anyhow;
 use anyhow::Result;
 
 use analyze::get_ignore_line_indexes;
+use anyhow::bail;
+use deno_graph::ModuleKind;
 use graph::ModuleGraphOptions;
-use graph::ModuleRef;
 use mappings::Mappings;
 use mappings::SYNTHETIC_SPECIFIERS;
 use mappings::SYNTHETIC_TEST_SPECIFIERS;
@@ -262,9 +264,9 @@ pub async fn transform(options: TransformOptions) -> Result<TransformOutput> {
       &mut main_env_context
     };
 
-    let file_text = match module {
-      ModuleRef::Es(module) => {
-        let parsed_source = module.parsed_source.clone();
+    let file_text = match module.kind {
+      ModuleKind::Esm => {
+        let parsed_source = module.maybe_parsed_source.as_ref().ok_or_else(|| anyhow!("Expected source for: {}", module.specifier))?.clone();
 
         let text_changes = parsed_source
           .with_view(|program| -> Result<Vec<TextChange>> {
@@ -332,7 +334,7 @@ pub async fn transform(options: TransformOptions) -> Result<TransformOutput> {
           text_changes,
         )
       }
-      ModuleRef::Synthetic(module) => {
+      ModuleKind::Asserted => {
         if let Some(source) = &module.maybe_source {
           format!(
             "export default JSON.parse(`{}`);",
@@ -341,7 +343,8 @@ pub async fn transform(options: TransformOptions) -> Result<TransformOutput> {
         } else {
           continue;
         }
-      }
+      },
+      _ => bail!("Not implemented module kind {:?} for {}", module.kind, module.specifier),
     };
 
     let file_path = mappings.get_file_path(specifier).to_owned();

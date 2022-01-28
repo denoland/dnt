@@ -206,9 +206,9 @@ dependencies = [
 
 [[package]]
 name = "deno_ast"
-version = "0.9.0"
+version = "0.10.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "e81ceec755f9e4e270e8d7ef4ade1921eddc1717dea092c726b088f9c074721b"
+checksum = "1a2780a628fd2fd52c81ef3f9d2bda0609a662b9e4f85623c29051c277363f65"
 dependencies = [
  "data-url",
  "dprint-swc-ecma-ast-view",
@@ -222,9 +222,9 @@ dependencies = [
 
 [[package]]
 name = "deno_graph"
-version = "0.18.0"
+version = "0.21.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "5b2a21feedd2fde8846a8b94855498ff7e1c59bdf972a06a6faf228999c1f7fd"
+checksum = "86eccec721ae9dceae2e6cbd83b63de3ef810e7c39357c9a867c98b9633d4775"
 dependencies = [
  "anyhow",
  "cfg-if 1.0.0",
@@ -606,11 +606,12 @@ dependencies = [
 
 [[package]]
 name = "import_map"
-version = "0.6.0"
+version = "0.7.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "7f64f821df8ee00a0fba2dde6296af519eff7d823542b057c1b8c40ca1d58f4c"
+checksum = "8a5e929cd5351ce1fe9e674a711b7d626dc00182350de310ed84d59a5ecb6a94"
 dependencies = [
  "indexmap",
+ "log",
  "serde",
  "serde_json",
  "url",

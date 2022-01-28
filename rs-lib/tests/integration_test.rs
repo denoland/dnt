@@ -1679,7 +1679,7 @@ async fn issue_104() {
 }
 
 fn get_shim_file_text(mut text: String) -> String {
-  text.push_str("\n");
+  text.push('\n');
   text.push_str(
     &include_str!("../src/scripts/createMergeProxy.ts")
       .replace("export function", "function"),
