@@ -69,6 +69,22 @@ fn is_windows_path_segment(specifier: &str) -> bool {
   chars.next().is_none()
 }
 
+/// Gets a path with the specified file stem suffix.
+pub fn path_with_stem_suffix(path: &Path, suffix: &str) -> PathBuf {
+  if let Some(file_name) = path.file_name().map(|f| f.to_string_lossy()) {
+    if let Some(file_stem) = path.file_stem().map(|f| f.to_string_lossy()) {
+      if let Some(ext) = path.extension().map(|f| f.to_string_lossy()) {
+        return path
+          .with_file_name(format!("{}_{}.{}", file_stem, suffix, ext));
+      }
+    }
+
+    path.with_file_name(format!("{}_{}", file_name, suffix))
+  } else {
+    path.with_file_name(suffix)
+  }
+}
+
 /// Strips the byte order mark from the provided text if it exists.
 pub fn strip_bom(text: &str) -> &str {
   if text.starts_with(BOM_CHAR) {
@@ -78,21 +94,23 @@ pub fn strip_bom(text: &str) -> &str {
   }
 }
 
-pub fn partition_by_root_specifiers(specifiers: &[ModuleSpecifier]) -> Vec<(ModuleSpecifier, Vec<ModuleSpecifier>)> {
-  let mut root_specifiers: Vec<(
-    ModuleSpecifier,
-    Vec<ModuleSpecifier>,
-  )> = Vec::new();
+pub fn partition_by_root_specifiers(
+  specifiers: &[ModuleSpecifier],
+) -> Vec<(ModuleSpecifier, Vec<ModuleSpecifier>)> {
+  let mut root_specifiers: Vec<(ModuleSpecifier, Vec<ModuleSpecifier>)> =
+    Vec::new();
   for remote_specifier in specifiers {
     let mut found = false;
     for (root_specifier, specifiers) in root_specifiers.iter_mut() {
-      if let Some(relative_url) =
-        root_specifier.make_relative(remote_specifier)
+      if let Some(relative_url) = root_specifier.make_relative(remote_specifier)
       {
         // found a new root
         if relative_url.starts_with("../") {
-          let end_ancestor_index = relative_url.len() - relative_url.trim_start_matches("../").len();
-          *root_specifier = root_specifier.join(&relative_url[..end_ancestor_index]).unwrap();
+          let end_ancestor_index =
+            relative_url.len() - relative_url.trim_start_matches("../").len();
+          *root_specifier = root_specifier
+            .join(&relative_url[..end_ancestor_index])
+            .unwrap();
         }
 
         specifiers.push(remote_specifier.clone());
@@ -105,8 +123,7 @@ pub fn partition_by_root_specifiers(specifiers: &[ModuleSpecifier]) -> Vec<(Modu
       let root_specifier = remote_specifier
         .join("./")
         .unwrap_or_else(|_| remote_specifier.clone());
-      root_specifiers
-        .push((root_specifier, vec![remote_specifier.clone()]));
+      root_specifiers.push((root_specifier, vec![remote_specifier.clone()]));
     }
   }
   root_specifiers
@@ -118,71 +135,107 @@ mod test {
   use pretty_assertions::assert_eq;
 
   #[test]
+  fn test_path_with_stem_suffix() {
+    assert_eq!(
+      path_with_stem_suffix(&PathBuf::from("/"), "2"),
+      PathBuf::from("/2")
+    );
+    assert_eq!(
+      path_with_stem_suffix(&PathBuf::from("/test"), "2"),
+      PathBuf::from("/test_2")
+    );
+    assert_eq!(
+      path_with_stem_suffix(&PathBuf::from("/test.txt"), "2"),
+      PathBuf::from("/test_2.txt")
+    );
+    assert_eq!(
+      path_with_stem_suffix(&PathBuf::from("/test/subdir"), "2"),
+      PathBuf::from("/test/subdir_2")
+    );
+    assert_eq!(
+      path_with_stem_suffix(&PathBuf::from("/test/subdir.other.txt"), "2"),
+      PathBuf::from("/test/subdir.other_2.txt")
+    );
+  }
+
+  #[test]
   fn partition_by_root_specifiers_same_sub_folder() {
-    run_partition_by_root_specifiers_test(vec![
-      "https://deno.land/x/mod/A.ts",
-      "https://deno.land/x/mod/other/A.ts",
-    ], vec![
-      (
+    run_partition_by_root_specifiers_test(
+      vec![
+        "https://deno.land/x/mod/A.ts",
+        "https://deno.land/x/mod/other/A.ts",
+      ],
+      vec![(
         "https://deno.land/x/mod/",
         vec![
           "https://deno.land/x/mod/A.ts",
           "https://deno.land/x/mod/other/A.ts",
         ],
-      ),
-    ]);
+      )],
+    );
   }
 
   #[test]
   fn partition_by_root_specifiers_different_sub_folder() {
-    run_partition_by_root_specifiers_test(vec![
-      "https://deno.land/x/mod/A.ts",
-      "https://deno.land/x/other/A.ts",
-    ], vec![
-      (
+    run_partition_by_root_specifiers_test(
+      vec![
+        "https://deno.land/x/mod/A.ts",
+        "https://deno.land/x/other/A.ts",
+      ],
+      vec![(
         "https://deno.land/x/",
         vec![
           "https://deno.land/x/mod/A.ts",
           "https://deno.land/x/other/A.ts",
         ],
-      ),
-    ]);
+      )],
+    );
   }
 
   #[test]
   fn partition_by_root_specifiers_different_hosts() {
-    run_partition_by_root_specifiers_test(vec![
-      "https://deno.land/mod/A.ts",
-      "https://localhost/mod/A.ts",
-      "https://other/A.ts",
-    ], vec![
-      (
-        "https://deno.land/mod/",
-        vec![
-          "https://deno.land/mod/A.ts",
-        ],
-      ),
-      (
-        "https://localhost/mod/",
-        vec![
-          "https://localhost/mod/A.ts",
-        ],
-      ),
-      (
-        "https://other/",
-        vec![
-          "https://other/A.ts",
-        ],
-      ),
-    ]);
+    run_partition_by_root_specifiers_test(
+      vec![
+        "https://deno.land/mod/A.ts",
+        "https://localhost/mod/A.ts",
+        "https://other/A.ts",
+      ],
+      vec![
+        ("https://deno.land/mod/", vec!["https://deno.land/mod/A.ts"]),
+        ("https://localhost/mod/", vec!["https://localhost/mod/A.ts"]),
+        ("https://other/", vec!["https://other/A.ts"]),
+      ],
+    );
   }
 
-  fn run_partition_by_root_specifiers_test(input: Vec<&str>, expected: Vec<(&str, Vec<&str>)>) {
-    let input = input.iter().map(|s| ModuleSpecifier::parse(s).unwrap()).collect::<Vec<_>>();
+  fn run_partition_by_root_specifiers_test(
+    input: Vec<&str>,
+    expected: Vec<(&str, Vec<&str>)>,
+  ) {
+    let input = input
+      .iter()
+      .map(|s| ModuleSpecifier::parse(s).unwrap())
+      .collect::<Vec<_>>();
     let output = partition_by_root_specifiers(&input);
     // the assertion is much easier to compare when everything is strings
-    let output = output.into_iter().map(|(s, vec)| (s.to_string(), vec.into_iter().map(|s| s.to_string()).collect::<Vec<_>>())).collect::<Vec<_>>();
-    let expected = expected.into_iter().map(|(s, vec)| (s.to_string(), vec.into_iter().map(|s| s.to_string()).collect::<Vec<_>>())).collect::<Vec<_>>();
+    let output = output
+      .into_iter()
+      .map(|(s, vec)| {
+        (
+          s.to_string(),
+          vec.into_iter().map(|s| s.to_string()).collect::<Vec<_>>(),
+        )
+      })
+      .collect::<Vec<_>>();
+    let expected = expected
+      .into_iter()
+      .map(|(s, vec)| {
+        (
+          s.to_string(),
+          vec.into_iter().map(|s| s.to_string()).collect::<Vec<_>>(),
+        )
+      })
+      .collect::<Vec<_>>();
     assert_eq!(output, expected);
   }
 }

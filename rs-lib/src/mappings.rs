@@ -14,6 +14,7 @@ use once_cell::sync::Lazy;
 use crate::graph::ModuleGraph;
 use crate::specifiers::Specifiers;
 use crate::utils::partition_by_root_specifiers;
+use crate::utils::path_with_stem_suffix;
 use crate::utils::url_to_file_path;
 
 pub struct SyntheticSpecifiers {
@@ -71,7 +72,8 @@ impl Mappings {
       }
     }
 
-    let root_remote_specifiers = partition_by_root_specifiers(&specifiers.remote);
+    let root_remote_specifiers =
+      partition_by_root_specifiers(&specifiers.remote);
     let mut mapped_base_dirs = HashSet::new();
     let deps_path =
       get_unique_path(PathBuf::from("deps"), &mut root_local_dirs);
@@ -212,10 +214,10 @@ fn get_unique_path(
   mut path: PathBuf,
   unique_set: &mut HashSet<PathBuf>,
 ) -> PathBuf {
-  let original_path = path.to_string_lossy().to_string();
+  let original_path = path.clone();
   let mut count = 2;
   while !unique_set.insert(path.clone()) {
-    path = PathBuf::from(format!("{}_{}", original_path, count));
+    path = path_with_stem_suffix(&original_path, &count.to_string());
     count += 1;
   }
   path
@@ -239,7 +241,7 @@ fn make_url_relative(
 fn get_dir_name_for_root(root: &ModuleSpecifier) -> PathBuf {
   let mut result = String::new();
   if let Some(domain) = root.domain() {
-    result.push_str(&sanitize_filepath(domain));
+    result.push_str(&sanitize_segment(domain));
   }
   if let Some(port) = root.port() {
     if !result.is_empty() {
@@ -252,7 +254,7 @@ fn get_dir_name_for_root(root: &ModuleSpecifier) -> PathBuf {
       if !result.is_empty() {
         result.push('_');
       }
-      result.push_str(&sanitize_filepath(segment));
+      result.push_str(&sanitize_segment(segment));
     }
   }
 
@@ -274,29 +276,18 @@ fn truncate_str(text: &str, max: usize) -> &str {
   }
 }
 
-fn sanitize_filepath(text: &str) -> String {
-  let mut chars = Vec::with_capacity(text.len()); // not chars, but good enough
-  for c in text.chars() {
-    // use an allow list of characters that won't have any issues
-    if is_banned_path_char(c) {
-      chars.push('_');
-    } else {
-      chars.push(c);
-    }
-  }
-  chars.into_iter().collect()
+fn sanitize_segment(text: &str) -> String {
+  text
+    .chars()
+    .map(|c| if is_banned_segment_char(c) { '_' } else { c })
+    .collect()
 }
 
-fn sanitize_segment(text: &str) -> String {
-  let mut chars = Vec::with_capacity(text.len()); // not chars, but good enough
-  for c in text.chars() {
-    if is_banned_segment_char(c) {
-      chars.push('_');
-    } else {
-      chars.push(c);
-    }
-  }
-  chars.into_iter().collect()
+fn sanitize_filepath(text: &str) -> String {
+  text
+    .chars()
+    .map(|c| if is_banned_path_char(c) { '_' } else { c })
+    .collect()
 }
 
 fn is_banned_segment_char(c: char) -> bool {
