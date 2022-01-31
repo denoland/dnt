@@ -77,3 +77,112 @@ pub fn strip_bom(text: &str) -> &str {
     text
   }
 }
+
+pub fn partition_by_root_specifiers(specifiers: &[ModuleSpecifier]) -> Vec<(ModuleSpecifier, Vec<ModuleSpecifier>)> {
+  let mut root_specifiers: Vec<(
+    ModuleSpecifier,
+    Vec<ModuleSpecifier>,
+  )> = Vec::new();
+  for remote_specifier in specifiers {
+    let mut found = false;
+    for (root_specifier, specifiers) in root_specifiers.iter_mut() {
+      if let Some(relative_url) =
+        root_specifier.make_relative(remote_specifier)
+      {
+        // found a new root
+        if relative_url.starts_with("../") {
+          let end_ancestor_index = relative_url.len() - relative_url.trim_start_matches("../").len();
+          *root_specifier = root_specifier.join(&relative_url[..end_ancestor_index]).unwrap();
+        }
+
+        specifiers.push(remote_specifier.clone());
+        found = true;
+        break;
+      }
+    }
+    if !found {
+      // get the specifier without the directory
+      let root_specifier = remote_specifier
+        .join("./")
+        .unwrap_or_else(|_| remote_specifier.clone());
+      root_specifiers
+        .push((root_specifier, vec![remote_specifier.clone()]));
+    }
+  }
+  root_specifiers
+}
+
+#[cfg(test)]
+mod test {
+  use super::*;
+  use pretty_assertions::assert_eq;
+
+  #[test]
+  fn partition_by_root_specifiers_same_sub_folder() {
+    run_partition_by_root_specifiers_test(vec![
+      "https://deno.land/x/mod/A.ts",
+      "https://deno.land/x/mod/other/A.ts",
+    ], vec![
+      (
+        "https://deno.land/x/mod/",
+        vec![
+          "https://deno.land/x/mod/A.ts",
+          "https://deno.land/x/mod/other/A.ts",
+        ],
+      ),
+    ]);
+  }
+
+  #[test]
+  fn partition_by_root_specifiers_different_sub_folder() {
+    run_partition_by_root_specifiers_test(vec![
+      "https://deno.land/x/mod/A.ts",
+      "https://deno.land/x/other/A.ts",
+    ], vec![
+      (
+        "https://deno.land/x/",
+        vec![
+          "https://deno.land/x/mod/A.ts",
+          "https://deno.land/x/other/A.ts",
+        ],
+      ),
+    ]);
+  }
+
+  #[test]
+  fn partition_by_root_specifiers_different_hosts() {
+    run_partition_by_root_specifiers_test(vec![
+      "https://deno.land/mod/A.ts",
+      "https://localhost/mod/A.ts",
+      "https://other/A.ts",
+    ], vec![
+      (
+        "https://deno.land/mod/",
+        vec![
+          "https://deno.land/mod/A.ts",
+        ],
+      ),
+      (
+        "https://localhost/mod/",
+        vec![
+          "https://localhost/mod/A.ts",
+        ],
+      ),
+      (
+        "https://other/",
+        vec![
+          "https://other/A.ts",
+        ],
+      ),
+    ]);
+  }
+
+  fn run_partition_by_root_specifiers_test(input: Vec<&str>, expected: Vec<(&str, Vec<&str>)>) {
+    let input = input.iter().map(|s| ModuleSpecifier::parse(s).unwrap()).collect::<Vec<_>>();
+    let output = partition_by_root_specifiers(&input);
+    // the assertion is much easier to compare when everything is strings
+    let output = output.into_iter().map(|(s, vec)| (s.to_string(), vec.into_iter().map(|s| s.to_string()).collect::<Vec<_>>())).collect::<Vec<_>>();
+    let expected = expected.into_iter().map(|(s, vec)| (s.to_string(), vec.into_iter().map(|s| s.to_string()).collect::<Vec<_>>())).collect::<Vec<_>>();
+    assert_eq!(output, expected);
+  }
+}

@@ -13,6 +13,7 @@ use once_cell::sync::Lazy;
 
 use crate::graph::ModuleGraph;
 use crate::specifiers::Specifiers;
+use crate::utils::partition_by_root_specifiers;
 use crate::utils::url_to_file_path;
 
 pub struct SyntheticSpecifiers {
@@ -70,43 +71,7 @@ impl Mappings {
       }
     }
 
-    let mut root_remote_specifiers: Vec<(
-      ModuleSpecifier,
-      Vec<(ModuleSpecifier, MediaType)>,
-    )> = Vec::new();
-    for remote_specifier in specifiers.remote.iter() {
-      let media_type = module_graph.get(remote_specifier).media_type;
-      let mut found = false;
-      for (root_specifier, specifiers) in root_remote_specifiers.iter_mut() {
-        if let Some(relative_url) =
-          root_specifier.make_relative(remote_specifier)
-        {
-          // found a new root
-          if relative_url.starts_with("../") {
-            // todo(dsherret): improve, this was just laziness
-            let mut new_root_specifier = root_specifier.clone();
-            let mut relative_url = relative_url.as_str();
-            while relative_url.starts_with("../") {
-              relative_url = &relative_url[3..];
-              new_root_specifier = new_root_specifier.join("../").unwrap();
-            }
-            *root_specifier = new_root_specifier;
-          }
-
-          specifiers.push((remote_specifier.clone(), media_type));
-          found = true;
-          break;
-        }
-      }
-      if !found {
-        let root_specifier = remote_specifier
-          .join("../")
-          .unwrap_or_else(|_| remote_specifier.clone());
-        root_remote_specifiers
-          .push((root_specifier, vec![(remote_specifier.clone(), media_type)]));
-      }
-    }
-
+    let root_remote_specifiers = partition_by_root_specifiers(&specifiers.remote);
     let mut mapped_base_dirs = HashSet::new();
     let deps_path =
       get_unique_path(PathBuf::from("deps"), &mut root_local_dirs);
@@ -115,7 +80,8 @@ impl Mappings {
         get_dir_name_for_root(&root),
         &mut mapped_base_dirs,
       ));
-      for (specifier, media_type) in specifiers {
+      for specifier in specifiers {
+        let media_type = module_graph.get(&specifier).media_type;
         let relative = base_dir
           .join(sanitize_filepath(&make_url_relative(&root, &specifier)?));
         mappings.insert(
