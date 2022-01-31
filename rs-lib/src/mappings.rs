@@ -184,7 +184,7 @@ fn get_mapped_file_path(
   fn without_ext(path: impl AsRef<Path>) -> PathBuf {
     // remove the extension if it's known
     // Ex. url could be `https://deno.land/test/1.2.5`
-    // and we don't want to use `test_1.2`
+    // and we don't want to use `1.2`
     let media_type: MediaType = path.as_ref().into();
     if media_type == MediaType::Unknown {
       path.as_ref().into()
@@ -260,8 +260,9 @@ fn get_dir_name_for_root(root: &ModuleSpecifier) -> PathBuf {
     "unknown".to_string()
   } else {
     // limit the size of the directory to reduce the chance of max path errors on Windows
-    truncate_str(&result.replace(".", "_"), 30)
+    truncate_str(&result, 30)
       .trim_end_matches('_')
+      .trim_end_matches('.')
       .to_string()
   })
 }
@@ -277,17 +278,33 @@ fn sanitize_filepath(text: &str) -> String {
   let mut chars = Vec::with_capacity(text.len()); // not chars, but good enough
   for c in text.chars() {
     // use an allow list of characters that won't have any issues
-    if c.is_alphabetic()
-      || c.is_numeric()
-      || c.is_whitespace()
-      || matches!(c, '_' | '-' | '.' | '/' | '\\')
-    {
-      chars.push(c);
-    } else {
+    if is_banned_path_char(c) {
       chars.push('_');
+    } else {
+      chars.push(c);
     }
   }
   chars.into_iter().collect()
+}
+
+fn sanitize_segment(text: &str) -> String {
+  let mut chars = Vec::with_capacity(text.len()); // not chars, but good enough
+  for c in text.chars() {
+    if is_banned_segment_char(c) {
+      chars.push('_');
+    } else {
+      chars.push(c);
+    }
+  }
+  chars.into_iter().collect()
+}
+
+fn is_banned_segment_char(c: char) -> bool {
+  matches!(c, '/' | '\\') || is_banned_path_char(c)
+}
+
+fn is_banned_path_char(c: char) -> bool {
+  matches!(c, '<' | '>' | ':' | '"' | '|' | '?' | '*')
 }
 
 fn get_base_dir(specifiers: &[ModuleSpecifier]) -> Result<PathBuf> {
@@ -323,16 +340,17 @@ fn get_base_dir(specifiers: &[ModuleSpecifier]) -> Result<PathBuf> {
 #[cfg(test)]
 mod test {
   use super::*;
+  use pretty_assertions::assert_eq;
 
   #[test]
   fn should_get_dir_name_root() {
-    run_test("http://deno.land/x/test", "deno_land_x_test");
+    run_test("http://deno.land/x/test", "deno.land_x_test");
     run_test("http://localhost", "localhost");
-    run_test("http://localhost/test%20test", "localhost_test_20test");
+    run_test("http://localhost/test%20test", "localhost_test%20test");
     // will truncate
     run_test(
       "http://localhost/test%20testingtestingtesting",
-      "localhost_test_20testingtestin",
+      "localhost_test%20testingtestin",
     );
 
     fn run_test(specifier: &str, expected: &str) {

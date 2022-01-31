@@ -462,7 +462,7 @@ async fn transform_remote_files() {
         "mod.ts",
         concat!(
           "import * as other from './deps/localhost/mod.js';\n",
-          "import './deps/deno_land_std_0_102_0/mod.js';",
+          "import './deps/deno.land_std@0.102.0/mod.js';",
         )
       ),
       (
@@ -493,7 +493,7 @@ async fn transform_remote_files() {
         "deps/localhost/sub/subfolder.js",
         "import * as localhost2 from '../../localhost2.js';"
       ),
-      ("deps/deno_land_std_0_102_0/mod.ts", "console.log(5);"),
+      ("deps/deno.land_std@0.102.0/mod.ts", "console.log(5);"),
       (
         "deps/localhost2.js",
         "import * as localhost3Mod from './localhost3/mod.js';"
@@ -1063,14 +1063,14 @@ async fn skypack_esm_module_mapping() {
           "import package1 from 'preact';\n",
           "import package2 from '@scope/package-name';\n",
           "import package3 from 'react';\n",
-          "import package4 from './deps/esm_sh/swr.js';\n",
-          "import package5 from './deps/esm_sh/test_1.2.5.js';\n",
+          "import package4 from './deps/esm.sh/swr.js';\n",
+          "import package5 from './deps/esm.sh/test@1.2.5.js';\n",
           "import package6 from 'preact/hooks';\n",
           "import package7 from 'react-dom/server';\n",
         )
       ),
-      ("deps/esm_sh/swr.ts", "",),
-      ("deps/esm_sh/test_1.2.5.ts", "",)
+      ("deps/esm.sh/swr.ts", "",),
+      ("deps/esm.sh/test@1.2.5.ts", "",)
     ]
   );
   assert_eq!(
@@ -1316,22 +1316,22 @@ async fn test_entry_points_same_module_multiple_places() {
       (
         "mod.ts",
         concat!(
-          "export * from './deps/deno_land_std_0_102_0/path.js';\n",
+          "export * from './deps/deno.land_std@0.102.0/path.js';\n",
           "import * as deps from './deps.js';",
         )
       ),
       (
         "deps.ts",
         concat!(
-          "export * from './deps/deno_land_std_0_102_0/path.js';\n",
-          "export * from './deps/deno_land_std_0_102_0/flags.js';",
+          "export * from './deps/deno.land_std@0.102.0/path.js';\n",
+          "export * from './deps/deno.land_std@0.102.0/flags.js';",
         )
       ),
       (
-        "deps/deno_land_std_0_102_0/flags.ts",
+        "deps/deno.land_std@0.102.0/flags.ts",
         "export class Flags {}"
       ),
-      ("deps/deno_land_std_0_102_0/path.ts", "export class Path {}")
+      ("deps/deno.land_std@0.102.0/path.ts", "export class Path {}")
     ]
   );
   assert_eq!(result.main.entry_points, &[PathBuf::from("mod.ts")]);
