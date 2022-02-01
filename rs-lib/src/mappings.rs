@@ -79,7 +79,7 @@ impl Mappings {
       get_unique_path(PathBuf::from("deps"), &mut root_local_dirs);
     for (root, specifiers) in root_remote_specifiers.into_iter() {
       let base_dir = deps_path.join(get_unique_path(
-        get_dir_name_for_root(&root),
+        get_dir_name_for_root(&root, &specifiers),
         &mut mapped_base_dirs,
       ));
       for specifier in specifiers {
@@ -238,7 +238,10 @@ fn make_url_relative(
   })
 }
 
-fn get_dir_name_for_root(root: &ModuleSpecifier) -> PathBuf {
+fn get_dir_name_for_root(
+  root: &ModuleSpecifier,
+  specifiers: &[ModuleSpecifier],
+) -> PathBuf {
   let mut result = String::new();
   if let Some(domain) = root.domain() {
     result.push_str(&sanitize_segment(domain));
@@ -261,8 +264,29 @@ fn get_dir_name_for_root(root: &ModuleSpecifier) -> PathBuf {
   PathBuf::from(if result.is_empty() {
     "unknown".to_string()
   } else {
-    // limit the size of the directory to reduce the chance of max path errors on Windows
-    truncate_str(&result, 30)
+    // Limit the size of the directory to reduce the chance of max path
+    // errors on Windows. This uses bytes instead of chars because it's
+    // faster, but the approximation should be good enough.
+    let root_len = root.as_str().len();
+    let max_specifier_len = specifiers
+      .iter()
+      .map(|s| s.as_str().len())
+      .max()
+      .unwrap_or(root_len);
+    let sub_path_len = max_specifier_len - root_len;
+    let max_win_path = 260;
+    // This is the approximate length that a path might be before the root directory.
+    // It should be a hardcoded number and not calculated based on the system as the
+    // produced code will most likely not stay only on the system that produced it.
+    let approx_path_prefix_len = 80;
+    let truncate_len = std::cmp::max(
+      10,
+      max_win_path as isize
+        - approx_path_prefix_len as isize
+        - sub_path_len as isize,
+    ) as usize;
+
+    truncate_str(&result, truncate_len)
       .trim_end_matches('_')
       .trim_end_matches('.')
       .to_string()
@@ -335,18 +359,49 @@ mod test {
 
   #[test]
   fn should_get_dir_name_root() {
-    run_test("http://deno.land/x/test", "deno.land_x_test");
-    run_test("http://localhost", "localhost");
-    run_test("http://localhost/test%20test", "localhost_test%20test");
+    run_test(
+      "http://deno.land/x/test",
+      &["http://deno.land/x/test/mod.ts"],
+      "deno.land_x_test",
+    );
+    run_test(
+      "http://localhost",
+      &["http://localhost/test.mod"],
+      "localhost",
+    );
+    run_test(
+      "http://localhost/test%20test",
+      &["http://localhost/test%20test/asdf"],
+      "localhost_test%20test",
+    );
     // will truncate
     run_test(
-      "http://localhost/test%20testingtestingtesting",
-      "localhost_test%20testingtestin",
+      // length of 45
+      "http://localhost/testtestestingtestingtesting",
+      // length of 210
+      &["http://localhost/testtestestingtestingtesting/testingthisoutwithaverlongspecifiertestingtasfasdfasdfasdfadsfasdfasfasdfasfasdfasdfasfasdfasfdasdfasdfasdfasdfasdfsdafasdfasdasdfasdfasdfasdfasdfasdfaasdfasdfas.ts"],
+      // Max(10, 260 - 80 - (210 - 45)) = 15 chars
+      "localhost_testt",
+    );
+    // will truncate
+    run_test(
+      // length of 45
+      "http://localhost/testtestestingtestingtesting",
+      // length of 220
+      &["http://localhost/test%20testingtestingtesting/testingthisoutwithaverlongspecifiertestingtasfasdfasdfasdfadsfasdfasfasdfasfasdfasdfasfasdfasfdasdfasdfasdfasdfasdfsdafasdfasdasdfasdfasdfasdfasdfasdfaasdfasdfasteststttts.ts"],
+      // Max(10, 260 - 80 - (210 - 45)) = 10 and trim the trailing underscore
+      "localhost",
     );
 
-    fn run_test(specifier: &str, expected: &str) {
+    fn run_test(specifier: &str, specifiers: &[&str], expected: &str) {
       assert_eq!(
-        get_dir_name_for_root(&ModuleSpecifier::parse(specifier).unwrap()),
+        get_dir_name_for_root(
+          &ModuleSpecifier::parse(specifier).unwrap(),
+          &specifiers
+            .iter()
+            .map(|s| ModuleSpecifier::parse(s).unwrap())
+            .collect::<Vec<_>>(),
+        ),
         PathBuf::from(expected)
       );
     }
