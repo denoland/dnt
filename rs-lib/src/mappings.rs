@@ -13,8 +13,8 @@ use once_cell::sync::Lazy;
 
 use crate::graph::ModuleGraph;
 use crate::specifiers::Specifiers;
+use crate::utils::get_unique_path;
 use crate::utils::partition_by_root_specifiers;
-use crate::utils::path_with_stem_suffix;
 use crate::utils::url_to_file_path;
 
 pub struct SyntheticSpecifiers {
@@ -68,12 +68,12 @@ impl Mappings {
       if let Some(Component::Normal(first_dir)) =
         relative_file_path.components().next()
       {
-        root_local_dirs.insert(PathBuf::from(first_dir));
+        root_local_dirs.insert(first_dir.to_string_lossy().to_lowercase());
       }
     }
 
     let root_remote_specifiers =
-      partition_by_root_specifiers(&specifiers.remote);
+      partition_by_root_specifiers(specifiers.remote.iter());
     let mut mapped_base_dirs = HashSet::new();
     let deps_path =
       get_unique_path(PathBuf::from("deps"), &mut root_local_dirs);
@@ -130,7 +130,7 @@ impl Mappings {
     // add the synthetic specifiers even though some of these files won't be created
     fn add_synthetic_specifier(
       mappings: &mut HashMap<ModuleSpecifier, PathBuf>,
-      mapped_filepaths_no_ext: &mut HashSet<PathBuf>,
+      mapped_filepaths_no_ext: &mut HashSet<String>,
       specifier: &ModuleSpecifier,
     ) {
       debug_assert!(specifier.to_string().starts_with("dnt://"));
@@ -181,7 +181,7 @@ impl Mappings {
 fn get_mapped_file_path(
   media_type: MediaType,
   path: impl AsRef<Path>,
-  mapped_filepaths_no_ext: &mut HashSet<PathBuf>,
+  mapped_filepaths_no_ext: &mut HashSet<String>,
 ) -> PathBuf {
   fn without_ext(path: impl AsRef<Path>) -> PathBuf {
     // remove the extension if it's known
@@ -210,19 +210,6 @@ fn get_mapped_file_path(
   )
 }
 
-fn get_unique_path(
-  mut path: PathBuf,
-  unique_set: &mut HashSet<PathBuf>,
-) -> PathBuf {
-  let original_path = path.clone();
-  let mut count = 2;
-  while !unique_set.insert(path.clone()) {
-    path = path_with_stem_suffix(&original_path, &count.to_string());
-    count += 1;
-  }
-  path
-}
-
 fn make_url_relative(
   root: &ModuleSpecifier,
   url: &ModuleSpecifier,
@@ -248,7 +235,9 @@ fn dir_name_for_root(
   specifiers: &[ModuleSpecifier],
 ) -> PathBuf {
   // all the provided specifiers should be descendants of the root
-  debug_assert!(specifiers.iter().all(|s| s.as_str().starts_with(root.as_str())));
+  debug_assert!(specifiers
+    .iter()
+    .all(|s| s.as_str().starts_with(root.as_str())));
 
   let mut result = String::new();
   if let Some(domain) = root.domain() {

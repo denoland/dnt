@@ -1,5 +1,6 @@
 // Copyright 2018-2022 the Deno authors. All rights reserved. MIT license.
 
+use std::collections::HashSet;
 use std::path::Path;
 use std::path::PathBuf;
 
@@ -69,6 +70,23 @@ fn is_windows_path_segment(specifier: &str) -> bool {
   chars.next().is_none()
 }
 
+/// Gets a unique file path given the provided file path
+/// and the set of existing file paths. Inserts to the
+/// set when finding a unique path.
+pub fn get_unique_path(
+  mut path: PathBuf,
+  unique_set: &mut HashSet<String>,
+) -> PathBuf {
+  let original_path = path.clone();
+  let mut count = 2;
+  // case insensitive comparison for case insensitive file systems
+  while !unique_set.insert(path.to_string_lossy().to_lowercase()) {
+    path = path_with_stem_suffix(&original_path, &count.to_string());
+    count += 1;
+  }
+  path
+}
+
 /// Gets a path with the specified file stem suffix.
 pub fn path_with_stem_suffix(path: &Path, suffix: &str) -> PathBuf {
   if let Some(file_name) = path.file_name().map(|f| f.to_string_lossy()) {
@@ -96,8 +114,8 @@ pub fn strip_bom(text: &str) -> &str {
 
 /// Partitions the provided specifiers by specifiers that do not have a
 /// parent specifier.
-pub fn partition_by_root_specifiers(
-  specifiers: &[ModuleSpecifier],
+pub fn partition_by_root_specifiers<'a>(
+  specifiers: impl Iterator<Item = &'a ModuleSpecifier>,
 ) -> Vec<(ModuleSpecifier, Vec<ModuleSpecifier>)> {
   let mut root_specifiers: Vec<(ModuleSpecifier, Vec<ModuleSpecifier>)> =
     Vec::new();
@@ -133,6 +151,8 @@ pub fn partition_by_root_specifiers(
 
 #[cfg(test)]
 mod test {
+  use std::collections::HashSet;
+
   use super::*;
   use pretty_assertions::assert_eq;
 
@@ -157,6 +177,39 @@ mod test {
     assert_eq!(
       path_with_stem_suffix(&PathBuf::from("/test/subdir.other.txt"), "2"),
       PathBuf::from("/test/subdir.other_2.txt")
+    );
+  }
+
+  #[test]
+  fn test_unique_path() {
+    let mut paths = HashSet::new();
+    assert_eq!(
+      get_unique_path(PathBuf::from("/test"), &mut paths),
+      PathBuf::from("/test")
+    );
+    assert_eq!(
+      get_unique_path(PathBuf::from("/test"), &mut paths),
+      PathBuf::from("/test_2")
+    );
+    assert_eq!(
+      get_unique_path(PathBuf::from("/test"), &mut paths),
+      PathBuf::from("/test_3")
+    );
+    assert_eq!(
+      get_unique_path(PathBuf::from("/TEST"), &mut paths),
+      PathBuf::from("/TEST_4")
+    );
+    assert_eq!(
+      get_unique_path(PathBuf::from("/test.txt"), &mut paths),
+      PathBuf::from("/test.txt")
+    );
+    assert_eq!(
+      get_unique_path(PathBuf::from("/test.txt"), &mut paths),
+      PathBuf::from("/test_2.txt")
+    );
+    assert_eq!(
+      get_unique_path(PathBuf::from("/TEST.TXT"), &mut paths),
+      PathBuf::from("/TEST_3.TXT")
     );
   }
 
@@ -218,7 +271,7 @@ mod test {
       .iter()
       .map(|s| ModuleSpecifier::parse(s).unwrap())
       .collect::<Vec<_>>();
-    let output = partition_by_root_specifiers(&input);
+    let output = partition_by_root_specifiers(input.iter());
     // the assertion is much easier to compare when everything is strings
     let output = output
       .into_iter()
