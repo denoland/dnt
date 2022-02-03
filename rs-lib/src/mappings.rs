@@ -79,7 +79,7 @@ impl Mappings {
       get_unique_path(PathBuf::from("deps"), &mut root_local_dirs);
     for (root, specifiers) in root_remote_specifiers.into_iter() {
       let base_dir = deps_path.join(get_unique_path(
-        get_dir_name_for_root(&root, &specifiers),
+        dir_name_for_root(&root, &specifiers),
         &mut mapped_base_dirs,
       ));
       for specifier in specifiers {
@@ -238,10 +238,18 @@ fn make_url_relative(
   })
 }
 
-fn get_dir_name_for_root(
+/// Gets the flattened directory name to use for the provided root
+/// specifier and its descendant specifiers. We use the descendant
+/// specifiers to estimate the maximum directory path length in
+/// order to truncate the root directory name if necessary due to
+/// the 260 character max path length on Windows.
+fn dir_name_for_root(
   root: &ModuleSpecifier,
   specifiers: &[ModuleSpecifier],
 ) -> PathBuf {
+  // all the provided specifiers should be descendants of the root
+  debug_assert!(specifiers.iter().all(|s| s.as_str().starts_with(root.as_str())));
+
   let mut result = String::new();
   if let Some(domain) = root.domain() {
     result.push_str(&sanitize_segment(domain));
@@ -300,13 +308,6 @@ fn truncate_str(text: &str, max: usize) -> &str {
   }
 }
 
-fn sanitize_segment(text: &str) -> String {
-  text
-    .chars()
-    .map(|c| if is_banned_segment_char(c) { '_' } else { c })
-    .collect()
-}
-
 fn sanitize_filepath(text: &str) -> String {
   text
     .chars()
@@ -314,12 +315,19 @@ fn sanitize_filepath(text: &str) -> String {
     .collect()
 }
 
-fn is_banned_segment_char(c: char) -> bool {
-  matches!(c, '/' | '\\') || is_banned_path_char(c)
-}
-
 fn is_banned_path_char(c: char) -> bool {
   matches!(c, '<' | '>' | ':' | '"' | '|' | '?' | '*')
+}
+
+fn sanitize_segment(text: &str) -> String {
+  text
+    .chars()
+    .map(|c| if is_banned_segment_char(c) { '_' } else { c })
+    .collect()
+}
+
+fn is_banned_segment_char(c: char) -> bool {
+  matches!(c, '/' | '\\') || is_banned_path_char(c)
 }
 
 fn get_base_dir(specifiers: &[ModuleSpecifier]) -> Result<PathBuf> {
@@ -388,14 +396,14 @@ mod test {
       // length of 45
       "http://localhost/testtestestingtestingtesting",
       // length of 220
-      &["http://localhost/test%20testingtestingtesting/testingthisoutwithaverlongspecifiertestingtasfasdfasdfasdfadsfasdfasfasdfasfasdfasdfasfasdfasfdasdfasdfasdfasdfasdfsdafasdfasdasdfasdfasdfasdfasdfasdfaasdfasdfasteststttts.ts"],
+      &["http://localhost/testtestestingtestingtesting/testingthisoutwithaverlongspecifiertestingtasfasdfasdfasdfadsfasdfasfasdfasfasdfasdfasfasdfasfdasdfasdfasdfasdfasdfsdafasdfasdasdfasdfasdfasdfasdfasdfaasdfasdfasteststttts.ts"],
       // Max(10, 260 - 80 - (210 - 45)) = 10 and trim the trailing underscore
       "localhost",
     );
 
     fn run_test(specifier: &str, specifiers: &[&str], expected: &str) {
       assert_eq!(
-        get_dir_name_for_root(
+        dir_name_for_root(
           &ModuleSpecifier::parse(specifier).unwrap(),
           &specifiers
             .iter()

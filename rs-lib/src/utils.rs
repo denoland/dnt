@@ -94,6 +94,8 @@ pub fn strip_bom(text: &str) -> &str {
   }
 }
 
+/// Partitions the provided specifiers by specifiers that do not have a
+/// parent specifier.
 pub fn partition_by_root_specifiers(
   specifiers: &[ModuleSpecifier],
 ) -> Vec<(ModuleSpecifier, Vec<ModuleSpecifier>)> {
