@@ -80,13 +80,13 @@ There are several steps done in a pipeline:
 [dnt] Type checking...
 [dnt] Emitting declaration files...
 [dnt] Emitting ESM package...
-[dnt] Emitting CommonJS package...
+[dnt] Emitting script package...
 [dnt] Running tests...
 
 > test
 > node test_runner.js
 
-Running tests in ./umd/mod.test.js...
+Running tests in ./script/mod.test.js...
 
 test escapeWithinString ... ok
 test escapeChar ... ok
@@ -100,7 +100,7 @@ test escapeChar ... ok
 
 ## Docs
 
-### Disabling Type Checking, Testing, Declaration Emit, or CommonJS Output
+### Disabling Type Checking, Testing, Declaration Emit, or CommonJS/UMD Output
 
 Use the following options to disable any one of these, which are enabled by default:
 
@@ -110,18 +110,18 @@ await build({
   typeCheck: false,
   test: false,
   declaration: false,
-  cjs: false,
+  scriptModule: false,
 });
 ```
 
 ### Top Level Await
 
-Top level await doesn't work in CommonJS and dnt will error if a top level await is used and you are outputting CommonJS code. If you want to output a CommonJS package then you'll have to restructure your code to not use any top level awaits. Otherwise, set the `cjs` build option to `false`:
+Top level await doesn't work in CommonJS/UMD and dnt will error if a top level await is used and you are outputting CommonJS/UMD code. If you want to output a CommonJS/UMD package then you'll have to restructure your code to not use any top level awaits. Otherwise, set the `scriptModule` build option to `false`:
 
 ```ts
 await build({
   // ...etc...
-  cjs: false,
+  scriptModule: false,
 });
 ```
 
@@ -217,7 +217,7 @@ For example:
 
 ```ts
 await build({
-  cjs: false, // node-fetch 3+ only supports ESM
+  scriptModule: false, // node-fetch 3+ only supports ESM
   // ...etc...
   shims: {
     // ...etc...
@@ -355,18 +355,18 @@ This will create a package.json with these as exports:
 {
   "name": "your-package",
   // etc...
-  "main": "./umd/mod.js",
+  "main": "./script/mod.js",
   "module": "./esm/mod.js",
   "types": "./types/mod.d.ts",
   "exports": {
     ".": {
       "import": "./esm/mod.js",
-      "require": "./umd/mod.js",
+      "require": "./script/mod.js",
       "types": "./types/mod.d.ts"
     },
     "./internal": {
       "import": "./esm/internal.js",
-      "require": "./umd/internal.js",
+      "require": "./script/internal.js",
       "types": "./types/internal.d.ts"
     }
   }
@@ -447,7 +447,7 @@ import { copy } from "https://deno.land/std@x.x.x/fs/mod.ts";
 
 await Deno.remove("npm", { recursive: true }).catch((_) => {});
 await copy("testdata", "npm/esm/testdata", { overwrite: true });
-await copy("testdata", "npm/umd/testdata", { overwrite: true });
+await copy("testdata", "npm/script/testdata", { overwrite: true });
 
 await build({
   // ...etc...
@@ -457,7 +457,7 @@ await build({
 // so it doesn't get published with your npm package
 await Deno.writeTextFile(
   "npm/.npmignore",
-  "esm/testdata/\numd/testdata/\n",
+  "esm/testdata/\nscript/testdata/\n",
   { append: true },
 );
 ```

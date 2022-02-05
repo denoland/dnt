@@ -56,10 +56,10 @@ export interface BuildOptions {
    * @default true
    */
   declaration?: boolean;
-  /** Include a CommonJS module.
-   * @default true
+  /** Include a CommonJS or UMD module.
+   * @default Defaults to CommonJS.
    */
-  cjs?: boolean;
+  scriptModule?: "cjs" | "umd" | false;
   /** Skip outputting the canonical TypeScript in the output directory before emitting.
    * @default false
    */
@@ -121,7 +121,7 @@ export async function build(options: BuildOptions): Promise<void> {
   // set defaults
   options = {
     ...options,
-    cjs: options.cjs ?? true,
+    scriptModule: options.scriptModule ?? "cjs",
     typeCheck: options.typeCheck ?? true,
     test: options.test ?? true,
     declaration: options.declaration ?? true,
@@ -176,7 +176,7 @@ export async function build(options: BuildOptions): Promise<void> {
 
   log("Building project...");
   const esmOutDir = path.join(options.outDir, "esm");
-  const umdOutDir = path.join(options.outDir, "umd");
+  const scriptOutDir = path.join(options.outDir, "script");
   const typesOutDir = path.join(options.outDir, "types");
   const compilerScriptTarget = getCompilerScriptTarget(scriptTarget);
   const project = createProjectSync({
@@ -241,19 +241,19 @@ export async function build(options: BuildOptions): Promise<void> {
       outputFileText,
     );
 
-    if (options.cjs) {
+    if (options.scriptModule) {
       // cjs does not support TLA so error fast if we find one
       const tlaLocation = getTopLevelAwait(sourceFile);
       if (tlaLocation) {
         warn(
-          `Top level await cannot be used when distributing CommonJS ` +
+          `Top level await cannot be used when distributing CommonJS/UMD ` +
             `(See ${outputFile.filePath} ${tlaLocation.line + 1}:${
               tlaLocation.character + 1
             }). ` +
-            `Please re-organize your code to not use a top level await or only distribute an ESM module by setting the 'cjs' build option to false.`,
+            `Please re-organize your code to not use a top level await or only distribute an ES module by setting the 'scriptModule' build option to false.`,
         );
         throw new Error(
-          "Build failed due to top level await when creating CommonJS package.",
+          "Build failed due to top level await when creating CommonJS/UMD package.",
         );
       }
     }
@@ -293,14 +293,16 @@ export async function build(options: BuildOptions): Promise<void> {
     `{\n  "type": "module"\n}\n`,
   );
 
-  // emit the umd files
-  if (options.cjs) {
-    log("Emitting CommonJS package...");
+  // emit the script files
+  if (options.scriptModule) {
+    log("Emitting script package...");
     project.compilerOptions.set({
       declaration: false,
       esModuleInterop: true,
-      outDir: umdOutDir,
-      module: ts.ModuleKind.UMD,
+      outDir: scriptOutDir,
+      module: options.scriptModule === "umd"
+        ? ts.ModuleKind.UMD
+        : ts.ModuleKind.CommonJS,
     });
     program = project.createProgram();
     emit({
@@ -309,7 +311,7 @@ export async function build(options: BuildOptions): Promise<void> {
       },
     });
     writeFile(
-      path.join(umdOutDir, "package.json"),
+      path.join(scriptOutDir, "package.json"),
       `{\n  "type": "commonjs"\n}\n`,
     );
   }
@@ -357,7 +359,7 @@ export async function build(options: BuildOptions): Promise<void> {
       transformOutput,
       package: options.package,
       testEnabled: options.test,
-      includeCjs: options.cjs,
+      includeScriptModule: options.scriptModule !== false,
       includeDeclarations: options.declaration,
       includeTsLib: options.compilerOptions?.importHelpers,
     });
@@ -420,7 +422,7 @@ export async function build(options: BuildOptions): Promise<void> {
             ? "@deno/shim-deno/test-internals"
             : denoTestShimPackage.name,
           testEntryPoints: transformOutput.test.entryPoints,
-          includeCjs: options.cjs,
+          includeScriptModule: options.scriptModule !== false,
         }),
         compilerScriptTarget,
       ),
