@@ -24,6 +24,7 @@ import { getPackageJson } from "./lib/package_json.ts";
 import { getTestRunnerCode } from "./lib/test_runner/get_test_runner_code.ts";
 
 export type { ShimOptions } from "./lib/shims.ts";
+export { emptyDir } from "./lib/mod.deps.ts";
 
 export interface EntryPoint {
   /**
