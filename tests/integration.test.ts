@@ -3,6 +3,7 @@
 import {
   assertEquals,
   assertRejects,
+  assertStringIncludes,
 } from "https://deno.land/std@0.119.0/testing/asserts.ts";
 import { build, BuildOptions, ShimOptions } from "../mod.ts";
 
@@ -134,6 +135,24 @@ yarn.lock
 pnpm-lock.yaml
 `,
     );
+  });
+});
+
+Deno.test("should build umd module", async () => {
+  await runTest("test_project", {
+    entryPoints: ["mod.ts"],
+    outDir: "./npm",
+    shims: {
+      deno: "dev",
+    },
+    scriptModule: "umd",
+    package: {
+      name: "add",
+      version: "1.0.0",
+    },
+  }, (output) => {
+    const fileText = output.getFileText("script/mod.js");
+    assertStringIncludes(fileText, "(function (factory) {");
   });
 });
 
