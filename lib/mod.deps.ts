@@ -8,3 +8,4 @@ export {
 export { default as CodeBlockWriter } from "https://deno.land/x/code_block_writer@11.0.0/mod.ts";
 export * as colors from "https://deno.land/std@0.119.0/fmt/colors.ts";
 export * as glob from "https://deno.land/std@0.119.0/fs/expand_glob.ts";
+export { emptyDir } from "https://deno.land/std@0.119.0/fs/empty_dir.ts";
