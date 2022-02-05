@@ -11,7 +11,7 @@ Deno.test("gets code when no shim used", () => {
   const code = getTestRunnerCode({
     testEntryPoints: ["./test.ts"],
     denoTestShimPackageName: undefined,
-    includeCjs: true,
+    includeScriptModule: true,
   });
   assertEquals(
     code,
@@ -32,11 +32,11 @@ async function main() {
       console.log("");
     }
 
-    const umdPath = "./umd/" + filePath;
-    console.log("Running tests in " + chalk.underline(umdPath) + "...\\n");
-    process.chdir(__dirname + "/umd");
+    const scriptPath = "./script/" + filePath;
+    console.log("Running tests in " + chalk.underline(scriptPath) + "...\\n");
+    process.chdir(__dirname + "/script");
     try {
-      require(umdPath);
+      require(scriptPath);
     } catch(err) {
       console.error(err);
       process.exit(1);
@@ -58,7 +58,7 @@ Deno.test("gets code when shim used", () => {
   const code = getTestRunnerCode({
     testEntryPoints: ["./1.test.ts", "./2.test.ts"],
     denoTestShimPackageName: "test-shim-package/test-internals",
-    includeCjs: true,
+    includeScriptModule: true,
   });
   assertEquals(
     code,
@@ -81,11 +81,11 @@ async function main() {
       console.log("");
     }
 
-    const umdPath = "./umd/" + filePath;
-    console.log("Running tests in " + chalk.underline(umdPath) + "...\\n");
-    process.chdir(__dirname + "/umd");
+    const scriptPath = "./script/" + filePath;
+    console.log("Running tests in " + chalk.underline(scriptPath) + "...\\n");
+    process.chdir(__dirname + "/script");
     try {
-      require(umdPath);
+      require(scriptPath);
     } catch(err) {
       console.error(err);
       process.exit(1);
@@ -111,7 +111,7 @@ Deno.test("gets code when cjs is not used", () => {
   const code = getTestRunnerCode({
     testEntryPoints: ["./test.ts"],
     denoTestShimPackageName: undefined,
-    includeCjs: false,
+    includeScriptModule: false,
   });
   assertEquals(
     code,

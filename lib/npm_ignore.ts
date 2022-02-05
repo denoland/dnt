@@ -25,7 +25,7 @@ export function getNpmIgnoreText(options: {
       const filePath = file.filePath.replace(/\.ts$/i, ".js");
       const dtsFilePath = file.filePath.replace(/\.ts$/i, ".d.ts");
       yield `esm/${filePath}`;
-      yield `umd/${filePath}`;
+      yield `script/${filePath}`;
       yield `types/${dtsFilePath}`;
     }
     yield "test_runner.js";

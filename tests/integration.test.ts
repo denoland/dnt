@@ -38,17 +38,17 @@ Deno.test("should build test project", async () => {
       importHelpers: true,
     },
   }, (output) => {
-    output.assertNotExists("umd/mod.js.map");
+    output.assertNotExists("script/mod.js.map");
     output.assertNotExists("esm/mod.js.map");
     assertEquals(output.packageJson, {
       name: "add",
       version: "1.0.0",
-      main: "./umd/mod.js",
+      main: "./script/mod.js",
       module: "./esm/mod.js",
       exports: {
         ".": {
           import: "./esm/mod.js",
-          require: "./umd/mod.js",
+          require: "./script/mod.js",
           types: "./types/mod.d.ts",
         },
       },
@@ -70,19 +70,19 @@ Deno.test("should build test project", async () => {
       output.npmIgnore,
       `src/
 esm/mod.test.js
-umd/mod.test.js
+script/mod.test.js
 types/mod.test.d.ts
 esm/deps/deno_land_std_0_119_0/fmt/colors.js
-umd/deps/deno_land_std_0_119_0/fmt/colors.js
+script/deps/deno_land_std_0_119_0/fmt/colors.js
 types/deps/deno_land_std_0_119_0/fmt/colors.d.ts
 esm/deps/deno_land_std_0_119_0/testing/_diff.js
-umd/deps/deno_land_std_0_119_0/testing/_diff.js
+script/deps/deno_land_std_0_119_0/testing/_diff.js
 types/deps/deno_land_std_0_119_0/testing/_diff.d.ts
 esm/deps/deno_land_std_0_119_0/testing/asserts.js
-umd/deps/deno_land_std_0_119_0/testing/asserts.js
+script/deps/deno_land_std_0_119_0/testing/asserts.js
 types/deps/deno_land_std_0_119_0/testing/asserts.d.ts
 esm/_dnt.test_shims.js
-umd/_dnt.test_shims.js
+script/_dnt.test_shims.js
 types/_dnt.test_shims.d.ts
 test_runner.js
 yarn.lock
@@ -101,7 +101,7 @@ Deno.test("should build with all options off", async () => {
       deno: "dev",
     },
     typeCheck: false,
-    cjs: false,
+    scriptModule: false,
     declaration: false,
     test: false,
     package: {
@@ -122,7 +122,7 @@ Deno.test("should build with all options off", async () => {
       devDependencies: {},
     });
 
-    output.assertNotExists("umd/mod.js");
+    output.assertNotExists("script/mod.js");
     output.assertNotExists("types/mod.js");
 
     // This doesn't include the test files because they're not analyzed for in this scenario.
@@ -173,7 +173,7 @@ Deno.test("should build bin project", async () => {
     });
     const expectedText = "#!/usr/bin/env node\n";
     assertEquals(
-      output.getFileText("umd/mod.js").substring(0, expectedText.length),
+      output.getFileText("script/mod.js").substring(0, expectedText.length),
       expectedText,
     );
     assertEquals(
@@ -203,7 +203,7 @@ Deno.test("should run tests when using @deno/shim-deno-test shim", async () => {
       importHelpers: true,
     },
   }, (output) => {
-    output.assertNotExists("umd/mod.js.map");
+    output.assertNotExists("script/mod.js.map");
     output.assertNotExists("esm/mod.js.map");
     assertEquals(output.packageJson.devDependencies, {
       "@types/node": versions.nodeTypes,
@@ -239,7 +239,7 @@ Deno.test("not error for TLA when not using CommonJS", async () => {
       deno: "dev",
     },
     outDir: "./npm",
-    cjs: false, // ok, because cjs is disabled now
+    scriptModule: false, // ok, because cjs is disabled now
     package: {
       name: "add",
       version: "1.0.0",
@@ -285,24 +285,24 @@ Deno.test("should build with source maps", async () => {
       sourceMap: true,
     },
   }, (output) => {
-    output.assertExists("umd/mod.js.map");
+    output.assertExists("script/mod.js.map");
     output.assertExists("esm/mod.js.map");
     assertEquals(
       output.npmIgnore,
       `esm/mod.test.js
-umd/mod.test.js
+script/mod.test.js
 types/mod.test.d.ts
 esm/deps/deno_land_std_0_119_0/fmt/colors.js
-umd/deps/deno_land_std_0_119_0/fmt/colors.js
+script/deps/deno_land_std_0_119_0/fmt/colors.js
 types/deps/deno_land_std_0_119_0/fmt/colors.d.ts
 esm/deps/deno_land_std_0_119_0/testing/_diff.js
-umd/deps/deno_land_std_0_119_0/testing/_diff.js
+script/deps/deno_land_std_0_119_0/testing/_diff.js
 types/deps/deno_land_std_0_119_0/testing/_diff.d.ts
 esm/deps/deno_land_std_0_119_0/testing/asserts.js
-umd/deps/deno_land_std_0_119_0/testing/asserts.js
+script/deps/deno_land_std_0_119_0/testing/asserts.js
 types/deps/deno_land_std_0_119_0/testing/asserts.d.ts
 esm/_dnt.test_shims.js
-umd/_dnt.test_shims.js
+script/_dnt.test_shims.js
 types/_dnt.test_shims.d.ts
 test_runner.js
 yarn.lock
@@ -334,12 +334,12 @@ Deno.test("should build with mappings", async () => {
     assertEquals(output.packageJson, {
       name: "mappings",
       version: "1.2.3",
-      main: "./umd/mod.js",
+      main: "./script/mod.js",
       module: "./esm/mod.js",
       exports: {
         ".": {
           import: "./esm/mod.js",
-          require: "./umd/mod.js",
+          require: "./script/mod.js",
           types: "./types/mod.d.ts",
         },
       },
@@ -360,10 +360,10 @@ Deno.test("should build with mappings", async () => {
       output.npmIgnore,
       `src/
 esm/mod.test.js
-umd/mod.test.js
+script/mod.test.js
 types/mod.test.d.ts
 esm/_dnt.test_shims.js
-umd/_dnt.test_shims.js
+script/_dnt.test_shims.js
 types/_dnt.test_shims.d.ts
 test_runner.js
 yarn.lock
@@ -404,7 +404,7 @@ Deno.test("should build shim project when using node-fetch", async () => {
   await runTest("shim_project", {
     entryPoints: ["mod.ts"],
     outDir: "./npm",
-    cjs: false,
+    scriptModule: false,
     shims: {
       ...getAllShimOptions(true),
       undici: false,
@@ -566,7 +566,7 @@ Deno.test("should build project with another package manager", async () => {
     },
     packageManager: "yarn",
     typeCheck: false,
-    cjs: false,
+    scriptModule: false,
     declaration: false,
   }, (output) => {
     output.assertExists("yarn.lock");

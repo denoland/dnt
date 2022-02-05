@@ -8,7 +8,7 @@ export interface GetPackageJsonOptions {
   transformOutput: TransformOutput;
   entryPoints: EntryPoint[];
   package: PackageJsonObject;
-  includeCjs: boolean | undefined;
+  includeScriptModule: boolean | undefined;
   includeDeclarations: boolean | undefined;
   includeTsLib: boolean | undefined;
   testEnabled: boolean | undefined;
@@ -18,7 +18,7 @@ export function getPackageJson({
   transformOutput,
   entryPoints,
   package: packageJsonObj,
-  includeCjs,
+  includeScriptModule,
   includeDeclarations,
   includeTsLib,
   testEnabled,
@@ -88,7 +88,7 @@ export function getPackageJson({
   const mainExport = exports.length > 0
     ? {
       module: `./esm/${exports[0].path}`,
-      main: includeCjs ? `./umd/${exports[0].path}` : undefined,
+      main: includeScriptModule ? `./script/${exports[0].path}` : undefined,
       types: includeDeclarations ? `./types/${exports[0].types}` : undefined,
     }
     : {};
@@ -106,7 +106,7 @@ export function getPackageJson({
       ...(packageJsonObj.exports ?? {}),
       ...(Object.fromEntries(exports.map((e) => [e.name, {
         import: `./esm/${e.path}`,
-        require: includeCjs ? `./umd/${e.path}` : undefined,
+        require: includeScriptModule ? `./script/${e.path}` : undefined,
         types: includeDeclarations
           ? (e.name === "." ? packageJsonObj.types : undefined) ??
             `./types/${e.types}`

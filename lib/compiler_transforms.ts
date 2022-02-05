@@ -2,7 +2,7 @@
 
 import { ts } from "./mod.deps.ts";
 
-// transform `import.meta.url` to a replacement that works in UMD modules
+// transform `import.meta.url` to a replacement that works in script modules
 export const transformImportMeta: ts.TransformerFactory<ts.SourceFile> = (
   context,
 ) => {

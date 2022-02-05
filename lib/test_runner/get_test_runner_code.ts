@@ -6,7 +6,7 @@ import { runTestDefinitions } from "./test_runner.ts";
 export function getTestRunnerCode(options: {
   testEntryPoints: string[];
   denoTestShimPackageName: string | undefined;
-  includeCjs: boolean | undefined;
+  includeScriptModule: boolean | undefined;
 }) {
   const writer = createWriter();
   writer.writeLine(`const chalk = require("chalk");`)
@@ -37,14 +37,14 @@ export function getTestRunnerCode(options: {
           writer.writeLine(`console.log("");`);
         }).blankLine();
 
-        if (options.includeCjs) {
-          writer.writeLine(`const umdPath = "./umd/" + filePath;`);
+        if (options.includeScriptModule) {
+          writer.writeLine(`const scriptPath = "./script/" + filePath;`);
           writer.writeLine(
-            `console.log("Running tests in " + chalk.underline(umdPath) + "...\\n");`,
+            `console.log("Running tests in " + chalk.underline(scriptPath) + "...\\n");`,
           );
-          writer.writeLine(`process.chdir(__dirname + "/umd");`);
+          writer.writeLine(`process.chdir(__dirname + "/script");`);
           writer.write("try ").inlineBlock(() => {
-            writer.writeLine(`require(umdPath);`);
+            writer.writeLine(`require(scriptPath);`);
           }).write(" catch(err)").block(() => {
             writer.writeLine("console.error(err);");
             writer.writeLine("process.exit(1);");
