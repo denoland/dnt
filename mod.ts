@@ -300,7 +300,9 @@ export async function build(options: BuildOptions): Promise<void> {
       declaration: false,
       esModuleInterop: true,
       outDir: scriptOutDir,
-      module: options.scriptModule === "umd" ? ts.ModuleKind.UMD : ts.ModuleKind.CommonJS,
+      module: options.scriptModule === "umd"
+        ? ts.ModuleKind.UMD
+        : ts.ModuleKind.CommonJS,
     });
     program = project.createProgram();
     emit({
