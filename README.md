@@ -235,17 +235,14 @@ await build({
         exportName: "default",
       }, {
         name: "RequestInit",
-        kind: "typeOnly", // only used in type declarations
+        typeOnly: true, // only used in type declarations
       }],
     }, {
       // this is what `blob: true` does internally
       package: {
         name: "buffer", // uses node's "buffer" module
       },
-      globalNames: [{
-        name: "Blob",
-        kind: "class",
-      }],
+      globalNames: ["Blob"],
     }, {
       // this is what `domException: true` does internally
       package: {
@@ -258,7 +255,6 @@ await build({
       },
       globalNames: [{
         name: "DOMException",
-        kind: "class",
         exportName: "default",
       }],
     }],
@@ -269,13 +265,7 @@ await build({
         name: "@deno/shim-timers",
         version: "~0.1.0",
       },
-      globalNames: [{
-        name: "setTimeout",
-        kind: "value",
-      }, {
-        name: "setInterval",
-        kind: "value",
-      }],
+      globalNames: ["setTimeout", "setInterval"],
     }],
   },
 });
