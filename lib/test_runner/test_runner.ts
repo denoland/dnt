@@ -21,7 +21,7 @@ export interface RunTestDefinitionsOptions {
 export interface TestDefinition {
   name: string | undefined;
   fn: (context: TestContext) => (Promise<void> | void);
-  ignored?: boolean;
+  ignore?: boolean;
 }
 
 export interface TestContext {
@@ -44,7 +44,7 @@ export async function runTestDefinitions(
   const testFailures = [];
   for (const definition of testDefinitions) {
     options.process.stdout.write("test " + definition.name + " ...");
-    if (definition.ignored) {
+    if (definition.ignore) {
       options.process.stdout.write(` ${options.chalk.gray("ignored")}\n`);
       continue;
     }
@@ -132,7 +132,7 @@ export async function runTestDefinitions(
         context.status = "pending";
         this.children.push(context);
 
-        if (definition.ignored) {
+        if (definition.ignore) {
           context.status = "ignored";
           return false;
         }
