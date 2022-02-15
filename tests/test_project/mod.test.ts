@@ -12,5 +12,5 @@ Deno.test({
   ignore: true,
   fn() {
     throw new Error("did not ignore");
-  }
+  },
 });
