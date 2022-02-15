@@ -63,7 +63,7 @@ Deno.test("Ignored tests and test cases", async () => {
   const context = getContext();
   await runTestDefinitions([{
     name: "Ignored",
-    ignored: true,
+    ignore: true,
     fn: () => {
       throw new Error("FAIL");
     },
@@ -75,7 +75,7 @@ Deno.test("Ignored tests and test cases", async () => {
         fn: () => {
           throw new Error("FAIL");
         },
-        ignored: true,
+        ignore: true,
       });
     },
   }], context);
