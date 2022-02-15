@@ -79,13 +79,14 @@ impl Mappings {
       get_unique_path(PathBuf::from("deps"), &mut root_local_dirs);
     for (root, specifiers) in root_remote_specifiers.into_iter() {
       let base_dir = deps_path.join(get_unique_path(
-        dir_name_for_root(&root, &specifiers),
+        dir_name_for_root(&root),
         &mut mapped_base_dirs,
       ));
       for specifier in specifiers {
         let media_type = module_graph.get(&specifier).media_type;
         let relative = base_dir
           .join(sanitize_filepath(&make_url_relative(&root, &specifier)?));
+
         mappings.insert(
           specifier,
           get_mapped_file_path(
@@ -225,20 +226,8 @@ fn make_url_relative(
   })
 }
 
-/// Gets the flattened directory name to use for the provided root
-/// specifier and its descendant specifiers. We use the descendant
-/// specifiers to estimate the maximum directory path length in
-/// order to truncate the root directory name if necessary due to
-/// the 260 character max path length on Windows.
-fn dir_name_for_root(
-  root: &ModuleSpecifier,
-  specifiers: &[ModuleSpecifier],
-) -> PathBuf {
-  // all the provided specifiers should be descendants of the root
-  debug_assert!(specifiers
-    .iter()
-    .all(|s| s.as_str().starts_with(root.as_str())));
-
+/// Gets the directory name to use for the provided root.
+fn dir_name_for_root(root: &ModuleSpecifier) -> PathBuf {
   let mut result = String::new();
   if let Some(domain) = root.domain() {
     result.push_str(&sanitize_segment(domain));
@@ -249,52 +238,14 @@ fn dir_name_for_root(
     }
     result.push_str(&port.to_string());
   }
+  let mut result = PathBuf::from(result);
   if let Some(segments) = root.path_segments() {
     for segment in segments.filter(|s| !s.is_empty()) {
-      if !result.is_empty() {
-        result.push('_');
-      }
-      result.push_str(&sanitize_segment(segment));
+      result = result.join(sanitize_segment(segment));
     }
   }
 
-  PathBuf::from(if result.is_empty() {
-    "unknown".to_string()
-  } else {
-    // Limit the size of the directory to reduce the chance of max path
-    // errors on Windows. This uses bytes instead of chars because it's
-    // faster, but the approximation should be good enough.
-    let root_len = root.as_str().len();
-    let max_specifier_len = specifiers
-      .iter()
-      .map(|s| s.as_str().len())
-      .max()
-      .unwrap_or(root_len);
-    let sub_path_len = max_specifier_len - root_len;
-    let max_win_path = 260;
-    // This is the approximate length that a path might be before the root directory.
-    // It should be a hardcoded number and not calculated based on the system as the
-    // produced code will most likely not stay only on the system that produced it.
-    let approx_path_prefix_len = 80;
-    let truncate_len = std::cmp::max(
-      10,
-      max_win_path as isize
-        - approx_path_prefix_len as isize
-        - sub_path_len as isize,
-    ) as usize;
-
-    truncate_str(&result, truncate_len)
-      .trim_end_matches('_')
-      .trim_end_matches('.')
-      .to_string()
-  })
-}
-
-fn truncate_str(text: &str, max: usize) -> &str {
-  match text.char_indices().nth(max) {
-    Some((i, _)) => &text[..i],
-    None => text,
-  }
+  result
 }
 
 fn sanitize_filepath(text: &str) -> String {
@@ -356,49 +307,13 @@ mod test {
 
   #[test]
   fn should_get_dir_name_root() {
-    run_test(
-      "http://deno.land/x/test",
-      &["http://deno.land/x/test/mod.ts"],
-      "deno.land_x_test",
-    );
-    run_test(
-      "http://localhost",
-      &["http://localhost/test.mod"],
-      "localhost",
-    );
-    run_test(
-      "http://localhost/test%20test",
-      &["http://localhost/test%20test/asdf"],
-      "localhost_test%20test",
-    );
-    // will truncate
-    run_test(
-      // length of 45
-      "http://localhost/testtestestingtestingtesting",
-      // length of 210
-      &["http://localhost/testtestestingtestingtesting/testingthisoutwithaverlongspecifiertestingtasfasdfasdfasdfadsfasdfasfasdfasfasdfasdfasfasdfasfdasdfasdfasdfasdfasdfsdafasdfasdasdfasdfasdfasdfasdfasdfaasdfasdfas.ts"],
-      // Max(10, 260 - 80 - (210 - 45)) = 15 chars
-      "localhost_testt",
-    );
-    // will truncate
-    run_test(
-      // length of 45
-      "http://localhost/testtestestingtestingtesting",
-      // length of 220
-      &["http://localhost/testtestestingtestingtesting/testingthisoutwithaverlongspecifiertestingtasfasdfasdfasdfadsfasdfasfasdfasfasdfasdfasfasdfasfdasdfasdfasdfasdfasdfsdafasdfasdasdfasdfasdfasdfasdfasdfaasdfasdfasteststttts.ts"],
-      // Max(10, 260 - 80 - (210 - 45)) = 10 and trim the trailing underscore
-      "localhost",
-    );
+    run_test("http://deno.land/x/test", "deno.land/x/test");
+    run_test("http://localhost", "localhost");
+    run_test("http://localhost/test%20:test", "localhost/test%20_test");
 
-    fn run_test(specifier: &str, specifiers: &[&str], expected: &str) {
+    fn run_test(specifier: &str, expected: &str) {
       assert_eq!(
-        dir_name_for_root(
-          &ModuleSpecifier::parse(specifier).unwrap(),
-          &specifiers
-            .iter()
-            .map(|s| ModuleSpecifier::parse(s).unwrap())
-            .collect::<Vec<_>>(),
-        ),
+        dir_name_for_root(&ModuleSpecifier::parse(specifier).unwrap()),
         PathBuf::from(expected)
       );
     }

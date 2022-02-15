@@ -1,5 +1,6 @@
 // Copyright 2018-2022 the Deno authors. All rights reserved. MIT license.
 
+use std::collections::BTreeMap;
 use std::collections::HashSet;
 use std::path::Path;
 use std::path::PathBuf;
@@ -81,31 +82,35 @@ pub fn get_unique_path(
   let mut count = 2;
   // case insensitive comparison for case insensitive file systems
   while !unique_set.insert(path.to_string_lossy().to_lowercase()) {
-    path = path_with_stem_suffix(&original_path, &count.to_string());
+    path = path_with_stem_suffix(&original_path, &format!("_{}", count));
     count += 1;
   }
   path
 }
 
 /// Gets a path with the specified file stem suffix.
+///
+/// Ex. `file.ts` with suffix `_2` returns `file_2.ts`
 pub fn path_with_stem_suffix(path: &Path, suffix: &str) -> PathBuf {
   if let Some(file_name) = path.file_name().map(|f| f.to_string_lossy()) {
     if let Some(file_stem) = path.file_stem().map(|f| f.to_string_lossy()) {
       if let Some(ext) = path.extension().map(|f| f.to_string_lossy()) {
         return if file_stem.to_lowercase().ends_with(".d") {
           path.with_file_name(format!(
-            "{}_{}.d.{}",
+            "{}{}.{}.{}",
             &file_stem[..file_stem.len() - ".d".len()],
             suffix,
+            // maintain casing
+            &file_stem[file_stem.len() - "d".len()..],
             ext
           ))
         } else {
-          path.with_file_name(format!("{}_{}.{}", file_stem, suffix, ext))
+          path.with_file_name(format!("{}{}.{}", file_stem, suffix, ext))
         };
       }
     }
 
-    path.with_file_name(format!("{}_{}", file_name, suffix))
+    path.with_file_name(format!("{}{}", file_name, suffix))
   } else {
     path.with_file_name(suffix)
   }
@@ -120,39 +125,19 @@ pub fn strip_bom(text: &str) -> &str {
   }
 }
 
-/// Partitions the provided specifiers by specifiers that do not have a
-/// parent specifier.
+/// Partitions the provided specifiers by the non-path and non-query parts of a specifier.
 pub fn partition_by_root_specifiers<'a>(
   specifiers: impl Iterator<Item = &'a ModuleSpecifier>,
-) -> Vec<(ModuleSpecifier, Vec<ModuleSpecifier>)> {
-  let mut root_specifiers: Vec<(ModuleSpecifier, Vec<ModuleSpecifier>)> =
-    Vec::new();
+) -> BTreeMap<ModuleSpecifier, Vec<ModuleSpecifier>> {
+  let mut root_specifiers: BTreeMap<ModuleSpecifier, Vec<ModuleSpecifier>> =
+    Default::default();
   for remote_specifier in specifiers {
-    let mut found = false;
-    for (root_specifier, specifiers) in root_specifiers.iter_mut() {
-      if let Some(relative_url) = root_specifier.make_relative(remote_specifier)
-      {
-        // found a new root
-        if relative_url.starts_with("../") {
-          let end_ancestor_index =
-            relative_url.len() - relative_url.trim_start_matches("../").len();
-          *root_specifier = root_specifier
-            .join(&relative_url[..end_ancestor_index])
-            .unwrap();
-        }
+    let mut root_specifier = remote_specifier.clone();
+    root_specifier.set_query(None);
+    root_specifier.set_path("/");
 
-        specifiers.push(remote_specifier.clone());
-        found = true;
-        break;
-      }
-    }
-    if !found {
-      // get the specifier without the directory
-      let root_specifier = remote_specifier
-        .join("./")
-        .unwrap_or_else(|_| remote_specifier.clone());
-      root_specifiers.push((root_specifier, vec![remote_specifier.clone()]));
-    }
+    let specifiers = root_specifiers.entry(root_specifier).or_default();
+    specifiers.push(remote_specifier.clone());
   }
   root_specifiers
 }
@@ -167,40 +152,39 @@ mod test {
   #[test]
   fn test_path_with_stem_suffix() {
     assert_eq!(
-      path_with_stem_suffix(&PathBuf::from("/"), "2"),
-      PathBuf::from("/2")
+      path_with_stem_suffix(&PathBuf::from("/"), "_2"),
+      PathBuf::from("/_2")
     );
     assert_eq!(
-      path_with_stem_suffix(&PathBuf::from("/test"), "2"),
+      path_with_stem_suffix(&PathBuf::from("/test"), "_2"),
       PathBuf::from("/test_2")
     );
     assert_eq!(
-      path_with_stem_suffix(&PathBuf::from("/test.txt"), "2"),
+      path_with_stem_suffix(&PathBuf::from("/test.txt"), "_2"),
       PathBuf::from("/test_2.txt")
     );
     assert_eq!(
-      path_with_stem_suffix(&PathBuf::from("/test/subdir"), "2"),
+      path_with_stem_suffix(&PathBuf::from("/test/subdir"), "_2"),
       PathBuf::from("/test/subdir_2")
     );
     assert_eq!(
-      path_with_stem_suffix(&PathBuf::from("/test/subdir.other.txt"), "2"),
+      path_with_stem_suffix(&PathBuf::from("/test/subdir.other.txt"), "_2"),
       PathBuf::from("/test/subdir.other_2.txt")
     );
     assert_eq!(
-      path_with_stem_suffix(&PathBuf::from("/test.d.ts"), "2"),
+      path_with_stem_suffix(&PathBuf::from("/test.d.ts"), "_2"),
       PathBuf::from("/test_2.d.ts")
     );
     assert_eq!(
-      path_with_stem_suffix(&PathBuf::from("/test.D.TS"), "2"),
-      // good enough
-      PathBuf::from("/test_2.d.TS")
+      path_with_stem_suffix(&PathBuf::from("/test.D.TS"), "_2"),
+      PathBuf::from("/test_2.D.TS")
     );
     assert_eq!(
-      path_with_stem_suffix(&PathBuf::from("/test.d.mts"), "2"),
+      path_with_stem_suffix(&PathBuf::from("/test.d.mts"), "_2"),
       PathBuf::from("/test_2.d.mts")
     );
     assert_eq!(
-      path_with_stem_suffix(&PathBuf::from("/test.d.cts"), "2"),
+      path_with_stem_suffix(&PathBuf::from("/test.d.cts"), "_2"),
       PathBuf::from("/test_2.d.cts")
     );
   }
@@ -246,7 +230,7 @@ mod test {
         "https://deno.land/x/mod/other/A.ts",
       ],
       vec![(
-        "https://deno.land/x/mod/",
+        "https://deno.land/",
         vec![
           "https://deno.land/x/mod/A.ts",
           "https://deno.land/x/mod/other/A.ts",
@@ -263,7 +247,7 @@ mod test {
         "https://deno.land/x/other/A.ts",
       ],
       vec![(
-        "https://deno.land/x/",
+        "https://deno.land/",
         vec![
           "https://deno.land/x/mod/A.ts",
           "https://deno.land/x/other/A.ts",
@@ -277,12 +261,19 @@ mod test {
     run_partition_by_root_specifiers_test(
       vec![
         "https://deno.land/mod/A.ts",
+        "http://deno.land/B.ts",
+        "https://deno.land:8080/C.ts",
         "https://localhost/mod/A.ts",
         "https://other/A.ts",
       ],
       vec![
-        ("https://deno.land/mod/", vec!["https://deno.land/mod/A.ts"]),
-        ("https://localhost/mod/", vec!["https://localhost/mod/A.ts"]),
+        ("http://deno.land/", vec!["http://deno.land/B.ts"]),
+        ("https://deno.land/", vec!["https://deno.land/mod/A.ts"]),
+        (
+          "https://deno.land:8080/",
+          vec!["https://deno.land:8080/C.ts"],
+        ),
+        ("https://localhost/", vec!["https://localhost/mod/A.ts"]),
         ("https://other/", vec!["https://other/A.ts"]),
       ],
     );
