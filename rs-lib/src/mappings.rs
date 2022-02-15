@@ -13,6 +13,8 @@ use once_cell::sync::Lazy;
 
 use crate::graph::ModuleGraph;
 use crate::specifiers::Specifiers;
+use crate::utils::get_unique_path;
+use crate::utils::partition_by_root_specifiers;
 use crate::utils::url_to_file_path;
 
 pub struct SyntheticSpecifiers {
@@ -66,58 +68,25 @@ impl Mappings {
       if let Some(Component::Normal(first_dir)) =
         relative_file_path.components().next()
       {
-        root_local_dirs.insert(PathBuf::from(first_dir));
+        root_local_dirs.insert(first_dir.to_string_lossy().to_lowercase());
       }
     }
 
-    let mut root_remote_specifiers: Vec<(
-      ModuleSpecifier,
-      Vec<(ModuleSpecifier, MediaType)>,
-    )> = Vec::new();
-    for remote_specifier in specifiers.remote.iter() {
-      let media_type = module_graph.get(remote_specifier).media_type;
-      let mut found = false;
-      for (root_specifier, specifiers) in root_remote_specifiers.iter_mut() {
-        if let Some(relative_url) =
-          root_specifier.make_relative(remote_specifier)
-        {
-          // found a new root
-          if relative_url.starts_with("../") {
-            // todo(dsherret): improve, this was just laziness
-            let mut new_root_specifier = root_specifier.clone();
-            let mut relative_url = relative_url.as_str();
-            while relative_url.starts_with("../") {
-              relative_url = &relative_url[3..];
-              new_root_specifier = new_root_specifier.join("../").unwrap();
-            }
-            *root_specifier = new_root_specifier;
-          }
-
-          specifiers.push((remote_specifier.clone(), media_type));
-          found = true;
-          break;
-        }
-      }
-      if !found {
-        let root_specifier = remote_specifier
-          .join("../")
-          .unwrap_or_else(|_| remote_specifier.clone());
-        root_remote_specifiers
-          .push((root_specifier, vec![(remote_specifier.clone(), media_type)]));
-      }
-    }
-
+    let root_remote_specifiers =
+      partition_by_root_specifiers(specifiers.remote.iter());
     let mut mapped_base_dirs = HashSet::new();
     let deps_path =
       get_unique_path(PathBuf::from("deps"), &mut root_local_dirs);
     for (root, specifiers) in root_remote_specifiers.into_iter() {
       let base_dir = deps_path.join(get_unique_path(
-        get_dir_name_for_root(&root),
+        dir_name_for_root(&root),
         &mut mapped_base_dirs,
       ));
-      for (specifier, media_type) in specifiers {
+      for specifier in specifiers {
+        let media_type = module_graph.get(&specifier).media_type;
         let relative = base_dir
           .join(sanitize_filepath(&make_url_relative(&root, &specifier)?));
+
         mappings.insert(
           specifier,
           get_mapped_file_path(
@@ -162,7 +131,7 @@ impl Mappings {
     // add the synthetic specifiers even though some of these files won't be created
     fn add_synthetic_specifier(
       mappings: &mut HashMap<ModuleSpecifier, PathBuf>,
-      mapped_filepaths_no_ext: &mut HashSet<PathBuf>,
+      mapped_filepaths_no_ext: &mut HashSet<String>,
       specifier: &ModuleSpecifier,
     ) {
       debug_assert!(specifier.to_string().starts_with("dnt://"));
@@ -213,12 +182,12 @@ impl Mappings {
 fn get_mapped_file_path(
   media_type: MediaType,
   path: impl AsRef<Path>,
-  mapped_filepaths_no_ext: &mut HashSet<PathBuf>,
+  mapped_filepaths_no_ext: &mut HashSet<String>,
 ) -> PathBuf {
   fn without_ext(path: impl AsRef<Path>) -> PathBuf {
     // remove the extension if it's known
     // Ex. url could be `https://deno.land/test/1.2.5`
-    // and we don't want to use `test_1.2`
+    // and we don't want to use `1.2`
     let media_type: MediaType = path.as_ref().into();
     if media_type == MediaType::Unknown {
       path.as_ref().into()
@@ -242,19 +211,6 @@ fn get_mapped_file_path(
   )
 }
 
-fn get_unique_path(
-  mut path: PathBuf,
-  unique_set: &mut HashSet<PathBuf>,
-) -> PathBuf {
-  let original_path = path.to_string_lossy().to_string();
-  let mut count = 2;
-  while !unique_set.insert(path.clone()) {
-    path = PathBuf::from(format!("{}_{}", original_path, count));
-    count += 1;
-  }
-  path
-}
-
 fn make_url_relative(
   root: &ModuleSpecifier,
   url: &ModuleSpecifier,
@@ -270,10 +226,11 @@ fn make_url_relative(
   })
 }
 
-fn get_dir_name_for_root(root: &ModuleSpecifier) -> PathBuf {
+/// Gets the directory name to use for the provided root.
+fn dir_name_for_root(root: &ModuleSpecifier) -> PathBuf {
   let mut result = String::new();
   if let Some(domain) = root.domain() {
-    result.push_str(&sanitize_filepath(domain));
+    result.push_str(&sanitize_segment(domain));
   }
   if let Some(port) = root.port() {
     if !result.is_empty() {
@@ -281,47 +238,36 @@ fn get_dir_name_for_root(root: &ModuleSpecifier) -> PathBuf {
     }
     result.push_str(&port.to_string());
   }
+  let mut result = PathBuf::from(result);
   if let Some(segments) = root.path_segments() {
     for segment in segments.filter(|s| !s.is_empty()) {
-      if !result.is_empty() {
-        result.push('_');
-      }
-      result.push_str(&sanitize_filepath(segment));
+      result = result.join(sanitize_segment(segment));
     }
   }
 
-  PathBuf::from(if result.is_empty() {
-    "unknown".to_string()
-  } else {
-    // limit the size of the directory to reduce the chance of max path errors on Windows
-    truncate_str(&result.replace(".", "_"), 30)
-      .trim_end_matches('_')
-      .to_string()
-  })
-}
-
-fn truncate_str(text: &str, max: usize) -> &str {
-  match text.char_indices().nth(max) {
-    Some((i, _)) => &text[..i],
-    None => text,
-  }
+  result
 }
 
 fn sanitize_filepath(text: &str) -> String {
-  let mut chars = Vec::with_capacity(text.len()); // not chars, but good enough
-  for c in text.chars() {
-    // use an allow list of characters that won't have any issues
-    if c.is_alphabetic()
-      || c.is_numeric()
-      || c.is_whitespace()
-      || matches!(c, '_' | '-' | '.' | '/' | '\\')
-    {
-      chars.push(c);
-    } else {
-      chars.push('_');
-    }
-  }
-  chars.into_iter().collect()
+  text
+    .chars()
+    .map(|c| if is_banned_path_char(c) { '_' } else { c })
+    .collect()
+}
+
+fn is_banned_path_char(c: char) -> bool {
+  matches!(c, '<' | '>' | ':' | '"' | '|' | '?' | '*')
+}
+
+fn sanitize_segment(text: &str) -> String {
+  text
+    .chars()
+    .map(|c| if is_banned_segment_char(c) { '_' } else { c })
+    .collect()
+}
+
+fn is_banned_segment_char(c: char) -> bool {
+  matches!(c, '/' | '\\') || is_banned_path_char(c)
 }
 
 fn get_base_dir(specifiers: &[ModuleSpecifier]) -> Result<PathBuf> {
@@ -357,21 +303,17 @@ fn get_base_dir(specifiers: &[ModuleSpecifier]) -> Result<PathBuf> {
 #[cfg(test)]
 mod test {
   use super::*;
+  use pretty_assertions::assert_eq;
 
   #[test]
   fn should_get_dir_name_root() {
-    run_test("http://deno.land/x/test", "deno_land_x_test");
+    run_test("http://deno.land/x/test", "deno.land/x/test");
     run_test("http://localhost", "localhost");
-    run_test("http://localhost/test%20test", "localhost_test_20test");
-    // will truncate
-    run_test(
-      "http://localhost/test%20testingtestingtesting",
-      "localhost_test_20testingtestin",
-    );
+    run_test("http://localhost/test%20:test", "localhost/test%20_test");
 
     fn run_test(specifier: &str, expected: &str) {
       assert_eq!(
-        get_dir_name_for_root(&ModuleSpecifier::parse(specifier).unwrap()),
+        dir_name_for_root(&ModuleSpecifier::parse(specifier).unwrap()),
         PathBuf::from(expected)
       );
     }
