@@ -329,7 +329,14 @@ fn remote_specifiers_to_paths_with_truncation<'a>(
         if file_name_str.len() > max_file_name_len {
           let new_name =
             if let Some((stem, ext)) = split_stem_and_ext(&file_name_str) {
-              format!("{}.{}", &stem[..max_file_name_len - ext.len() - 1], ext)
+              let file_name_index = std::cmp::min(
+                stem.len(),
+                std::cmp::max(
+                  3,
+                  (max_file_name_len as isize) - (ext.len() as isize + 1),
+                ) as usize,
+              );
+              format!("{}.{}", &stem[..file_name_index], ext)
             } else {
               file_name_str[..max_file_name_len].to_string()
             };
@@ -384,8 +391,8 @@ fn split_stem_and_ext(path: &str) -> Option<(&str, &str)> {
   let d_ts_ext = ".d.ts";
   if path.to_lowercase().ends_with(d_ts_ext) {
     Some((
-      &path[..d_ts_ext.len()],
-      &path[..path.len() - d_ts_ext.len() + 1],
+      &path[..path.len() - d_ts_ext.len()],
+      &path[path.len() - (d_ts_ext.len() - 1)..],
     ))
   } else {
     path
@@ -587,11 +594,20 @@ mod test {
   #[test]
   fn test_remote_specifiers_to_paths_filename_truncation() {
     run_remote_specifiers_to_paths_test(
-      &["http://localhost/1234567890123456.json"],
-      &[(
+      &[
+        "http://localhost/1234567890123456.d.ts",
         "http://localhost/1234567890123456.json",
-        "localhost/1234567890.json",
-      )],
+      ],
+      &[
+        (
+          "http://localhost/1234567890123456.d.ts",
+          "localhost/1234567890.d.ts",
+        ),
+        (
+          "http://localhost/1234567890123456.json",
+          "localhost/1234567890.json",
+        ),
+      ],
       25,
     );
 
@@ -655,5 +671,18 @@ mod test {
       .collect::<Vec<_>>();
     result_as_strs.sort_by_key(|r| r.0);
     assert_eq!(result_as_strs, expected);
+  }
+
+  #[test]
+  fn test_split_stem_and_ext() {
+    assert_eq!(split_stem_and_ext("test.ts"), Some(("test", "ts")));
+    assert_eq!(split_stem_and_ext("test.TS"), Some(("test", "TS")));
+    assert_eq!(split_stem_and_ext("test.D.TS"), Some(("test", "D.TS")));
+    assert_eq!(split_stem_and_ext("test.d.ts"), Some(("test", "d.ts")));
+    assert_eq!(
+      split_stem_and_ext("test.other.json"),
+      Some(("test.other", "json"))
+    );
+    assert_eq!(split_stem_and_ext("none"), None);
   }
 }
