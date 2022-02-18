@@ -6,7 +6,18 @@ use std::path::Path;
 use std::path::PathBuf;
 
 use anyhow::Result;
+use deno_ast::parse_module;
+use deno_ast::swc::common::BytePos;
+use deno_ast::swc::common::Span;
+use deno_ast::view::NodeTrait;
+use deno_ast::view::Program;
+use deno_ast::view::SpannedExt;
 use deno_ast::ModuleSpecifier;
+use deno_ast::ParseParams;
+use deno_ast::SourceTextInfo;
+
+use crate::text_changes::apply_text_changes;
+use crate::text_changes::TextChange;
 
 pub const BOM_CHAR: char = '\u{FEFF}';
 
@@ -140,6 +151,63 @@ pub fn partition_by_root_specifiers<'a>(
     specifiers.push(remote_specifier.clone());
   }
   root_specifiers
+}
+
+pub fn prepend_statement_to_text(
+  file_path: &Path,
+  file_text: &mut String,
+  statement_text: &str,
+) {
+  // It's not great to have to reparse the file for this. Perhaps there is a utility
+  // function in swc or maybe add one to deno_ast for parsing out the leading comments
+  let source = SourceTextInfo::from_string(std::mem::take(file_text));
+  let parsed_module = parse_module(ParseParams {
+    specifier: file_path.to_string_lossy().to_string(),
+    capture_tokens: true,
+    maybe_syntax: None,
+    media_type: file_path.into(),
+    scope_analysis: false,
+    source: source.clone(),
+  });
+  match parsed_module {
+    Ok(parsed_module) => parsed_module.with_view(|program| {
+      let text_change =
+        text_change_for_prepend_statement_to_text(&program, statement_text);
+      *file_text =
+        apply_text_changes(source.text().to_string(), vec![text_change]);
+    }),
+    Err(_) => {
+      // should never happen... fallback...
+      *file_text = format!("{}\n{}", statement_text, source.text_str(),);
+    }
+  }
+}
+
+pub fn text_change_for_prepend_statement_to_text(
+  program: &Program,
+  statement_text: &str,
+) -> TextChange {
+  let insert_pos = top_file_insert_pos(program);
+  TextChange {
+    span: Span::new(insert_pos, insert_pos, Default::default()),
+    new_text: format!(
+      "{}{}\n",
+      if insert_pos == BytePos(0) { "" } else { "\n" },
+      statement_text,
+    ),
+  }
+}
+
+fn top_file_insert_pos(program: &Program) -> BytePos {
+  // get the insert position when inserting at the top of a file
+  program
+    .leading_comments()
+    // be very specific here because comments might contain information that
+    // applies to the next node (such as a `// @ts-ignore`)
+    .next()
+    .filter(|c| c.text_fast(program).to_lowercase().contains("copyright"))
+    .map(|c| c.hi())
+    .unwrap_or_else(|| BytePos(0))
 }
 
 #[cfg(test)]

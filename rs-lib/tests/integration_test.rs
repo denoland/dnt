@@ -1450,7 +1450,7 @@ async fn polyfills_all() {
       (
         "mod.ts",
         concat!(
-          "import './_dnt.polyfills.js';\n",
+          "import \"./_dnt.polyfills.js\";\n",
           "export const test = (obj) => Object.hasOwn(obj, 'test');\n",
           "try {\n",
           "} catch (err) {\n",
@@ -1507,7 +1507,7 @@ async fn test_string_replace_all_polyfill(
         (
           "mod.ts",
           concat!(
-            "import './_dnt.polyfills.js';\n",
+            "import \"./_dnt.polyfills.js\";\n",
             "''.replaceAll('test', 'other');\n",
           ),
         ),
@@ -1532,9 +1532,10 @@ async fn test_string_replace_all_polyfill(
 async fn polyfills_test_files() {
   let result = TestBuilder::new()
     .with_loader(|loader| {
-      loader
-        .add_local_file("/mod.ts", "")
-        .add_local_file("/mod.test.ts", "Object.hasOwn({}, 'prop');");
+      loader.add_local_file("/mod.ts", "").add_local_file(
+        "/mod.test.ts",
+        "// Some copyright text\nObject.hasOwn({}, 'prop');",
+      );
     })
     .add_test_entry_point("file:///mod.test.ts")
     .transform()
@@ -1550,7 +1551,8 @@ async fn polyfills_test_files() {
       (
         "mod.test.ts",
         concat!(
-          "import './_dnt.test_polyfills.js';\n",
+          "// Some copyright text\n",
+          "import \"./_dnt.test_polyfills.js\";\n\n",
           "Object.hasOwn({}, 'prop');"
         )
       ),
@@ -1598,7 +1600,7 @@ async fn module_specifier_mapping_general() {
       (
         "mod.ts",
         concat!(
-          "import './_dnt.polyfills.js';\n",
+          "import \"./_dnt.polyfills.js\";\n",
           "import './other.node.js';"
         ),
       ),
