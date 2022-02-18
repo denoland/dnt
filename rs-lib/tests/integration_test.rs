@@ -43,6 +43,24 @@ async fn transform_shims() {
       ),
     ),
     (
+      concat!("// copyright comment\n", "Deno.readTextFile();",),
+      // should inject after the copyright comment
+      concat!(
+        "// copyright comment\n",
+        r#"import * as dntShim from "./_dnt.shims.js";"#,
+        "\n\ndntShim.Deno.readTextFile();"
+      ),
+    ),
+    (
+      concat!("// @ts-ignore\n", "Deno.readTextFile();",),
+      // should inject before the non-copyright comment
+      concat!(
+        r#"import * as dntShim from "./_dnt.shims.js";"#,
+        "\n// @ts-ignore\n",
+        "dntShim.Deno.readTextFile();"
+      ),
+    ),
+    (
       "const [test=Deno] = other;",
       concat!(
         r#"import * as dntShim from "./_dnt.shims.js";"#,

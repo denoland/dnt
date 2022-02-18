@@ -58,11 +58,27 @@ pub fn get_global_text_changes(
   visit_children(program.into(), &global_shim_name, &mut context);
 
   if context.import_shim {
+    // insert after the leading comments as they're probably copyright comments
+    let insert_pos = params
+      .program
+      .leading_comments()
+      // be very specific here because comments might contain information that
+      // applies to the next node (such as a `// @ts-ignore`)
+      .next()
+      .filter(|c| {
+        c.text_fast(params.program)
+          .to_lowercase()
+          .contains("copyright")
+      })
+      .map(|c| c.hi())
+      .unwrap_or_else(|| BytePos(0));
     context.text_changes.push(TextChange {
-      span: Span::new(BytePos(0), BytePos(0), Default::default()),
+      span: Span::new(insert_pos, insert_pos, Default::default()),
       new_text: format!(
-        "import * as {} from \"{}\";\n",
-        global_shim_name, params.shim_specifier,
+        "{}import * as {} from \"{}\";\n",
+        if insert_pos == BytePos(0) { "" } else { "\n" },
+        global_shim_name,
+        params.shim_specifier,
       ),
     });
   }
