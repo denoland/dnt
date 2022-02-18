@@ -7,17 +7,13 @@ import { ScriptTarget } from "./lib/types.ts";
 
 await init(source);
 
-export interface Redirects {
-  /** The to and from specifier redirect. */
-  [specifier: string]: string;
-}
-
-/** Specifier to bare specifier mappings. */
+/** Specifier to specifier mappings. */
 export interface SpecifierMappings {
-  [specifier: string]: MappedSpecifier;
+  /** Map a specifier to another module or npm package. */
+  [specifier: string]: PackageMappedSpecifier | string;
 }
 
-export interface MappedSpecifier {
+export interface PackageMappedSpecifier {
   /** Name of the npm package specifier to map to. */
   name: string;
   /** Version to use in the package.json file.
@@ -50,7 +46,7 @@ export type Shim = PackageShim | ModuleShim;
 
 export interface PackageShim {
   /** Information about the npm package specifier to import. */
-  package: MappedSpecifier;
+  package: PackageMappedSpecifier;
   /** Npm package to include in the dev depedencies that has the type declarations. */
   typesPackage?: Dependency;
   /** Named exports from the shim to use as globals. */
@@ -70,7 +66,6 @@ export interface TransformOptions {
   shims?: Shim[];
   testShims?: Shim[];
   mappings?: SpecifierMappings;
-  redirects?: Redirects;
   target: ScriptTarget;
   /// Path or url to the import map.
   importMap?: string;
@@ -112,12 +107,7 @@ export function transform(options: TransformOptions): Promise<TransformOutput> {
     ...options,
     mappings: Object.fromEntries(
       Object.entries(options.mappings ?? {}).map(([key, value]) => {
-        return [valueToUrl(key), value];
-      }),
-    ),
-    redirects: Object.fromEntries(
-      Object.entries(options.redirects ?? {}).map(([key, value]) => {
-        return [valueToUrl(key), valueToUrl(value)];
+        return [valueToUrl(key), mapMappedSpecifier(value)];
       }),
     ),
     entryPoints: options.entryPoints.map(valueToUrl),
@@ -132,8 +122,41 @@ export function transform(options: TransformOptions): Promise<TransformOutput> {
   return wasmFuncs.transform(newOptions);
 }
 
-type SerializableShim = { kind: "Package"; value: PackageShim } | {
-  kind: "Module";
+type SerializableMappedSpecifier = {
+  kind: "package";
+  value: PackageMappedSpecifier;
+} | {
+  kind: "module";
+  value: string;
+};
+
+function mapMappedSpecifier(
+  value: string | PackageMappedSpecifier,
+): SerializableMappedSpecifier {
+  if (typeof value === "string") {
+    if (isPathOrUrl(value)) {
+      return {
+        kind: "module",
+        value: valueToUrl(value),
+      };
+    } else {
+      return {
+        kind: "package",
+        value: {
+          name: value,
+        },
+      };
+    }
+  } else {
+    return {
+      kind: "package",
+      value,
+    };
+  }
+}
+
+type SerializableShim = { kind: "package"; value: PackageShim } | {
+  kind: "module";
   value: ModuleShim;
 };
 
@@ -143,10 +166,10 @@ function mapShim(value: Shim): SerializableShim {
     globalNames: value.globalNames.map(mapToGlobalName),
   };
   if (isPackageShim(newValue)) {
-    return { kind: "Package", value: newValue };
+    return { kind: "package", value: newValue };
   } else {
     return {
-      kind: "Module",
+      kind: "module",
       value: {
         ...newValue,
         module: resolveBareSpecifierOrPath(newValue.module),
@@ -173,16 +196,19 @@ function mapToGlobalName(value: string | GlobalName): GlobalName {
 
 function resolveBareSpecifierOrPath(value: string) {
   value = value.trim();
-  if (
-    /^[a-z]+:\/\//i.test(value) || // has scheme
-    value.startsWith("./") ||
-    value.startsWith("../") ||
-    /\.[a-z]+$/i.test(value) // has extension
-  ) {
+  if (isPathOrUrl(value)) {
     return valueToUrl(value);
   } else {
     return value;
   }
+}
+
+function isPathOrUrl(value: string) {
+  value = value.trim();
+  return /^[a-z]+:\/\//i.test(value) || // has scheme
+    value.startsWith("./") ||
+    value.startsWith("../") ||
+    /\.[a-z]+$/i.test(value); // has extension
 }
 
 function valueToUrl(value: string) {

@@ -56,7 +56,6 @@ pub struct TransformOptions {
   pub shims: Vec<Shim>,
   pub test_shims: Vec<Shim>,
   pub mappings: HashMap<ModuleSpecifier, MappedSpecifier>,
-  pub redirects: HashMap<ModuleSpecifier, ModuleSpecifier>,
   pub target: ScriptTarget,
   pub import_map: Option<ModuleSpecifier>,
 }
@@ -73,7 +72,6 @@ pub async fn transform(options: JsValue) -> Result<JsValue, JsValue> {
     test_shims: options.test_shims,
     loader: Some(Box::new(JsLoader {})),
     specifier_mappings: options.mappings,
-    redirects: options.redirects,
     target: options.target,
     import_map: options.import_map,
   })

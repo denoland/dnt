@@ -4,8 +4,8 @@ use std::path::PathBuf;
 
 use deno_node_transform::Dependency;
 use deno_node_transform::GlobalName;
-use deno_node_transform::MappedSpecifier;
 use deno_node_transform::ModuleShim;
+use deno_node_transform::PackageMappedSpecifier;
 use deno_node_transform::PackageShim;
 use deno_node_transform::ScriptTarget;
 use deno_node_transform::Shim;
@@ -95,7 +95,7 @@ async fn transform_shim_custom_shims() {
       );
     })
     .add_shim(Shim::Package(PackageShim {
-      package: MappedSpecifier {
+      package: PackageMappedSpecifier {
         name: "node-fetch".to_string(),
         version: Some("~3.1.0".to_string()),
         sub_path: None,
@@ -108,7 +108,7 @@ async fn transform_shim_custom_shims() {
       }],
     }))
     .add_shim(Shim::Package(PackageShim {
-      package: MappedSpecifier {
+      package: PackageMappedSpecifier {
         name: "node-fetch".to_string(),
         version: Some("~3.1.0".to_string()),
         sub_path: Some("test".to_string()),
@@ -121,7 +121,7 @@ async fn transform_shim_custom_shims() {
       }],
     }))
     .add_shim(Shim::Package(PackageShim {
-      package: MappedSpecifier {
+      package: PackageMappedSpecifier {
         name: "domexception".to_string(),
         version: Some("^4.0.0".to_string()),
         sub_path: None,
@@ -137,7 +137,7 @@ async fn transform_shim_custom_shims() {
       }],
     }))
     .add_shim(Shim::Package(PackageShim {
-      package: MappedSpecifier {
+      package: PackageMappedSpecifier {
         name: "buffer".to_string(),
         version: None,
         sub_path: None,
@@ -157,7 +157,7 @@ async fn transform_shim_custom_shims() {
       ],
     }))
     .add_shim(Shim::Package(PackageShim {
-      package: MappedSpecifier {
+      package: PackageMappedSpecifier {
         name: "type-only".to_string(),
         version: None,
         sub_path: None,
@@ -962,26 +962,31 @@ async fn transform_specifier_mappings() {
           "import * as myOther from './other.ts';",
         );
     })
-    .add_specifier_mapping(
+    .add_package_specifier_mapping(
       "http://localhost/mod.ts",
       "remote-module",
       Some("1.0.0"),
       None,
     )
-    .add_specifier_mapping("file:///file.ts", "local-module", None, None)
-    .add_specifier_mapping(
+    .add_package_specifier_mapping(
+      "file:///file.ts",
+      "local-module",
+      None,
+      None,
+    )
+    .add_package_specifier_mapping(
       "http://localhost/mod/entryA.ts",
       "mod",
       Some("~0.1.0"),
       None,
     )
-    .add_specifier_mapping(
+    .add_package_specifier_mapping(
       "http://localhost/mod/entryB.ts",
       "mod",
       Some("~0.1.0"),
       Some("entryB"),
     )
-    .add_specifier_mapping(
+    .add_package_specifier_mapping(
       "http://localhost/mod/entryC.ts",
       "mod",
       Some("~0.1.0"),
@@ -1025,13 +1030,13 @@ async fn transform_not_found_mappings() {
     .with_loader(|loader| {
       loader.add_local_file("/mod.ts", "test");
     })
-    .add_specifier_mapping(
+    .add_package_specifier_mapping(
       "http://localhost/mod.ts",
       "local-module",
       None,
       None,
     )
-    .add_specifier_mapping(
+    .add_package_specifier_mapping(
       "http://localhost/mod2.ts",
       "local-module2",
       None,
@@ -1044,7 +1049,7 @@ async fn transform_not_found_mappings() {
 
   assert_eq!(
     error_message.to_string(),
-    "The following specifiers were indicated to be mapped, but were not found:\n  * http://localhost/mod.ts\n  * http://localhost/mod2.ts"
+    "The following specifiers were indicated to be mapped to a package, but were not found:\n  * http://localhost/mod.ts\n  * http://localhost/mod2.ts"
   );
 }
 
@@ -1541,7 +1546,7 @@ async fn polyfills_test_files() {
 }
 
 #[tokio::test]
-async fn redirects_general() {
+async fn module_specifier_mapping_general() {
   let result = TestBuilder::new()
     .with_loader(|loader| {
       loader
@@ -1561,7 +1566,10 @@ async fn redirects_general() {
         )
         .add_local_file("/myFunction.ts", "export function myFunction() {}");
     })
-    .add_redirect("file:///other.deno.ts", "file:///other.node.ts")
+    .add_module_specifier_mapping(
+      "file:///other.deno.ts",
+      "file:///other.node.ts",
+    )
     .transform()
     .await
     .unwrap();
@@ -1607,7 +1615,7 @@ async fn redirect_entrypoint() {
         .add_local_file("/mod.node.ts", "5;");
     })
     .entry_point("file:///mod.deno.ts")
-    .add_redirect("file:///mod.deno.ts", "file:///mod.node.ts")
+    .add_module_specifier_mapping("file:///mod.deno.ts", "file:///mod.node.ts")
     .transform()
     .await
     .unwrap();
@@ -1622,7 +1630,7 @@ async fn redirect_not_found() {
     .with_loader(|loader| {
       loader.add_local_file("/mod.ts", "console.log(5);");
     })
-    .add_redirect("file:///mod.deno.ts", "file:///mod.node.ts")
+    .add_module_specifier_mapping("file:///mod.deno.ts", "file:///mod.node.ts")
     .transform()
     .await
     .err()
@@ -1631,7 +1639,7 @@ async fn redirect_not_found() {
   assert_eq!(
     err_message.to_string(),
     concat!(
-      "The following specifiers were indicated to be redirected, but were not found:\n",
+      "The following specifiers were indicated to be mapped to a module, but were not found:\n",
       "  * file:///mod.deno.ts",
     ),
   );

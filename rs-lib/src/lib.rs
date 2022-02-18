@@ -89,9 +89,20 @@ pub struct TransformOutputEnvironment {
 }
 
 #[cfg_attr(feature = "serialization", derive(serde::Deserialize))]
+#[cfg_attr(
+  feature = "serialization",
+  serde(tag = "kind", content = "value", rename_all = "camelCase")
+)]
+#[derive(Clone, Debug)]
+pub enum MappedSpecifier {
+  Package(PackageMappedSpecifier),
+  Module(ModuleSpecifier),
+}
+
+#[cfg_attr(feature = "serialization", derive(serde::Deserialize))]
 #[cfg_attr(feature = "serialization", serde(rename_all = "camelCase"))]
 #[derive(Clone, Debug)]
-pub struct MappedSpecifier {
+pub struct PackageMappedSpecifier {
   /// Name being mapped to.
   pub name: String,
   /// Version of the specifier. Leave this blank to not have a
@@ -101,7 +112,7 @@ pub struct MappedSpecifier {
   pub sub_path: Option<String>,
 }
 
-impl MappedSpecifier {
+impl PackageMappedSpecifier {
   pub(crate) fn module_specifier_text(&self) -> String {
     if let Some(path) = &self.sub_path {
       format!("{}/{}", self.name, path)
@@ -124,7 +135,10 @@ pub struct GlobalName {
 }
 
 #[cfg_attr(feature = "serialization", derive(serde::Deserialize))]
-#[cfg_attr(feature = "serialization", serde(tag = "kind", content = "value"))]
+#[cfg_attr(
+  feature = "serialization",
+  serde(tag = "kind", content = "value", rename_all = "camelCase")
+)]
 #[derive(Clone, Debug)]
 pub enum Shim {
   Package(PackageShim),
@@ -152,7 +166,7 @@ impl Shim {
 #[derive(Clone, Debug)]
 pub struct PackageShim {
   /// Information about the npm package to use for this shim.
-  pub package: MappedSpecifier,
+  pub package: PackageMappedSpecifier,
   /// Npm package to include in the dev depedencies that has the type declarations.
   pub types_package: Option<Dependency>,
   /// Names this shim provides that will be injected in global contexts.
@@ -197,11 +211,8 @@ pub struct TransformOptions {
   pub shims: Vec<Shim>,
   pub test_shims: Vec<Shim>,
   pub loader: Option<Box<dyn Loader>>,
-  /// Maps specifiers to an npm module. This does not follow or resolve
-  /// the mapped specifier
+  /// Maps specifiers to an npm package or module.
   pub specifier_mappings: HashMap<ModuleSpecifier, MappedSpecifier>,
-  /// Redirects one specifier to another specifier.
-  pub redirects: HashMap<ModuleSpecifier, ModuleSpecifier>,
   /// Version of ECMAScript that the final code will target.
   /// This controls whether certain polyfills should occur.
   pub target: ScriptTarget,
@@ -244,20 +255,20 @@ pub async fn transform(options: TransformOptions) -> Result<TransformOutput> {
         )
         .collect(),
       specifier_mappings: &options.specifier_mappings,
-      redirects: &options.redirects,
       loader: options.loader,
       import_map: options.import_map,
     })
     .await?;
 
   let mappings = Mappings::new(&module_graph, &specifiers)?;
-  let all_specifier_mappings: HashMap<ModuleSpecifier, String> = specifiers
-    .main
-    .mapped
-    .iter()
-    .chain(specifiers.test.mapped.iter())
-    .map(|m| (m.0.clone(), m.1.module_specifier_text()))
-    .collect();
+  let all_package_specifier_mappings: HashMap<ModuleSpecifier, String> =
+    specifiers
+      .main
+      .mapped
+      .iter()
+      .chain(specifiers.test.mapped.iter())
+      .map(|m| (m.0.clone(), m.1.module_specifier_text()))
+      .collect();
 
   let mut warnings = get_declaration_warnings(&specifiers);
   let mut main_env_context = EnvironmentContext {
@@ -374,7 +385,7 @@ pub async fn transform(options: TransformOptions) -> Result<TransformOutput> {
                 module_graph: &module_graph,
                 mappings: &mappings,
                 program: &program,
-                specifier_mappings: &all_specifier_mappings,
+                package_specifier_mappings: &all_package_specifier_mappings,
               },
             )?);
 
@@ -623,7 +634,7 @@ fn check_add_shim_file_to_environment(
 }
 
 fn get_dependencies(
-  mappings: BTreeMap<ModuleSpecifier, MappedSpecifier>,
+  mappings: BTreeMap<ModuleSpecifier, PackageMappedSpecifier>,
 ) -> Vec<Dependency> {
   let mut dependencies = mappings
     .into_iter()

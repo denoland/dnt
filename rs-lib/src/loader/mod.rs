@@ -19,6 +19,7 @@ pub use default_loader::*;
 pub use specifier_mappers::*;
 
 use crate::MappedSpecifier;
+use crate::PackageMappedSpecifier;
 
 #[cfg_attr(feature = "serialization", derive(serde::Deserialize))]
 #[cfg_attr(feature = "serialization", serde(rename_all = "camelCase"))]
@@ -38,8 +39,8 @@ pub trait Loader {
 
 #[derive(Default, Clone)]
 pub struct LoaderSpecifiers {
-  pub mapped: BTreeMap<ModuleSpecifier, MappedSpecifier>,
-  pub redirects: HashMap<ModuleSpecifier, ModuleSpecifier>,
+  pub mapped_packages: BTreeMap<ModuleSpecifier, PackageMappedSpecifier>,
+  pub mapped_modules: HashMap<ModuleSpecifier, ModuleSpecifier>,
 }
 
 pub struct SourceLoader<'a> {
@@ -47,7 +48,6 @@ pub struct SourceLoader<'a> {
   specifiers: LoaderSpecifiers,
   specifier_mappers: Vec<Box<dyn SpecifierMapper>>,
   specifier_mappings: &'a HashMap<ModuleSpecifier, MappedSpecifier>,
-  redirects: &'a HashMap<ModuleSpecifier, ModuleSpecifier>,
 }
 
 impl<'a> SourceLoader<'a> {
@@ -55,14 +55,12 @@ impl<'a> SourceLoader<'a> {
     loader: Box<dyn Loader>,
     specifier_mappers: Vec<Box<dyn SpecifierMapper>>,
     specifier_mappings: &'a HashMap<ModuleSpecifier, MappedSpecifier>,
-    redirects: &'a HashMap<ModuleSpecifier, ModuleSpecifier>,
   ) -> Self {
     Self {
       loader: Arc::new(loader),
       specifiers: Default::default(),
       specifier_mappers,
       specifier_mappings,
-      redirects,
     }
   }
 
@@ -78,38 +76,41 @@ impl<'a> deno_graph::source::Loader for SourceLoader<'a> {
     // todo: handle dynamic
     _is_dynamic: bool,
   ) -> deno_graph::source::LoadFuture {
-    if let Some(mapping) = self.specifier_mappings.get(specifier) {
-      self
-        .specifiers
-        .mapped
-        .insert(specifier.clone(), mapping.clone());
-      // provide a dummy file so that this module can be analyzed later
-      return get_dummy_module(specifier);
-    }
-
-    for mapper in self.specifier_mappers.iter() {
-      if let Some(entry) = mapper.map(specifier) {
-        self.specifiers.mapped.insert(specifier.clone(), entry);
+    let specifier = match self.specifier_mappings.get(specifier) {
+      Some(MappedSpecifier::Package(mapping)) => {
+        self
+          .specifiers
+          .mapped_packages
+          .insert(specifier.clone(), mapping.clone());
         // provide a dummy file so that this module can be analyzed later
         return get_dummy_module(specifier);
       }
-    }
-
-    let loader = self.loader.clone();
-    let specifier = specifier.clone();
-    let load_specifier =
-      if let Some(redirect) = self.redirects.get(&specifier).cloned() {
+      Some(MappedSpecifier::Module(redirect)) => {
         self
           .specifiers
-          .redirects
+          .mapped_modules
           .insert(specifier.clone(), redirect.clone());
         redirect
-      } else {
-        specifier.clone()
-      };
+      }
+      None => {
+        for mapper in self.specifier_mappers.iter() {
+          if let Some(entry) = mapper.map(specifier) {
+            self
+              .specifiers
+              .mapped_packages
+              .insert(specifier.clone(), entry);
+            // provide a dummy file so that this module can be analyzed later
+            return get_dummy_module(specifier);
+          }
+        }
+        specifier
+      }
+    };
 
+    let loader = self.loader.clone();
+    let specifier = specifier.to_owned();
     Box::pin(async move {
-      let resp = loader.load(load_specifier.clone()).await;
+      let resp = loader.load(specifier.clone()).await;
       resp.map(|r| {
         r.map(|r| deno_graph::source::LoadResponse {
           specifier: r.specifier,

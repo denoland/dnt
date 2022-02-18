@@ -20,7 +20,7 @@ pub struct GetImportExportsTextChangesParams<'a> {
   pub module_graph: &'a ModuleGraph,
   pub mappings: &'a Mappings,
   pub program: &'a Program<'a>,
-  pub specifier_mappings: &'a HashMap<ModuleSpecifier, String>,
+  pub package_specifier_mappings: &'a HashMap<ModuleSpecifier, String>,
 }
 
 struct Context<'a> {
@@ -30,7 +30,7 @@ struct Context<'a> {
   mappings: &'a Mappings,
   output_file_path: &'a PathBuf,
   text_changes: Vec<TextChange>,
-  specifier_mappings: &'a HashMap<ModuleSpecifier, String>,
+  package_specifier_mappings: &'a HashMap<ModuleSpecifier, String>,
 }
 
 pub fn get_import_exports_text_changes(
@@ -43,7 +43,7 @@ pub fn get_import_exports_text_changes(
     mappings: params.mappings,
     output_file_path: params.mappings.get_file_path(params.specifier),
     text_changes: Vec::new(),
-    specifier_mappings: params.specifier_mappings,
+    package_specifier_mappings: params.package_specifier_mappings,
   };
 
   visit_children(params.program.as_node(), &mut context)?;
@@ -117,13 +117,14 @@ fn visit_module_specifier(str: &Str, context: &mut Context) {
     None => return,
   };
 
-  let new_text =
-    if let Some(bare_specifier) = context.specifier_mappings.get(&specifier) {
-      bare_specifier.to_string()
-    } else {
-      let specifier_file_path = context.mappings.get_file_path(&specifier);
-      get_relative_specifier(context.output_file_path, specifier_file_path)
-    };
+  let new_text = if let Some(bare_specifier) =
+    context.package_specifier_mappings.get(&specifier)
+  {
+    bare_specifier.to_string()
+  } else {
+    let specifier_file_path = context.mappings.get_file_path(&specifier);
+    get_relative_specifier(context.output_file_path, specifier_file_path)
+  };
 
   context.text_changes.push(TextChange {
     span: Span::new(
