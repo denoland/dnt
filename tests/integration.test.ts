@@ -461,8 +461,7 @@ Deno.test("should build shim project when using node-fetch", async () => {
       }, {
         module: "ArrayBuffer.ts",
         globalNames: ["ArrayBuffer"],
-      },
-      ],
+      }],
     },
     package: {
       name: "shim-package",

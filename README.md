@@ -287,7 +287,7 @@ await build({
 });
 ```
 
-Where *my-custom-fetch-implementation.ts* contains:
+Where `my-custom-fetch-implementation.ts` contains:
 
 ```ts
 export function fetch(/* etc... */) {
