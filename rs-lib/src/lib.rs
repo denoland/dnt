@@ -89,7 +89,10 @@ pub struct TransformOutputEnvironment {
 }
 
 #[cfg_attr(feature = "serialization", derive(serde::Deserialize))]
-#[cfg_attr(feature = "serialization", serde(tag = "kind", content = "value", rename_all = "camelCase"))]
+#[cfg_attr(
+  feature = "serialization",
+  serde(tag = "kind", content = "value", rename_all = "camelCase")
+)]
 #[derive(Clone, Debug)]
 pub enum MappedSpecifier {
   Package(PackageMappedSpecifier),
@@ -132,7 +135,10 @@ pub struct GlobalName {
 }
 
 #[cfg_attr(feature = "serialization", derive(serde::Deserialize))]
-#[cfg_attr(feature = "serialization", serde(tag = "kind", content = "value", rename_all = "camelCase"))]
+#[cfg_attr(
+  feature = "serialization",
+  serde(tag = "kind", content = "value", rename_all = "camelCase")
+)]
 #[derive(Clone, Debug)]
 pub enum Shim {
   Package(PackageShim),
