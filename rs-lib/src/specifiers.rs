@@ -13,7 +13,7 @@ use crate::declaration_file_resolution::resolve_declaration_file_mappings;
 use crate::declaration_file_resolution::DeclarationFileResolution;
 use crate::graph::ModuleGraph;
 use crate::loader::LoaderSpecifiers;
-use crate::MappedSpecifier;
+use crate::PackageMappedSpecifier;
 
 #[derive(Debug)]
 pub struct Specifiers {
@@ -34,7 +34,7 @@ impl Specifiers {
 
 #[derive(Debug)]
 pub struct EnvironmentSpecifiers {
-  pub mapped: BTreeMap<ModuleSpecifier, MappedSpecifier>,
+  pub mapped: BTreeMap<ModuleSpecifier, PackageMappedSpecifier>,
 }
 
 pub fn get_specifiers(
@@ -63,7 +63,8 @@ pub fn get_specifiers(
         .map(|s| modules.remove(&module_graph.resolve(s)))
         .flatten()
       {
-        if let Some(mapped_entry) = specifiers.mapped.remove(&module.specifier)
+        if let Some(mapped_entry) =
+          specifiers.mapped_packages.remove(&module.specifier)
         {
           found_mapped_specifiers
             .insert(module.specifier.clone(), mapped_entry);
@@ -89,7 +90,7 @@ pub fn get_specifiers(
   }
 
   // clear out all the mapped modules
-  for specifier in specifiers.mapped.keys() {
+  for specifier in specifiers.mapped_packages.keys() {
     modules.remove(specifier);
   }
 
@@ -120,7 +121,10 @@ pub fn get_specifiers(
     }
   }
 
-  ensure_mapped_specifiers_valid(&found_mapped_specifiers, &specifiers.mapped)?;
+  ensure_package_mapped_specifiers_valid(
+    &found_mapped_specifiers,
+    &specifiers.mapped_packages,
+  )?;
 
   Ok(Specifiers {
     local: local_specifiers
@@ -137,18 +141,18 @@ pub fn get_specifiers(
       mapped: found_mapped_specifiers,
     },
     test: EnvironmentSpecifiers {
-      mapped: specifiers.mapped,
+      mapped: specifiers.mapped_packages,
     },
   })
 }
 
-fn ensure_mapped_specifiers_valid(
-  mapped_specifiers: &BTreeMap<ModuleSpecifier, MappedSpecifier>,
-  test_mapped_specifiers: &BTreeMap<ModuleSpecifier, MappedSpecifier>,
+fn ensure_package_mapped_specifiers_valid(
+  mapped_specifiers: &BTreeMap<ModuleSpecifier, PackageMappedSpecifier>,
+  test_mapped_specifiers: &BTreeMap<ModuleSpecifier, PackageMappedSpecifier>,
 ) -> Result<()> {
   let mut specifier_for_name: HashMap<
     String,
-    (ModuleSpecifier, MappedSpecifier),
+    (ModuleSpecifier, PackageMappedSpecifier),
   > = HashMap::new();
   for (from_specifier, mapped_specifier) in mapped_specifiers
     .iter()

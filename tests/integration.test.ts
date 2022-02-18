@@ -331,8 +331,8 @@ pnpm-lock.yaml
   });
 });
 
-Deno.test("should build with mappings", async () => {
-  await runTest("mappings_project", {
+Deno.test("should build with package mappings", async () => {
+  await runTest("package_mappings_project", {
     entryPoints: ["mod.ts"],
     outDir: "./npm",
     shims: {
@@ -541,8 +541,8 @@ Deno.test("should build polyfill project", async () => {
   });
 });
 
-Deno.test("should build and test redirects files project", async () => {
-  await runTest("redirects_project", {
+Deno.test("should build and test module mappings files project", async () => {
+  await runTest("module_mappings_project", {
     entryPoints: ["mod.ts"],
     outDir: "./npm",
     shims: {
@@ -553,7 +553,7 @@ Deno.test("should build and test redirects files project", async () => {
       name: "node-files-package",
       version: "1.0.0",
     },
-    redirects: {
+    mappings: {
       "./output.deno.ts": "./output.node.ts",
     },
   }, (output) => {
@@ -636,9 +636,9 @@ async function runTest(
   project:
     | "import_map_project"
     | "json_module_project"
-    | "mappings_project"
+    | "package_mappings_project"
     | "polyfill_project"
-    | "redirects_project"
+    | "module_mappings_project"
     | "shim_project"
     | "test_project"
     | "tla_project",

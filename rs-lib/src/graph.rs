@@ -23,7 +23,6 @@ pub struct ModuleGraphOptions<'a> {
   pub test_entry_points: Vec<ModuleSpecifier>,
   pub loader: Option<Box<dyn Loader>>,
   pub specifier_mappings: &'a HashMap<ModuleSpecifier, MappedSpecifier>,
-  pub redirects: &'a HashMap<ModuleSpecifier, ModuleSpecifier>,
   pub import_map: Option<ModuleSpecifier>,
 }
 
@@ -55,7 +54,6 @@ impl ModuleGraph {
       // todo: support configuring this in the future
       get_all_specifier_mappers(),
       options.specifier_mappings,
-      options.redirects,
     );
     let source_parser = ScopeAnalysisParser::new();
     let graph = Self {
@@ -94,15 +92,19 @@ impl ModuleGraph {
 
     let loader_specifiers = loader.into_specifiers();
 
-    let not_found_redirects = options
-      .redirects
-      .keys()
-      .filter(|s| !loader_specifiers.redirects.contains_key(s))
+    let not_found_module_mappings = options
+      .specifier_mappings
+      .iter()
+      .filter_map(|(k, v)| match v {
+        MappedSpecifier::Package(_) => None,
+        MappedSpecifier::Module(_) => Some(k),
+      })
+      .filter(|s| !loader_specifiers.mapped_modules.contains_key(s))
       .collect::<Vec<_>>();
-    if !not_found_redirects.is_empty() {
+    if !not_found_module_mappings.is_empty() {
       bail!(
-        "The following specifiers were indicated to be redirected, but were not found:\n{}",
-        format_specifiers_for_message(not_found_redirects),
+        "The following specifiers were indicated to be mapped to a module, but were not found:\n{}",
+        format_specifiers_for_message(not_found_module_mappings),
       );
     }
 
@@ -113,15 +115,19 @@ impl ModuleGraph {
       &graph.all_modules(),
     )?;
 
-    let not_found_specifiers = options
+    let not_found_package_specifiers = options
       .specifier_mappings
-      .keys()
+      .iter()
+      .filter_map(|(k, v)| match v {
+        MappedSpecifier::Package(_) => Some(k),
+        MappedSpecifier::Module(_) => None,
+      })
       .filter(|s| !specifiers.has_mapped(s))
       .collect::<Vec<_>>();
-    if !not_found_specifiers.is_empty() {
+    if !not_found_package_specifiers.is_empty() {
       bail!(
-        "The following specifiers were indicated to be mapped, but were not found:\n{}",
-        format_specifiers_for_message(not_found_specifiers),
+        "The following specifiers were indicated to be mapped to a package, but were not found:\n{}",
+        format_specifiers_for_message(not_found_package_specifiers),
       );
     }
 

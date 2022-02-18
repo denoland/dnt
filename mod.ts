@@ -13,12 +13,7 @@ import { ShimOptions, shimOptionsToTransformShims } from "./lib/shims.ts";
 import { getNpmIgnoreText } from "./lib/npm_ignore.ts";
 import { PackageJsonObject, ScriptTarget } from "./lib/types.ts";
 import { glob, runNpmCommand } from "./lib/utils.ts";
-import {
-  Redirects,
-  SpecifierMappings,
-  transform,
-  TransformOutput,
-} from "./transform.ts";
+import { SpecifierMappings, transform, TransformOutput } from "./transform.ts";
 import * as compilerTransforms from "./lib/compiler_transforms.ts";
 import { getPackageJson } from "./lib/package_json.ts";
 import { getTestRunnerCode } from "./lib/test_runner/get_test_runner_code.ts";
@@ -69,21 +64,28 @@ export interface BuildOptions {
   rootTestDir?: string;
   /** Glob pattern to use to find tests files. Defaults to `deno test`'s pattern. */
   testPattern?: string;
-  /** Specifiers to map from and to a bare specifier with optional version. */
-  mappings?: SpecifierMappings;
   /**
-   * Specifiers to redirect from and to. This will cause dnt to do a redirect
-   * and can be useful for using different modules in the output.
+   * Specifiers to map from and to.
    *
-   * For example, you may wish to create a node specific file then do:
+   * This can be used to create a node specific file:
    *
    * ```
-   * redirect: {
+   * mappings: {
    *   "./file.deno.ts": "./file.node.ts",
    * }
    * ```
+   *
+   * Or map a specifier to an npm package:
+   *
+   * ```
+   * mappings: {
+   * "https://deno.land/x/code_block_writer@11.0.0/mod.ts": {
+   *   name: "code-block-writer",
+   *   version: "^11.0.0",
+   * }
+   * ```
    */
-  redirects?: Redirects;
+  mappings?: SpecifierMappings;
   /** Package.json output. You may override dependencies and dev dependencies in here. */
   package: PackageJsonObject;
   /** Path or url to import map. */
@@ -396,7 +398,6 @@ export async function build(options: BuildOptions): Promise<void> {
       shims,
       testShims,
       mappings: options.mappings,
-      redirects: options.redirects,
       target: scriptTarget,
       importMap: options.importMap,
     });

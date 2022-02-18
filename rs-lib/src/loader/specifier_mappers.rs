@@ -4,10 +4,10 @@ use deno_ast::ModuleSpecifier;
 use once_cell::sync::Lazy;
 use regex::Regex;
 
-use crate::MappedSpecifier;
+use crate::PackageMappedSpecifier;
 
 pub trait SpecifierMapper {
-  fn map(&self, specifier: &ModuleSpecifier) -> Option<MappedSpecifier>;
+  fn map(&self, specifier: &ModuleSpecifier) -> Option<PackageMappedSpecifier>;
 }
 
 pub fn get_all_specifier_mappers() -> Vec<Box<dyn SpecifierMapper>> {
@@ -52,10 +52,10 @@ static ESMSH_MAPPING_RE: Lazy<Regex> = Lazy::new(|| {
 struct SkypackMapper {}
 
 impl SpecifierMapper for SkypackMapper {
-  fn map(&self, specifier: &ModuleSpecifier) -> Option<MappedSpecifier> {
+  fn map(&self, specifier: &ModuleSpecifier) -> Option<PackageMappedSpecifier> {
     SKYPACK_MAPPING_RE
       .captures(specifier.as_str())
-      .map(|captures| MappedSpecifier {
+      .map(|captures| PackageMappedSpecifier {
         name: captures.get(1).unwrap().as_str().to_string(),
         version: Some(captures.get(2).unwrap().as_str().to_string()),
         sub_path: captures.get(3).map(|m| m.as_str().to_owned()),
@@ -66,10 +66,10 @@ impl SpecifierMapper for SkypackMapper {
 struct EsmShMapper {}
 
 impl SpecifierMapper for EsmShMapper {
-  fn map(&self, specifier: &ModuleSpecifier) -> Option<MappedSpecifier> {
+  fn map(&self, specifier: &ModuleSpecifier) -> Option<PackageMappedSpecifier> {
     ESMSH_MAPPING_RE
       .captures(specifier.as_str())
-      .map(|captures| MappedSpecifier {
+      .map(|captures| PackageMappedSpecifier {
         name: captures.get(1).unwrap().as_str().to_string(),
         version: Some(captures.get(2).unwrap().as_str().to_string()),
         sub_path: captures.get(3).map(|m| m.as_str().to_owned()),
@@ -96,9 +96,9 @@ impl NodeSpecifierMapper {
 }
 
 impl SpecifierMapper for NodeSpecifierMapper {
-  fn map(&self, specifier: &ModuleSpecifier) -> Option<MappedSpecifier> {
+  fn map(&self, specifier: &ModuleSpecifier) -> Option<PackageMappedSpecifier> {
     if self.url_re.is_match(specifier.as_str()) {
-      Some(MappedSpecifier {
+      Some(PackageMappedSpecifier {
         name: self.to_specifier.clone(),
         version: None,
         sub_path: None,

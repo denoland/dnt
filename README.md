@@ -268,7 +268,7 @@ await build({
 });
 ```
 
-#### Local or Remote Shim Modules
+#### Local and Remote Shims
 
 Custom shims can also refer to local or remote modules:
 
@@ -420,12 +420,12 @@ One option to handle this, is to use the [`which_runtime`](https://deno.land/x/w
 
 #### Node and Deno Specific Modules
 
-Another option is to create node and deno specific modules. This can be done by specifying a redirect:
+Another option is to create node and deno specific modules. This can be done by specifying a mapping to a module:
 
 ```ts
 await build({
   // ...etc...
-  redirects: {
+  mappings: {
     "./file.deno.ts": "./file.node.ts",
   },
 });
@@ -433,7 +433,7 @@ await build({
 
 Then within the file, use `// dnt-shim-ignore` directives to disable shimming if you desire.
 
-A redirect file should be written similar to how you write Deno code (ex. use extensions on imports), except you can also import built-in node modules such as `import fs from "fs";` (just remember to include an `@types/node` dev dependency, if necessary).
+A mapped module should be written similar to how you write Deno code (ex. use extensions on imports), except you can also import built-in node modules such as `import fs from "fs";` (just remember to include an `@types/node` dev dependency, if necessary).
 
 ### Pre & Post Build Steps
 
@@ -568,7 +568,7 @@ await build({
 
 dnt should be able to target old versions of Node by specifying a `{ compilerOption: { target: ... }}` value in the build options (see [Node Target Mapping](https://github.com/microsoft/TypeScript/wiki/Node-Target-Mapping) for what target maps to what Node version). A problem though is that certain shims might not work in old versions of Node.
 
-If wanting to target a version of Node v14 and below, its recommend to use the `Deno.test`-only shim (described above) and then making use of the "redirects" feature to write Node-only files where you can handle differences. Alternatively, see if changes to the shim libraries might make it run on old versions of Node. Unfortunately, certain features are impossible or infeasible to get working.
+If wanting to target a version of Node v14 and below, its recommend to use the `Deno.test`-only shim (described above) and then making use of the "mappings" feature to write Node-only files where you can handle differences. Alternatively, see if changes to the shim libraries might make it run on old versions of Node. Unfortunately, certain features are impossible or infeasible to get working.
 
 See [this thread](https://github.com/denoland/node_deno_shims/issues/15) in node_deno_shims for more details.
 

@@ -7,6 +7,7 @@ use deno_node_transform::transform;
 use deno_node_transform::GlobalName;
 use deno_node_transform::MappedSpecifier;
 use deno_node_transform::ModuleSpecifier;
+use deno_node_transform::PackageMappedSpecifier;
 use deno_node_transform::PackageShim;
 use deno_node_transform::ScriptTarget;
 use deno_node_transform::Shim;
@@ -21,7 +22,6 @@ pub struct TestBuilder {
   additional_entry_points: Vec<String>,
   test_entry_points: Vec<String>,
   specifier_mappings: HashMap<ModuleSpecifier, MappedSpecifier>,
-  redirects: HashMap<ModuleSpecifier, ModuleSpecifier>,
   shims: Vec<Shim>,
   test_shims: Vec<Shim>,
   target: ScriptTarget,
@@ -37,7 +37,6 @@ impl TestBuilder {
       additional_entry_points: Vec::new(),
       test_entry_points: Vec::new(),
       specifier_mappings: Default::default(),
-      redirects: Default::default(),
       shims: Default::default(),
       test_shims: Default::default(),
       target: ScriptTarget::ES5,
@@ -77,7 +76,7 @@ impl TestBuilder {
 
   pub fn add_default_shims(&mut self) -> &mut Self {
     let deno_shim = Shim::Package(PackageShim {
-      package: MappedSpecifier {
+      package: PackageMappedSpecifier {
         name: "@deno/shim-deno".to_string(),
         version: Some("^0.1.0".to_string()),
         sub_path: None,
@@ -92,7 +91,7 @@ impl TestBuilder {
     self.add_shim(deno_shim.clone());
     self.add_test_shim(deno_shim);
     let timers_shim = Shim::Package(PackageShim {
-      package: MappedSpecifier {
+      package: PackageMappedSpecifier {
         name: "@deno/shim-timers".to_string(),
         version: Some("^0.1.0".to_string()),
         sub_path: None,
@@ -126,7 +125,7 @@ impl TestBuilder {
     self
   }
 
-  pub fn add_specifier_mapping(
+  pub fn add_package_specifier_mapping(
     &mut self,
     specifier: impl AsRef<str>,
     bare_specifier: impl AsRef<str>,
@@ -135,23 +134,23 @@ impl TestBuilder {
   ) -> &mut Self {
     self.specifier_mappings.insert(
       ModuleSpecifier::parse(specifier.as_ref()).unwrap(),
-      MappedSpecifier {
+      MappedSpecifier::Package(PackageMappedSpecifier {
         name: bare_specifier.as_ref().to_string(),
         version: version.map(|v| v.to_string()),
         sub_path: path.map(|v| v.to_string()),
-      },
+      }),
     );
     self
   }
 
-  pub fn add_redirect(
+  pub fn add_module_specifier_mapping(
     &mut self,
     from: impl AsRef<str>,
     to: impl AsRef<str>,
   ) -> &mut Self {
-    self.redirects.insert(
+    self.specifier_mappings.insert(
       ModuleSpecifier::parse(from.as_ref()).unwrap(),
-      ModuleSpecifier::parse(to.as_ref()).unwrap(),
+      MappedSpecifier::Module(ModuleSpecifier::parse(to.as_ref()).unwrap()),
     );
     self
   }
@@ -181,7 +180,6 @@ impl TestBuilder {
       test_shims: self.test_shims.clone(),
       loader: Some(Box::new(self.loader.clone())),
       specifier_mappings: self.specifier_mappings.clone(),
-      redirects: self.redirects.clone(),
       target: self.target,
       import_map: self.import_map.clone(),
     })
