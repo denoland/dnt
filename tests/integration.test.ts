@@ -396,7 +396,13 @@ Deno.test("should build shim project", async () => {
   await runTest("shim_project", {
     entryPoints: ["mod.ts"],
     outDir: "./npm",
-    shims: getAllShimOptions(true),
+    shims: {
+      ...getAllShimOptions(true),
+      custom: [{
+        module: "./ArrayBuffer.ts",
+        globalNames: ["ArrayBuffer"],
+      }],
+    },
     package: {
       name: "shim-package",
       version: "1.0.0",
@@ -452,7 +458,11 @@ Deno.test("should build shim project when using node-fetch", async () => {
           name: "RequestInit",
           typeOnly: true,
         }],
-      }],
+      }, {
+        module: "ArrayBuffer.ts",
+        globalNames: ["ArrayBuffer"],
+      },
+      ],
     },
     package: {
       name: "shim-package",
@@ -484,6 +494,8 @@ import { File, FormData, Headers, Request, Response } from "undici";
 export { File, FormData, Headers, Request, Response } from "undici";
 import { default as fetch } from "node-fetch";
 export { default as fetch, type RequestInit } from "node-fetch";
+import { ArrayBuffer } from "./ArrayBuffer.js";
+export { ArrayBuffer } from "./ArrayBuffer.js";
 
 const dntGlobals = {
   Deno,
@@ -501,6 +513,7 @@ const dntGlobals = {
   Request,
   Response,
   fetch,
+  ArrayBuffer,
 };
 export const dntGlobalThis = createMergeProxy(globalThis, dntGlobals);
 `;

@@ -165,9 +165,7 @@ function getCryptoShim(): Shim {
 
 function getBlobShim(): Shim {
   return {
-    package: {
-      name: "buffer",
-    },
+    module: "buffer",
     globalNames: ["Blob"],
   };
 }

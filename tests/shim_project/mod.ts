@@ -47,3 +47,7 @@ export async function getCryptoKeyPair(
 export function throwDomException() {
   throw new DOMException("My message", "Something");
 }
+
+export function localShimValue() {
+  return new ArrayBuffer(5);
+}

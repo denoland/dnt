@@ -1,6 +1,6 @@
 // Copyright 2018-2022 the Deno authors. All rights reserved. MIT license.
-
-import { addAsync, getCryptoKeyPair, throwDomException } from "./mod.ts";
+import { isDeno } from "https://deno.land/x/which_runtime@0.2.0/mod.ts";
+import { addAsync, getCryptoKeyPair, throwDomException, localShimValue } from "./mod.ts";
 
 Deno.test("should add in test project", async () => {
   const result = await addAsync(1, 2);
@@ -28,6 +28,12 @@ Deno.test("should shim DOMException", () => {
   }
   if (!(err instanceof DOMException)) {
     throw new Error("Expected to throw DOMException.");
+  }
+});
+
+Deno.test("should shim localValue", { ignore: isDeno }, () => {
+  if (localShimValue().byteLength !== 100) {
+    throw new Error("Did not equal expected.");
   }
 });
 
