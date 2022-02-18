@@ -5,6 +5,8 @@ use std::path::PathBuf;
 use deno_node_transform::Dependency;
 use deno_node_transform::GlobalName;
 use deno_node_transform::MappedSpecifier;
+use deno_node_transform::ModuleShim;
+use deno_node_transform::PackageShim;
 use deno_node_transform::ScriptTarget;
 use deno_node_transform::Shim;
 use pretty_assertions::assert_eq;
@@ -83,10 +85,16 @@ async fn transform_shim_custom_shims() {
     .with_loader(|loader| {
       loader.add_local_file(
         "/mod.ts",
-        "fetch(); console.log(Blob); fetchTest(); DOMException;",
+        "fetch(); console.log(Blob); fetchTest(); DOMException; BareModule; LocalShim;",
+      ).add_local_file(
+        "/local_shim.ts",
+        "export class LocalShim {} fetch()",
+      ).add_remote_file(
+        "https://localhost/remote_shim.ts",
+        "export class RemoteShim {} fetch()",
       );
     })
-    .add_shim(Shim {
+    .add_shim(Shim::Package(PackageShim {
       package: MappedSpecifier {
         name: "node-fetch".to_string(),
         version: Some("~3.1.0".to_string()),
@@ -98,8 +106,8 @@ async fn transform_shim_custom_shims() {
         export_name: Some("default".to_string()),
         type_only: false,
       }],
-    })
-    .add_shim(Shim {
+    }))
+    .add_shim(Shim::Package(PackageShim {
       package: MappedSpecifier {
         name: "node-fetch".to_string(),
         version: Some("~3.1.0".to_string()),
@@ -111,8 +119,8 @@ async fn transform_shim_custom_shims() {
         export_name: Some("fetchTestName".to_string()),
         type_only: false,
       }],
-    })
-    .add_shim(Shim {
+    }))
+    .add_shim(Shim::Package(PackageShim {
       package: MappedSpecifier {
         name: "domexception".to_string(),
         version: Some("^4.0.0".to_string()),
@@ -127,8 +135,8 @@ async fn transform_shim_custom_shims() {
         export_name: Some("default".to_string()),
         type_only: false,
       }],
-    })
-    .add_shim(Shim {
+    }))
+    .add_shim(Shim::Package(PackageShim {
       package: MappedSpecifier {
         name: "buffer".to_string(),
         version: None,
@@ -147,8 +155,8 @@ async fn transform_shim_custom_shims() {
           type_only: true,
         },
       ],
-    })
-    .add_shim(Shim {
+    }))
+    .add_shim(Shim::Package(PackageShim {
       package: MappedSpecifier {
         name: "type-only".to_string(),
         version: None,
@@ -160,7 +168,31 @@ async fn transform_shim_custom_shims() {
         export_name: None,
         type_only: true,
       }],
-    })
+    }))
+    .add_shim(Shim::Module(ModuleShim {
+      module: "bare-module".to_string(),
+      global_names: vec![GlobalName {
+        name: "BareModule".to_string(),
+        export_name: None,
+        type_only: false,
+      }],
+    }))
+    .add_shim(Shim::Module(ModuleShim {
+      module: "file:///local_shim.ts".to_string(),
+      global_names: vec![GlobalName {
+        name: "LocalShim".to_string(),
+        export_name: None,
+        type_only: false,
+      }],
+    }))
+    .add_shim(Shim::Module(ModuleShim {
+      module: "https:///localhost/remote_shim.ts".to_string(),
+      global_names: vec![GlobalName {
+        name: "RemoteShim".to_string(),
+        export_name: None,
+        type_only: false,
+      }],
+    }))
     .transform()
     .await
     .unwrap();
@@ -181,12 +213,21 @@ async fn transform_shim_custom_shims() {
             "import { Blob } from \"buffer\";\n",
             "export { Blob, type Other } from \"buffer\";\n",
             "export { type TypeOnly } from \"type-only\";\n",
+            "import { BareModule } from \"bare-module\";\n",
+            "export { BareModule } from \"bare-module\";\n",
+            "import { LocalShim } from \"./local_shim.js\";\n",
+            "export { LocalShim } from \"./local_shim.js\";\n",
+            "import { RemoteShim } from \"./deps/localhost/remote_shim.js\";\n",
+            "export { RemoteShim } from \"./deps/localhost/remote_shim.js\";\n",
             "\n",
             "const dntGlobals = {\n",
             "  fetch,\n",
             "  fetchTest,\n",
             "  DOMException,\n",
             "  Blob,\n",
+            "  BareModule,\n",
+            "  LocalShim,\n",
+            "  RemoteShim,\n",
             "};\n",
             "export const dntGlobalThis = createMergeProxy(globalThis, dntGlobals);\n",
           ).to_string(),
@@ -196,9 +237,23 @@ async fn transform_shim_custom_shims() {
         "mod.ts",
         concat!(
           "import * as dntShim from \"./_dnt.shims.js\";\n",
-          "dntShim.fetch(); console.log(dntShim.Blob); dntShim.fetchTest(); dntShim.DOMException;"
+          "dntShim.fetch(); console.log(dntShim.Blob); dntShim.fetchTest(); dntShim.DOMException; dntShim.BareModule; dntShim.LocalShim;"
         )
         .to_string()
+      ),
+      (
+        "local_shim.ts",
+        concat!(
+          "import * as dntShim from \"./_dnt.shims.js\";\n",
+          "export class LocalShim {} dntShim.fetch()"
+        ).to_string(),
+      ),
+      (
+        "deps/localhost/remote_shim.ts",
+        concat!(
+          "import * as dntShim from \"../../_dnt.shims.js\";\n",
+          "export class RemoteShim {} dntShim.fetch()"
+        ).to_string(),
       ),
     ]
   );

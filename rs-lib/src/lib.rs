@@ -124,15 +124,55 @@ pub struct GlobalName {
 }
 
 #[cfg_attr(feature = "serialization", derive(serde::Deserialize))]
+#[cfg_attr(feature = "serialization", serde(tag = "kind", content = "value"))]
+#[derive(Clone, Debug)]
+pub enum Shim {
+  Package(PackageShim),
+  Module(ModuleShim),
+}
+
+impl Shim {
+  pub fn global_names(&self) -> &Vec<GlobalName> {
+    match self {
+      Shim::Package(shim) => &shim.global_names,
+      Shim::Module(shim) => &shim.global_names,
+    }
+  }
+
+  pub(crate) fn maybe_specifier(&self) -> Option<ModuleSpecifier> {
+    match self {
+      Shim::Package(_) => None,
+      Shim::Module(module) => module.maybe_specifier(),
+    }
+  }
+}
+
+#[cfg_attr(feature = "serialization", derive(serde::Deserialize))]
 #[cfg_attr(feature = "serialization", serde(rename_all = "camelCase"))]
 #[derive(Clone, Debug)]
-pub struct Shim {
+pub struct PackageShim {
   /// Information about the npm package to use for this shim.
   pub package: MappedSpecifier,
   /// Npm package to include in the dev depedencies that has the type declarations.
   pub types_package: Option<Dependency>,
   /// Names this shim provides that will be injected in global contexts.
   pub global_names: Vec<GlobalName>,
+}
+
+#[cfg_attr(feature = "serialization", derive(serde::Deserialize))]
+#[cfg_attr(feature = "serialization", serde(rename_all = "camelCase"))]
+#[derive(Clone, Debug)]
+pub struct ModuleShim {
+  /// Information about the module or bare specifier to use for this shim.
+  pub module: String,
+  /// Names this shim provides that will be injected in global contexts.
+  pub global_names: Vec<GlobalName>,
+}
+
+impl ModuleShim {
+  pub fn maybe_specifier(&self) -> Option<ModuleSpecifier> {
+    ModuleSpecifier::parse(&self.module).ok()
+  }
 }
 
 // make sure to update `ScriptTarget` in the TS code when changing the names on this
@@ -186,8 +226,23 @@ pub async fn transform(options: TransformOptions) -> Result<TransformOutput> {
 
   let (module_graph, specifiers) =
     crate::graph::ModuleGraph::build_with_specifiers(ModuleGraphOptions {
-      entry_points: options.entry_points.clone(),
-      test_entry_points: options.test_entry_points.clone(),
+      entry_points: options
+        .entry_points
+        .iter()
+        .cloned()
+        .chain(options.shims.iter().filter_map(|s| s.maybe_specifier()))
+        .collect(),
+      test_entry_points: options
+        .test_entry_points
+        .iter()
+        .cloned()
+        .chain(
+          options
+            .test_shims
+            .iter()
+            .filter_map(|s| s.maybe_specifier()),
+        )
+        .collect(),
       specifier_mappings: &options.specifier_mappings,
       redirects: &options.redirects,
       loader: options.loader,
@@ -204,7 +259,6 @@ pub async fn transform(options: TransformOptions) -> Result<TransformOutput> {
     .map(|m| (m.0.clone(), m.1.module_specifier_text()))
     .collect();
 
-  // todo: parallelize
   let mut warnings = get_declaration_warnings(&specifiers);
   let mut main_env_context = EnvironmentContext {
     environment: TransformOutputEnvironment {
@@ -222,7 +276,7 @@ pub async fn transform(options: TransformOptions) -> Result<TransformOutput> {
     shim_global_names: options
       .shims
       .iter()
-      .map(|s| s.global_names.iter().map(|s| s.name.as_str()))
+      .map(|s| s.global_names().iter().map(|s| s.name.as_str()))
       .flatten()
       .collect(),
     shims: &options.shims,
@@ -244,7 +298,7 @@ pub async fn transform(options: TransformOptions) -> Result<TransformOutput> {
     shim_global_names: options
       .test_shims
       .iter()
-      .map(|s| s.global_names.iter().map(|s| s.name.as_str()))
+      .map(|s| s.global_names().iter().map(|s| s.name.as_str()))
       .flatten()
       .collect(),
     shims: &options.test_shims,
@@ -373,10 +427,12 @@ pub async fn transform(options: TransformOptions) -> Result<TransformOutput> {
   check_add_shim_file_to_environment(
     &mut main_env_context,
     mappings.get_file_path(&SYNTHETIC_SPECIFIERS.shims),
+    &mappings,
   );
   check_add_shim_file_to_environment(
     &mut test_env_context,
     mappings.get_file_path(&SYNTHETIC_TEST_SPECIFIERS.shims),
+    &mappings,
   );
 
   add_shim_types_packages_to_test_environment(
@@ -407,8 +463,10 @@ fn add_shim_types_packages_to_test_environment<'a>(
   all_shims: impl Iterator<Item = &'a Shim>,
 ) {
   for shim in all_shims {
-    if let Some(types_package) = &shim.types_package {
-      test_output_env.dependencies.push(types_package.clone())
+    if let Shim::Package(shim) = shim {
+      if let Some(types_package) = &shim.types_package {
+        test_output_env.dependencies.push(types_package.clone())
+      }
     }
   }
 }
@@ -445,32 +503,40 @@ fn check_add_polyfill_file_to_environment(
 fn check_add_shim_file_to_environment(
   env_context: &mut EnvironmentContext,
   shim_file_path: &Path,
+  mappings: &Mappings,
 ) {
   if env_context.used_shim {
-    let shim_file_text = build_shim_file(env_context.shims);
+    let shim_file_text =
+      build_shim_file(env_context.shims, shim_file_path, mappings);
     env_context.environment.files.push(OutputFile {
       file_path: shim_file_path.to_path_buf(),
       file_text: shim_file_text,
     });
 
     for shim in env_context.shims.iter() {
-      if !env_context
-        .environment
-        .dependencies
-        .iter()
-        .any(|d| d.name == shim.package.name)
-      {
-        if let Some(version) = &shim.package.version {
-          env_context.environment.dependencies.push(Dependency {
-            name: shim.package.name.to_string(),
-            version: version.clone(),
-          });
+      if let Shim::Package(shim) = shim {
+        if !env_context
+          .environment
+          .dependencies
+          .iter()
+          .any(|d| d.name == shim.package.name)
+        {
+          if let Some(version) = &shim.package.version {
+            env_context.environment.dependencies.push(Dependency {
+              name: shim.package.name.to_string(),
+              version: version.clone(),
+            });
+          }
         }
       }
     }
   }
 
-  fn build_shim_file(shims: &[Shim]) -> String {
+  fn build_shim_file(
+    shims: &[Shim],
+    shim_file_path: &Path,
+    mappings: &Mappings,
+  ) -> String {
     fn get_specifer_text(n: &GlobalName) -> String {
       let name_text = if let Some(export_name) = &n.export_name {
         format!("{} as {}", export_name, n.name)
@@ -484,13 +550,32 @@ fn check_add_shim_file_to_environment(
       }
     }
 
+    fn get_module_specifier_text(
+      shim: &Shim,
+      shim_file_path: &Path,
+      mappings: &Mappings,
+    ) -> String {
+      match shim {
+        Shim::Package(shim) => shim.package.module_specifier_text(),
+        Shim::Module(shim) => match shim.maybe_specifier() {
+          Some(specifier) => {
+            let to = mappings.get_file_path(&specifier);
+            get_relative_specifier(shim_file_path, to)
+          }
+          None => shim.module.clone(),
+        },
+      }
+    }
+
     let mut text = String::new();
     for shim in shims.iter() {
       let declaration_names = shim
-        .global_names
+        .global_names()
         .iter()
         .filter(|n| !n.type_only)
         .collect::<Vec<_>>();
+      let module_specifier_text =
+        get_module_specifier_text(shim, shim_file_path, mappings);
       if !declaration_names.is_empty() {
         text.push_str(&format!(
           "import {{ {} }} from \"{}\";\n",
@@ -499,19 +584,19 @@ fn check_add_shim_file_to_environment(
             .map(get_specifer_text)
             .collect::<Vec<_>>()
             .join(", "),
-          shim.package.module_specifier_text(),
+          &module_specifier_text,
         ));
       }
 
       text.push_str(&format!(
         "export {{ {} }} from \"{}\";\n",
         shim
-          .global_names
+          .global_names()
           .iter()
           .map(get_specifer_text)
           .collect::<Vec<_>>()
           .join(", "),
-        shim.package.module_specifier_text(),
+        &module_specifier_text,
       ));
     }
 
@@ -520,7 +605,7 @@ fn check_add_shim_file_to_environment(
     }
 
     text.push_str("const dntGlobals = {\n");
-    for global_name in shims.iter().map(|s| s.global_names.iter()).flatten() {
+    for global_name in shims.iter().map(|s| s.global_names().iter()).flatten() {
       if !global_name.type_only {
         text.push_str(&format!("  {},\n", global_name.name));
       }

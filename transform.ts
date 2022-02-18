@@ -46,11 +46,20 @@ export interface GlobalName {
   typeOnly?: boolean;
 }
 
-export interface Shim {
-  /** Information about the npm package or bare specifier to import. */
+export type Shim = PackageShim | ModuleShim;
+
+export interface PackageShim {
+  /** Information about the npm package specifier to import. */
   package: MappedSpecifier;
   /** Npm package to include in the dev depedencies that has the type declarations. */
   typesPackage?: Dependency;
+  /** Named exports from the shim to use as globals. */
+  globalNames: (GlobalName | string)[];
+}
+
+export interface ModuleShim {
+  /** The module or bare specifier. */
+  module: string;
   /** Named exports from the shim to use as globals. */
   globalNames: (GlobalName | string)[];
 }
@@ -123,23 +132,31 @@ export function transform(options: TransformOptions): Promise<TransformOutput> {
   return wasmFuncs.transform(newOptions);
 }
 
-function valueToUrl(value: string) {
-  const lowerCaseValue = value.toLowerCase();
-  if (
-    lowerCaseValue.startsWith("http://") ||
-    lowerCaseValue.startsWith("https://")
-  ) {
-    return value;
-  } else {
-    return path.toFileUrl(path.resolve(value)).toString();
-  }
-}
+type SerializableShim = { kind: "Package"; value: PackageShim } | {
+  kind: "Module";
+  value: ModuleShim;
+};
 
-function mapShim(value: Shim): Shim {
-  return {
+function mapShim(value: Shim): SerializableShim {
+  const newValue: Shim = {
     ...value,
     globalNames: value.globalNames.map(mapToGlobalName),
   };
+  if (isPackageShim(newValue)) {
+    return { kind: "Package", value: newValue };
+  } else {
+    return {
+      kind: "Module",
+      value: {
+        ...newValue,
+        module: resolveBareSpecifierOrPath(newValue.module),
+      },
+    };
+  }
+}
+
+function isPackageShim(value: Shim): value is PackageShim {
+  return (value as PackageShim).package != null;
 }
 
 function mapToGlobalName(value: string | GlobalName): GlobalName {
@@ -151,5 +168,31 @@ function mapToGlobalName(value: string | GlobalName): GlobalName {
   } else {
     value.typeOnly ??= false;
     return value;
+  }
+}
+
+function resolveBareSpecifierOrPath(value: string) {
+  value = value.trim();
+  if (
+    /^[a-z]+:\/\//i.test(value) || // has scheme
+    value.startsWith("./") ||
+    value.startsWith("../") ||
+    /\.[a-z]+$/i.test(value) // has extension
+  ) {
+    return valueToUrl(value);
+  } else {
+    return value;
+  }
+}
+
+function valueToUrl(value: string) {
+  const lowerCaseValue = value.toLowerCase();
+  if (
+    lowerCaseValue.startsWith("http://") ||
+    lowerCaseValue.startsWith("https://")
+  ) {
+    return value;
+  } else {
+    return path.toFileUrl(path.resolve(value)).toString();
   }
 }

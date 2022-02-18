@@ -222,7 +222,6 @@ await build({
   scriptModule: false, // node-fetch 3+ only supports ESM
   // ...etc...
   shims: {
-    // ...etc...
     custom: [{
       package: {
         name: "node-fetch",
@@ -239,9 +238,7 @@ await build({
       }],
     }, {
       // this is what `blob: true` does internally
-      package: {
-        name: "buffer", // uses node's "buffer" module
-      },
+      module: "buffer", // uses node's "buffer" module
       globalNames: ["Blob"],
     }, {
       // this is what `domException: true` does internally
@@ -270,6 +267,35 @@ await build({
   },
 });
 ```
+
+#### Local or Remote Shim Modules
+
+Custom shims can also refer to local or remote modules:
+
+```ts
+await build({
+  // ...etc...
+  shims: {
+    custom: [{
+      module: "./my-custom-fetch-implementation.ts",
+      globalNames: ["fetch"],
+    }, {
+      module: "https://deno.land/x/some_remote_shim_module/mod.ts",
+      globalNames: ["setTimeout"],
+    }],
+  },
+});
+```
+
+Where `my-custom-fetch-implementation.ts` contains:
+
+```ts
+export function fetch(/* etc... */) {
+  // etc...
+}
+```
+
+This is useful in situations where you want to implement your own shim.
 
 ### Specifier to Npm Package Mappings
 

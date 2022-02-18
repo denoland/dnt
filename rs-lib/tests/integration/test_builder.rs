@@ -7,6 +7,7 @@ use deno_node_transform::transform;
 use deno_node_transform::GlobalName;
 use deno_node_transform::MappedSpecifier;
 use deno_node_transform::ModuleSpecifier;
+use deno_node_transform::PackageShim;
 use deno_node_transform::ScriptTarget;
 use deno_node_transform::Shim;
 use deno_node_transform::TransformOptions;
@@ -75,7 +76,7 @@ impl TestBuilder {
   }
 
   pub fn add_default_shims(&mut self) -> &mut Self {
-    let deno_shim = Shim {
+    let deno_shim = Shim::Package(PackageShim {
       package: MappedSpecifier {
         name: "@deno/shim-deno".to_string(),
         version: Some("^0.1.0".to_string()),
@@ -87,10 +88,10 @@ impl TestBuilder {
         export_name: None,
         type_only: false,
       }],
-    };
+    });
     self.add_shim(deno_shim.clone());
     self.add_test_shim(deno_shim);
-    let timers_shim = Shim {
+    let timers_shim = Shim::Package(PackageShim {
       package: MappedSpecifier {
         name: "@deno/shim-timers".to_string(),
         version: Some("^0.1.0".to_string()),
@@ -109,7 +110,7 @@ impl TestBuilder {
           type_only: false,
         },
       ],
-    };
+    });
     self.add_shim(timers_shim.clone());
     self.add_test_shim(timers_shim);
     self

@@ -2,6 +2,7 @@
 
 import { assertEquals } from "./test.deps.ts";
 import { shimOptionsToTransformShims } from "./shims.ts";
+import { PackageShim } from "../transform.ts";
 
 Deno.test("should get when all true", () => {
   const result = shimOptionsToTransformShims({
@@ -80,7 +81,13 @@ Deno.test("should get for inner deno namespace", () => {
   });
 
   assertEquals(result.shims.length, 1);
-  assertEquals(result.shims[0].package.name, "@deno/shim-deno-test");
+  assertEquals(
+    (result.shims[0] as PackageShim).package.name,
+    "@deno/shim-deno-test",
+  );
   assertEquals(result.testShims.length, 1);
-  assertEquals(result.testShims[0].package.name, "@deno/shim-deno-test");
+  assertEquals(
+    (result.testShims[0] as PackageShim).package.name,
+    "@deno/shim-deno-test",
+  );
 });
