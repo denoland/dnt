@@ -199,15 +199,15 @@ pub fn text_change_for_prepend_statement_to_text(
 }
 
 fn top_file_insert_pos(program: &Program) -> BytePos {
-  // get the insert position when inserting at the top of a file
-  program
-    .leading_comments()
-    // be very specific here because comments might contain information that
-    // applies to the next node (such as a `// @ts-ignore`)
-    .next()
-    .filter(|c| c.text_fast(program).to_lowercase().contains("copyright"))
-    .map(|c| c.hi())
-    .unwrap_or_else(|| BytePos(0))
+  let mut pos = BytePos(0);
+  for comment in program.leading_comments() {
+    // insert before any @ts-ignore or @ts-expect
+    if comment.text_fast(program).to_lowercase().contains("@ts-") {
+      break;
+    }
+    pos = comment.hi();
+  }
+  pos
 }
 
 #[cfg(test)]
