@@ -2,8 +2,6 @@
 
 use std::collections::HashSet;
 
-use deno_ast::swc::common::BytePos;
-use deno_ast::swc::common::Span;
 use deno_ast::swc::common::Spanned;
 use deno_ast::swc::common::SyntaxContext;
 use deno_ast::swc::utils::ident::IdentLike;
@@ -11,6 +9,7 @@ use deno_ast::view::*;
 
 use crate::analyze::is_in_type;
 use crate::text_changes::TextChange;
+use crate::utils::text_change_for_prepend_statement_to_text;
 
 pub struct GetGlobalTextChangesParams<'a> {
   pub program: &'a Program<'a>,
@@ -58,13 +57,15 @@ pub fn get_global_text_changes(
   visit_children(program.into(), &global_shim_name, &mut context);
 
   if context.import_shim {
-    context.text_changes.push(TextChange {
-      span: Span::new(BytePos(0), BytePos(0), Default::default()),
-      new_text: format!(
-        "import * as {} from \"{}\";\n",
-        global_shim_name, params.shim_specifier,
-      ),
-    });
+    context
+      .text_changes
+      .push(text_change_for_prepend_statement_to_text(
+        program,
+        &format!(
+          "import * as {} from \"{}\";",
+          global_shim_name, params.shim_specifier,
+        ),
+      ));
   }
 
   GetGlobalTextChangesResult {

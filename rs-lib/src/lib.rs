@@ -25,6 +25,7 @@ use specifiers::Specifiers;
 use text_changes::apply_text_changes;
 use text_changes::TextChange;
 use utils::get_relative_specifier;
+use utils::prepend_statement_to_text;
 use visitors::fill_polyfills;
 use visitors::get_deno_comment_directive_text_changes;
 use visitors::get_global_text_changes;
@@ -501,10 +502,13 @@ fn check_add_polyfill_file_to_environment(
         .iter_mut()
         .find(|f| &f.file_path == entry_point)
       {
-        file.file_text = format!(
-          "import '{}';\n{}",
-          get_relative_specifier(&file.file_path, &polyfill_file_path),
-          file.file_text
+        prepend_statement_to_text(
+          &file.file_path,
+          &mut file.file_text,
+          &format!(
+            "import \"{}\";",
+            get_relative_specifier(&file.file_path, &polyfill_file_path)
+          ),
         );
       }
     }
