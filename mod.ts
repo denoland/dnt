@@ -1,6 +1,7 @@
 // Copyright 2018-2022 the Deno authors. All rights reserved. MIT license.
 
 import {
+  getCompilerLibOption,
   getCompilerScriptTarget,
   getCompilerSourceMapOptions,
   getTopLevelAwaitLocation,
@@ -116,6 +117,8 @@ export interface BuildOptions {
      * sources as then it will duplicate the the source data being published.
      */
     inlineSources?: boolean;
+    /** Default set of library options to use. See https://www.typescriptlang.org/tsconfig/#lib */
+    lib?: string[];
   };
 }
 
@@ -211,6 +214,7 @@ export async function build(options: BuildOptions): Promise<void> {
       module: ts.ModuleKind.ESNext,
       moduleResolution: ts.ModuleResolutionKind.NodeJs,
       target: compilerScriptTarget,
+      lib: options.compilerOptions?.lib ?? getCompilerLibOption(scriptTarget),
       allowSyntheticDefaultImports: true,
       importHelpers: options.compilerOptions?.importHelpers,
       ...getCompilerSourceMapOptions(options.compilerOptions?.sourceMap),

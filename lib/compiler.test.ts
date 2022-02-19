@@ -1,4 +1,5 @@
 import {
+  getCompilerLibOption,
   getCompilerScriptTarget,
   getCompilerSourceMapOptions,
   getTopLevelAwaitLocation,
@@ -27,6 +28,30 @@ Deno.test("script target should have expected outputs", () => {
   for (const key in cases) {
     const scriptTarget = key as ScriptTarget;
     assertEquals(getCompilerScriptTarget(scriptTarget), cases[scriptTarget]);
+  }
+
+  assertThrows(() => getCompilerScriptTarget("invalid" as any));
+});
+
+Deno.test("compiler lib option should have expected outputs", () => {
+  const cases: {
+    [k in ScriptTarget]: string[];
+  } = {
+    "ES3": [],
+    "ES5": ["lib.es5.d.ts"],
+    "ES2015": ["lib.es2015.d.ts"],
+    "ES2016": ["lib.es2016.d.ts"],
+    "ES2017": ["lib.es2017.d.ts"],
+    "ES2018": ["lib.es2018.d.ts"],
+    "ES2019": ["lib.es2019.d.ts"],
+    "ES2020": ["lib.es2020.d.ts"],
+    "ES2021": ["lib.es2021.d.ts"],
+    "Latest": ["lib.esnext.d.ts"],
+  };
+
+  for (const key in cases) {
+    const scriptTarget = key as ScriptTarget;
+    assertEquals(getCompilerLibOption(scriptTarget), cases[scriptTarget]);
   }
 
   assertThrows(() => getCompilerScriptTarget("invalid" as any));
