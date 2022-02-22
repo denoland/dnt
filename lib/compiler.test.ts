@@ -51,6 +51,10 @@ Deno.test("get has top level await", () => {
     line: 0,
     character: 17,
   });
+  runTest("const t = { prop: await test() };", {
+    line: 0,
+    character: 18,
+  });
 
   function runTest(code: string, expected: ts.LineAndCharacter | undefined) {
     const sourceFile = ts.createSourceFile(

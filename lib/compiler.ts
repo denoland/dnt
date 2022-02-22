@@ -64,23 +64,20 @@ export function getTopLevelAwaitLocation(sourceFile: ts.SourceFile) {
 }
 
 function getTopLevelAwait(node: ts.Node): ts.Node | undefined {
-  if (ts.isExpressionStatement(node) && ts.isAwaitExpression(node.expression)) {
+  if (ts.isAwaitExpression(node)) {
     return node;
   }
   if (ts.isForOfStatement(node) && node.awaitModifier !== undefined) {
     return node;
   }
-  const topLevelAwait = ts.forEachChild(node, (child) => {
+  return ts.forEachChild(node, (child) => {
     if (
       !ts.isFunctionDeclaration(child) && !ts.isFunctionExpression(child) &&
       !ts.isArrowFunction(child) && !ts.isMethodDeclaration(child)
     ) {
-      const topLevelAwait = getTopLevelAwait(child);
-      if (topLevelAwait !== undefined) return topLevelAwait;
+      return getTopLevelAwait(child);
     }
   });
-
-  return topLevelAwait;
 }
 
 export function transformCodeToTarget(code: string, target: ts.ScriptTarget) {
