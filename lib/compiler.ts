@@ -53,18 +53,31 @@ export function getCompilerSourceMapOptions(
   }
 }
 
-export function getTopLevelAwait(sourceFile: ts.SourceFile) {
-  for (const statement of sourceFile.statements) {
-    if (
-      ts.isExpressionStatement(statement) &&
-      ts.isAwaitExpression(statement.expression)
-    ) {
-      return sourceFile.getLineAndCharacterOfPosition(
-        statement.expression.getStart(sourceFile),
-      );
-    }
+export function getTopLevelAwaitLocation(sourceFile: ts.SourceFile) {
+  const topLevelAwait = getTopLevelAwait(sourceFile);
+  if (topLevelAwait !== undefined) {
+    return sourceFile.getLineAndCharacterOfPosition(
+      topLevelAwait.getStart(sourceFile),
+    );
   }
   return undefined;
+}
+
+function getTopLevelAwait(node: ts.Node): ts.Node | undefined {
+  if (ts.isAwaitExpression(node)) {
+    return node;
+  }
+  if (ts.isForOfStatement(node) && node.awaitModifier !== undefined) {
+    return node;
+  }
+  return ts.forEachChild(node, (child) => {
+    if (
+      !ts.isFunctionDeclaration(child) && !ts.isFunctionExpression(child) &&
+      !ts.isArrowFunction(child) && !ts.isMethodDeclaration(child)
+    ) {
+      return getTopLevelAwait(child);
+    }
+  });
 }
 
 export function transformCodeToTarget(code: string, target: ts.ScriptTarget) {

@@ -1,7 +1,7 @@
 import {
   getCompilerScriptTarget,
   getCompilerSourceMapOptions,
-  getTopLevelAwait,
+  getTopLevelAwaitLocation,
   SourceMapOptions,
 } from "./compiler.ts";
 import { ts } from "./mod.deps.ts";
@@ -35,9 +35,25 @@ Deno.test("script target should have expected outputs", () => {
 Deno.test("get has top level await", () => {
   runTest("const some = code;class SomeOtherCode {}", undefined);
   runTest("async function test() { await 5; }", undefined);
+  runTest(
+    "async function test() { for await (const item of items) {} }",
+    undefined,
+  );
   runTest("await test();", {
     line: 0,
     character: 0,
+  });
+  runTest("for await (const item of items) {}", {
+    line: 0,
+    character: 0,
+  });
+  runTest("if (condition) { await test() }", {
+    line: 0,
+    character: 17,
+  });
+  runTest("const t = { prop: await test() };", {
+    line: 0,
+    character: 18,
   });
 
   function runTest(code: string, expected: ts.LineAndCharacter | undefined) {
@@ -46,7 +62,7 @@ Deno.test("get has top level await", () => {
       code,
       ts.ScriptTarget.Latest,
     );
-    assertEquals(getTopLevelAwait(sourceFile), expected);
+    assertEquals(getTopLevelAwaitLocation(sourceFile), expected);
   }
 });
 

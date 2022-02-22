@@ -3,7 +3,7 @@
 import {
   getCompilerScriptTarget,
   getCompilerSourceMapOptions,
-  getTopLevelAwait,
+  getTopLevelAwaitLocation,
   outputDiagnostics,
   SourceMapOptions,
   transformCodeToTarget,
@@ -246,7 +246,7 @@ export async function build(options: BuildOptions): Promise<void> {
 
     if (options.scriptModule) {
       // cjs does not support TLA so error fast if we find one
-      const tlaLocation = getTopLevelAwait(sourceFile);
+      const tlaLocation = getTopLevelAwaitLocation(sourceFile);
       if (tlaLocation) {
         warn(
           `Top level await cannot be used when distributing CommonJS/UMD ` +
