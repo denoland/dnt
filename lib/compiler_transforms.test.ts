@@ -31,6 +31,6 @@ Deno.test("transform import.meta.main expressions", () => {
     "if (import.meta.main) { console.log('main'); }",
     `if ((require.main === module)) {
     console.log("main");
-}\n`);
+}\n`,
+  );
 });
-

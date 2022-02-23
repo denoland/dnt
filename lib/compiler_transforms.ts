@@ -54,10 +54,10 @@ export const transformImportMeta: ts.TransformerFactory<ts.SourceFile> = (
     return factory.createParenthesizedExpression(factory.createBinaryExpression(
       factory.createPropertyAccessExpression(
         factory.createIdentifier("require"),
-        factory.createIdentifier("main")
+        factory.createIdentifier("main"),
       ),
       factory.createToken(ts.SyntaxKind.EqualsEqualsEqualsToken),
-      factory.createIdentifier("module")
-    ))
+      factory.createIdentifier("module"),
+    ));
   }
 };
