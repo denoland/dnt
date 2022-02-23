@@ -6,6 +6,8 @@ import { ts } from "./mod.deps.ts";
 export const transformImportMeta: ts.TransformerFactory<ts.SourceFile> = (
   context,
 ) => {
+  const factory = context.factory;
+
   return (sourceFile) => ts.visitEachChild(sourceFile, visitNode, context);
 
   function visitNode(node: ts.Node): ts.Node {
@@ -14,16 +16,19 @@ export const transformImportMeta: ts.TransformerFactory<ts.SourceFile> = (
       ts.isPropertyAccessExpression(node) &&
       ts.isMetaProperty(node.expression) &&
       node.expression.keywordToken === ts.SyntaxKind.ImportKeyword &&
-      ts.isIdentifier(node.name) &&
-      node.name.escapedText === "url"
+      ts.isIdentifier(node.name)
     ) {
-      return getReplacementBinaryExpr();
+      if (node.name.escapedText === "url") {
+        return getReplacementImportMetaUrl();
+      } else if (node.name.escapedText === "main") {
+        return getReplacementImportMetaMain();
+      }
     }
+
     return ts.visitEachChild(node, visitNode, context);
   }
 
-  function getReplacementBinaryExpr(): ts.PropertyAccessExpression {
-    const factory = context.factory;
+  function getReplacementImportMetaUrl() {
     // Copy and pasted from ts-ast-viewer.com
     // require("url").pathToFileURL(__filename).href
     return factory.createPropertyAccessExpression(
@@ -41,5 +46,18 @@ export const transformImportMeta: ts.TransformerFactory<ts.SourceFile> = (
       ),
       factory.createIdentifier("href"),
     );
+  }
+
+  function getReplacementImportMetaMain() {
+    // Copy and pasted from ts-ast-viewer.com
+    // (require.main === module)
+    return factory.createParenthesizedExpression(factory.createBinaryExpression(
+      factory.createPropertyAccessExpression(
+        factory.createIdentifier("require"),
+        factory.createIdentifier("main")
+      ),
+      factory.createToken(ts.SyntaxKind.EqualsEqualsEqualsToken),
+      factory.createIdentifier("module")
+    ))
   }
 };
