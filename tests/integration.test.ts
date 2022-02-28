@@ -8,8 +8,8 @@ import {
 import { build, BuildOptions, ShimOptions } from "../mod.ts";
 
 const versions = {
-  denoShim: "~0.3.0",
-  denoTestShim: "~0.3.0",
+  denoShim: "~0.4.0",
+  denoTestShim: "~0.3.2",
   cryptoShim: "~0.2.0",
   domExceptionShim: "^4.0.0",
   domExceptionShimTypes: "^2.0.1",
@@ -18,7 +18,7 @@ const versions = {
   weakRefSham: "~0.1.0",
   undici: "^4.12.1",
   chalk: "4.1.2",
-  nodeTypes: "16.11.1",
+  nodeTypes: "16.11.26",
   tsLib: "2.3.1",
 };
 

@@ -71,7 +71,7 @@ export function getPackageJson({
               d.name === "@deno/shim-deno" || d.name === "@deno/shim-deno-test"
             )))
       ? {
-        "@types/node": "16.11.1",
+        "@types/node": "16.11.26",
       }
       : {}),
     ...testDevDependencies,
