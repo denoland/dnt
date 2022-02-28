@@ -5,6 +5,7 @@ import {
   assertRejects,
   assertStringIncludes,
 } from "https://deno.land/std@0.119.0/testing/asserts.ts";
+import { ShimValue } from "../lib/shims.ts";
 import { build, BuildOptions, ShimOptions } from "../mod.ts";
 
 const versions = {
@@ -489,6 +490,8 @@ import { setInterval, setTimeout } from "@deno/shim-timers";
 export { setInterval, setTimeout } from "@deno/shim-timers";
 import { default as DOMException } from "domexception";
 export { default as DOMException } from "domexception";
+import { default as URL } from "url";
+export { default as URL } from "url";
 import { File, FormData, Headers, Request, Response } from "undici";
 export { File, FormData, Headers, Request, Response } from "undici";
 import { default as fetch } from "node-fetch";
@@ -506,6 +509,7 @@ const dntGlobals = {
   setInterval,
   setTimeout,
   DOMException,
+  URL,
   File,
   FormData,
   Headers,
@@ -685,7 +689,7 @@ async function runTest(
   }
 }
 
-function getAllShimOptions(value: boolean | "dev"): ShimOptions {
+function getAllShimOptions(value: ShimValue): ShimOptions {
   return {
     deno: value,
     timers: value,

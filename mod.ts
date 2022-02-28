@@ -369,6 +369,7 @@ export async function build(options: BuildOptions): Promise<void> {
       includeScriptModule: options.scriptModule !== false,
       includeDeclarations: options.declaration,
       includeTsLib: options.compilerOptions?.importHelpers,
+      shims: options.shims,
     });
     writeFile(
       path.join(options.outDir, "package.json"),

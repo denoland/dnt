@@ -1,6 +1,6 @@
 // Copyright 2018-2022 the Deno authors. All rights reserved. MIT license.
 
-import type { EntryPoint } from "../mod.ts";
+import type { EntryPoint, ShimOptions } from "../mod.ts";
 import { TransformOutput } from "../transform.ts";
 import { PackageJsonObject } from "./types.ts";
 
@@ -12,6 +12,7 @@ export interface GetPackageJsonOptions {
   includeDeclarations: boolean | undefined;
   includeTsLib: boolean | undefined;
   testEnabled: boolean | undefined;
+  shims: ShimOptions;
 }
 
 export function getPackageJson({
@@ -22,6 +23,7 @@ export function getPackageJson({
   includeDeclarations,
   includeTsLib,
   testEnabled,
+  shims,
 }: GetPackageJsonOptions) {
   const finalEntryPoints = transformOutput
     .main.entryPoints.map((e, i) => ({
@@ -61,19 +63,9 @@ export function getPackageJson({
     })
     : {};
   const devDependencies = {
-    ...(!Object.keys(dependencies).includes("@types/node") &&
-        // todo(dsherret): don't hardcode the package name here and come up with some better solution
-        (transformOutput.main.dependencies.some((d) =>
-          d.name === "@deno/shim-deno" || d.name === "@deno/shim-deno-test"
-        ) ||
-          (testEnabled &&
-            transformOutput.test.dependencies.some((d) =>
-              d.name === "@deno/shim-deno" || d.name === "@deno/shim-deno-test"
-            )))
-      ? {
+    ...(shouldIncludeTypesNode() ? {
         "@types/node": "16.11.1",
-      }
-      : {}),
+      } : {}),
     ...testDevDependencies,
     // override with specified dependencies
     ...(packageJsonObj.devDependencies ?? {}),
@@ -118,4 +110,20 @@ export function getPackageJson({
     dependencies,
     devDependencies,
   };
+
+  function shouldIncludeTypesNode() {
+    if (Object.keys(dependencies).includes("@types/node")) {
+      return false;
+    }
+
+    if (typeof shims.deno === "object") {
+      if (shims.deno.test) {
+        return true;
+      }
+    } else if (shims.deno) {
+      return true;
+    } else {
+      return false;
+    }
+  }
 }
