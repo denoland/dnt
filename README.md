@@ -30,36 +30,36 @@ There are several steps done in a pipeline:
 
    ```ts
    // ex. scripts/build_npm.ts
-   import { build, emptyDir } from 'https://deno.land/x/dnt/mod.ts'
+   import { build, emptyDir } from "https://deno.land/x/dnt/mod.ts";
 
-   await emptyDir('./npm')
+   await emptyDir("./npm");
 
    await build({
-     entryPoints: ['./mod.ts'],
-     outDir: './npm',
+     entryPoints: ["./mod.ts"],
+     outDir: "./npm",
      shims: {
        // see JS docs for overview and more options
        deno: true,
      },
      package: {
        // package.json properties
-       name: 'your-package',
+       name: "your-package",
        version: Deno.args[0],
-       description: 'Your package.',
-       license: 'MIT',
+       description: "Your package.",
+       license: "MIT",
        repository: {
-         type: 'git',
-         url: 'git+https://github.com/username/repo.git',
+         type: "git",
+         url: "git+https://github.com/username/repo.git",
        },
        bugs: {
-         url: 'https://github.com/username/repo/issues',
+         url: "https://github.com/username/repo/issues",
        },
      },
-   })
+   });
 
    // post build steps
-   Deno.copyFileSync('LICENSE', 'npm/LICENSE')
-   Deno.copyFileSync('README.md', 'npm/README.md')
+   Deno.copyFileSync("LICENSE", "npm/LICENSE");
+   Deno.copyFileSync("README.md", "npm/README.md");
    ```
 
 1. Ignore the output directory with your source control if you desire (ex. add `npm/` to `.gitignore`).
@@ -115,7 +115,7 @@ await build({
   test: false,
   declaration: false,
   scriptModule: false,
-})
+});
 ```
 
 ### Top Level Await
@@ -126,7 +126,7 @@ Top level await doesn't work in CommonJS/UMD and dnt will error if a top level a
 await build({
   // ...etc...
   scriptModule: false,
-})
+});
 ```
 
 ### Shims
@@ -139,7 +139,7 @@ await build({
   shims: {
     deno: true,
   },
-})
+});
 ```
 
 Then write a statement like so...
@@ -166,10 +166,10 @@ For example, to use the `Deno` namespace only for development and the `setTimeou
 await build({
   // ...etc...
   shims: {
-    deno: 'dev',
+    deno: "dev",
     timers: true,
   },
-})
+});
 ```
 
 #### Preventing Shimming
@@ -205,10 +205,10 @@ await build({
   // ...etc...
   shims: {
     deno: {
-      test: 'dev',
+      test: "dev",
     },
   },
-})
+});
 ```
 
 This may be useful in Node v14 and below where the full deno shim doesn't always work. See the section on Node v14 below for more details
@@ -224,61 +224,50 @@ await build({
   scriptModule: false, // node-fetch 3+ only supports ESM
   // ...etc...
   shims: {
-    custom: [
-      {
-        package: {
-          name: 'node-fetch',
-          version: '~3.1.0',
-        },
-        globalNames: [
-          {
-            // for the `fetch` global...
-            name: 'fetch',
-            // use the default export of node-fetch
-            exportName: 'default',
-          },
-          {
-            name: 'RequestInit',
-            typeOnly: true, // only used in type declarations
-          },
-        ],
+    custom: [{
+      package: {
+        name: "node-fetch",
+        version: "~3.1.0",
       },
-      {
-        // this is what `blob: true` does internally
-        module: 'buffer', // uses node's "buffer" module
-        globalNames: ['Blob'],
+      globalNames: [{
+        // for the `fetch` global...
+        name: "fetch",
+        // use the default export of node-fetch
+        exportName: "default",
+      }, {
+        name: "RequestInit",
+        typeOnly: true, // only used in type declarations
+      }],
+    }, {
+      // this is what `blob: true` does internally
+      module: "buffer", // uses node's "buffer" module
+      globalNames: ["Blob"],
+    }, {
+      // this is what `domException: true` does internally
+      package: {
+        name: "domexception",
+        version: "^4.0.0",
       },
-      {
-        // this is what `domException: true` does internally
-        package: {
-          name: 'domexception',
-          version: '^4.0.0',
-        },
-        typesPackage: {
-          name: '@types/domexception',
-          version: '^2.0.1',
-        },
-        globalNames: [
-          {
-            name: 'DOMException',
-            exportName: 'default',
-          },
-        ],
+      typesPackage: {
+        name: "@types/domexception",
+        version: "^2.0.1",
       },
-    ],
+      globalNames: [{
+        name: "DOMException",
+        exportName: "default",
+      }],
+    }],
     // shims to only use in the tests
-    customDev: [
-      {
-        // this is what `timers: "dev"` does internally
-        package: {
-          name: '@deno/shim-timers',
-          version: '~0.1.0',
-        },
-        globalNames: ['setTimeout', 'setInterval'],
+    customDev: [{
+      // this is what `timers: "dev"` does internally
+      package: {
+        name: "@deno/shim-timers",
+        version: "~0.1.0",
       },
-    ],
+      globalNames: ["setTimeout", "setInterval"],
+    }],
   },
-})
+});
 ```
 
 #### Local and Remote Shims
@@ -289,18 +278,15 @@ Custom shims can also refer to local or remote modules:
 await build({
   // ...etc...
   shims: {
-    custom: [
-      {
-        module: './my-custom-fetch-implementation.ts',
-        globalNames: ['fetch'],
-      },
-      {
-        module: 'https://deno.land/x/some_remote_shim_module/mod.ts',
-        globalNames: ['setTimeout'],
-      },
-    ],
+    custom: [{
+      module: "./my-custom-fetch-implementation.ts",
+      globalNames: ["fetch"],
+    }, {
+      module: "https://deno.land/x/some_remote_shim_module/mod.ts",
+      globalNames: ["setTimeout"],
+    }],
   },
-})
+});
 ```
 
 Where `my-custom-fetch-implementation.ts` contains:
@@ -323,12 +309,12 @@ For example:
 await build({
   // ...etc...
   mappings: {
-    'https://deno.land/x/code_block_writer@11.0.0/mod.ts': {
-      name: 'code-block-writer',
-      version: '^11.0.0',
+    "https://deno.land/x/code_block_writer@11.0.0/mod.ts": {
+      name: "code-block-writer",
+      version: "^11.0.0",
     },
   },
-})
+});
 ```
 
 This will:
@@ -346,25 +332,25 @@ Say an npm package called `example` had a subpath at `sub_path.js` and you wante
 await build({
   // ...etc...
   mappings: {
-    'https://deno.land/x/example@0.1.0/sub_path.ts': {
-      name: 'example',
-      version: '^0.1.0',
-      subPath: 'sub_path.js', // note this
+    "https://deno.land/x/example@0.1.0/sub_path.ts": {
+      name: "example",
+      version: "^0.1.0",
+      subPath: "sub_path.js", // note this
     },
   },
-})
+});
 ```
 
 This would cause the following:
 
 ```ts
-import * as mod from 'https://deno.land/x/example@0.1.0/sub_path.ts'
+import * as mod from "https://deno.land/x/example@0.1.0/sub_path.ts";
 ```
 
 ...to go to...
 
 ```ts
-import * as mod from 'example/sub_path.js'
+import * as mod from "example/sub_path.js";
 ```
 
 ...with a dependency on `"example": "^0.1.0"`.
@@ -375,15 +361,12 @@ To do this, specify multiple entry points like so (ex. an entry point at `.` and
 
 ```ts
 await build({
-  entryPoints: [
-    'mod.ts',
-    {
-      name: './internal',
-      path: 'internal.ts',
-    },
-  ],
+  entryPoints: ["mod.ts", {
+    name: "./internal",
+    path: "internal.ts",
+  }],
   // ...etc...
-})
+});
 ```
 
 This will create a package.json with these as exports:
@@ -418,15 +401,13 @@ To publish an npm [bin package](https://docs.npmjs.com/cli/v7/configuring-npm/pa
 
 ```ts
 await build({
-  entryPoints: [
-    {
-      kind: 'bin',
-      name: 'my_binary', // command name
-      path: './cli.ts',
-    },
-  ],
+  entryPoints: [{
+    kind: "bin",
+    name: "my_binary", // command name
+    path: "./cli.ts",
+  }],
   // ...etc...
-})
+});
 ```
 
 This will add a `"bin"` entry to the package.json and add `#!/usr/bin/env node` to the top of the specified entry point.
@@ -447,9 +428,9 @@ Another option is to create node and deno specific modules. This can be done by 
 await build({
   // ...etc...
   mappings: {
-    './file.deno.ts': './file.node.ts',
+    "./file.deno.ts": "./file.node.ts",
   },
-})
+});
 ```
 
 Then within the file, use `// dnt-shim-ignore` directives to disable shimming if you desire.
@@ -464,15 +445,15 @@ Since the file you're calling is a script, simply add statements before and afte
 // run pre-build steps here
 
 // ex. maybe consider deleting the output directory before build
-await Deno.remove('npm', { recursive: true }).catch((_) => {})
+await Deno.remove("npm", { recursive: true }).catch((_) => {});
 
 await build({
   // ...etc..
-})
+});
 
 // run post-build steps here
-await Deno.copyFile('LICENSE', 'npm/LICENSE')
-await Deno.copyFile('README.md', 'npm/README.md')
+await Deno.copyFile("LICENSE", "npm/LICENSE");
+await Deno.copyFile("README.md", "npm/README.md");
 ```
 
 ### Including Test Data Files
@@ -482,23 +463,23 @@ Your Deno tests might rely on test data files. One way of handling this is to co
 For example:
 
 ```ts
-import { copy } from 'https://deno.land/std@x.x.x/fs/mod.ts'
+import { copy } from "https://deno.land/std@x.x.x/fs/mod.ts";
 
-await Deno.remove('npm', { recursive: true }).catch((_) => {})
-await copy('testdata', 'npm/esm/testdata', { overwrite: true })
-await copy('testdata', 'npm/script/testdata', { overwrite: true })
+await Deno.remove("npm", { recursive: true }).catch((_) => {});
+await copy("testdata", "npm/esm/testdata", { overwrite: true });
+await copy("testdata", "npm/script/testdata", { overwrite: true });
 
 await build({
   // ...etc...
-})
+});
 
 // ensure the test data is ignored in the `.npmignore` file
 // so it doesn't get published with your npm package
 await Deno.writeTextFile(
-  'npm/.npmignore',
-  'esm/testdata/\nscript/testdata/\n',
-  { append: true }
-)
+  "npm/.npmignore",
+  "esm/testdata/\nscript/testdata/\n",
+  { append: true },
+);
 ```
 
 Alternatively, you could also use the [`which_runtime`](https://deno.land/x/which_runtime) module and use a different directory path when the tests are running in Node. This is probably more ideal if you have a lot of test data.
@@ -510,11 +491,11 @@ By default, dnt uses the same search [pattern](https://deno.land/manual/testing)
 ```ts
 await build({
   // ...etc...
-  testPattern: '**/*.test.{ts,tsx,js,mjs,jsx}',
+  testPattern: "**/*.test.{ts,tsx,js,mjs,jsx}",
   // and/or provide a directory to start searching for test
   // files from, which defaults to the current working directory
-  rootTestDir: './tests',
-})
+  rootTestDir: "./tests",
+});
 ```
 
 ### GitHub Actions - Npm Publish on Tag
@@ -528,7 +509,7 @@ await build({
        version: Deno.args[0],
        // ...etc...
      },
-   })
+   });
    ```
 
    Note: You may wish to remove the leading `v` in the tag name if it exists (ex. `Deno.args[0]?.replace(/^v/, "")`)
@@ -572,8 +553,8 @@ For example:
 ```ts
 await build({
   // ...etc...
-  packageManager: 'yarn', // or "pnpm"
-})
+  packageManager: "yarn", // or "pnpm"
+});
 ```
 
 You can even specify an absolute path to the executable file of the package manager:
@@ -581,8 +562,8 @@ You can even specify an absolute path to the executable file of the package mana
 ```ts
 await build({
   // ...etc...
-  packageManager: '/usr/bin/pnpm',
-})
+  packageManager: "/usr/bin/pnpm",
+});
 ```
 
 ### Node v14 and Below
@@ -599,15 +580,15 @@ For only the Deno to canonical TypeScript transform which may be useful for bund
 
 ```ts
 // docs: https://doc.deno.land/https/deno.land/x/dnt/transform.ts
-import { transform } from 'https://deno.land/x/dnt/transform.ts'
+import { transform } from "https://deno.land/x/dnt/transform.ts";
 
 const outputResult = await transform({
-  entryPoints: ['./mod.ts'],
-  testEntryPoints: ['./mod.test.ts'],
+  entryPoints: ["./mod.ts"],
+  testEntryPoints: ["./mod.test.ts"],
   shims: [],
   testShims: [],
   // mappings: {}, // optional specifier mappings
-})
+});
 ```
 
 ## Rust API Example
