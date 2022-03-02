@@ -8,8 +8,10 @@ use deno_ast::ModuleSpecifier;
 use deno_graph::Module;
 use deno_graph::ModuleKind;
 use deno_graph::Resolved;
+use reqwest::Url;
 
 use crate::graph::ModuleGraph;
+use crate::PackageMappedSpecifier;
 
 #[derive(Debug)]
 pub struct DeclarationFileResolution {
@@ -29,6 +31,7 @@ pub struct TypesDependency {
 pub fn resolve_declaration_file_mappings(
   module_graph: &ModuleGraph,
   modules: &[&Module],
+  mapped_specifiers: &BTreeMap<Url, PackageMappedSpecifier>,
 ) -> Result<BTreeMap<ModuleSpecifier, DeclarationFileResolution>> {
   let mut type_dependencies = BTreeMap::new();
 
@@ -39,6 +42,11 @@ pub fn resolve_declaration_file_mappings(
   // get the resolved type dependencies
   let mut mappings = BTreeMap::new();
   for (code_specifier, deps) in type_dependencies.into_iter() {
+    // if this type_dependency is mapped, then pass it.
+    if mapped_specifiers.contains_key(&code_specifier) {
+      continue;
+    }
+
     let deps = deps.into_iter().collect::<Vec<_>>();
     let selected_dep =
       select_best_types_dep(module_graph, &code_specifier, &deps);

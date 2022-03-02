@@ -112,7 +112,11 @@ pub fn get_specifiers(
     }
   }
 
-  let types = resolve_declaration_file_mappings(module_graph, &all_modules)?;
+  let types = resolve_declaration_file_mappings(
+    module_graph,
+    &all_modules,
+    &found_mapped_specifiers,
+  )?;
   let mut declaration_specifiers = HashSet::new();
   for value in types.values() {
     declaration_specifiers.insert(&value.selected.specifier);
