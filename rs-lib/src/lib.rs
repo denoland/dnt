@@ -288,8 +288,7 @@ pub async fn transform(options: TransformOptions) -> Result<TransformOutput> {
     shim_global_names: options
       .shims
       .iter()
-      .map(|s| s.global_names().iter().map(|s| s.name.as_str()))
-      .flatten()
+      .flat_map(|s| s.global_names().iter().map(|s| s.name.as_str()))
       .collect(),
     shims: &options.shims,
     used_shim: false,
@@ -310,8 +309,7 @@ pub async fn transform(options: TransformOptions) -> Result<TransformOutput> {
     shim_global_names: options
       .test_shims
       .iter()
-      .map(|s| s.global_names().iter().map(|s| s.name.as_str()))
-      .flatten()
+      .flat_map(|s| s.global_names().iter().map(|s| s.name.as_str()))
       .collect(),
     shims: &options.test_shims,
     used_shim: false,
@@ -408,7 +406,7 @@ pub async fn transform(options: TransformOptions) -> Result<TransformOutput> {
         if let Some(source) = &module.maybe_source {
           format!(
             "export default JSON.parse(`{}`);",
-            strip_bom(&source.replace("`", "\\`").replace("${", "\\${"))
+            strip_bom(&source.replace('`', "\\`").replace("${", "\\${"))
           )
         } else {
           continue;
@@ -620,7 +618,7 @@ fn check_add_shim_file_to_environment(
     }
 
     text.push_str("const dntGlobals = {\n");
-    for global_name in shims.iter().map(|s| s.global_names().iter()).flatten() {
+    for global_name in shims.iter().flat_map(|s| s.global_names().iter()) {
       if !global_name.type_only {
         text.push_str(&format!("  {},\n", global_name.name));
       }
