@@ -130,9 +130,11 @@ fn get_dummy_module(
     "content-type".to_string(),
     "application/javascript".to_string(),
   );
-  Box::pin(future::ready(Ok(Some(deno_graph::source::LoadResponse::Module{
-    specifier: specifier.clone(),
-    content: Arc::new(String::new()),
-    maybe_headers: Some(headers),
-  }))))
+  Box::pin(future::ready(Ok(Some(
+    deno_graph::source::LoadResponse::Module {
+      specifier: specifier.clone(),
+      content: Arc::new(String::new()),
+      maybe_headers: Some(headers),
+    },
+  ))))
 }
