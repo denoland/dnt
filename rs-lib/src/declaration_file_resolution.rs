@@ -8,7 +8,6 @@ use deno_ast::ModuleSpecifier;
 use deno_graph::Module;
 use deno_graph::ModuleKind;
 use deno_graph::Resolved;
-use reqwest::Url;
 
 use crate::graph::ModuleGraph;
 use crate::PackageMappedSpecifier;
@@ -31,7 +30,7 @@ pub struct TypesDependency {
 pub fn resolve_declaration_file_mappings(
   module_graph: &ModuleGraph,
   modules: &[&Module],
-  mapped_specifiers: &BTreeMap<Url, PackageMappedSpecifier>,
+  mapped_specifiers: &BTreeMap<ModuleSpecifier, PackageMappedSpecifier>,
 ) -> Result<BTreeMap<ModuleSpecifier, DeclarationFileResolution>> {
   let mut type_dependencies = BTreeMap::new();
 

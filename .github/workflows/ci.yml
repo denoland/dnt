@@ -12,28 +12,20 @@ jobs:
     timeout-minutes: 30
     steps:
     - uses: actions/checkout@v2
-    - uses: actions-rs/toolchain@v1
-      with:
-        profile: minimal
-        toolchain: 1.58.0
-        override: true
+    - uses: dtolnay/rust-toolchain@stable
     - uses: Swatinem/rust-cache@v1
-
-    - name: Install clippy and rustfmt
-      run: |
-        rustup component add clippy
-        rustup component add rustfmt
-
-    - name: Format
-      run: cargo fmt --all -- --check
-    - name: Lint
-      run: cargo clippy --all-targets --all-features --release
-
     - uses: denoland/setup-deno@v1
       with:
-        deno-version: ~1.17
-    - run: deno lint --config deno.json
-    - run: deno fmt --config deno.json --check
+        deno-version: ~1.x
+
+    - name: Format
+      run: |
+        cargo fmt --all -- --check
+        deno fmt --check
+    - name: Lint
+      run: |
+        cargo clippy --all-targets --all-features --release
+        deno lint --config deno.json
 
     - name: Build
       run: cargo build --all-targets --all-features --release

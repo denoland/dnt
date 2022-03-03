@@ -60,8 +60,7 @@ pub fn get_specifiers(
     while !pending.is_empty() {
       if let Some(module) = pending
         .pop()
-        .map(|s| modules.remove(&module_graph.resolve(s)))
-        .flatten()
+        .and_then(|s| modules.remove(&module_graph.resolve(s)))
       {
         if let Some(mapped_entry) =
           specifiers.mapped_packages.remove(&module.specifier)

@@ -29,7 +29,7 @@ pub fn get_relative_specifier(
   let relative_path_str = relative_path
     .to_string_lossy()
     .to_string()
-    .replace("\\", "/");
+    .replace('\\', "/");
 
   if relative_path_str.starts_with("../") || relative_path_str.starts_with("./")
   {
