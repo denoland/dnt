@@ -1198,6 +1198,39 @@ async fn skypack_module_mapping_different_versions() {
 }
 
 #[tokio::test]
+async fn esm_module_with_deno_types() {
+  let result = TestBuilder::new()
+    .with_loader(|loader| {
+      loader
+        .add_local_file(
+          "/mod.ts",
+          concat!(
+            "// @deno-types=\"https://esm.sh/test@0.0.1/lib/mod.d.ts\"\n",
+            "import {test} from 'https://esm.sh/test@0.0.1/lib/mod.js';\n",
+          ),
+        )
+        .add_remote_file_with_headers(
+          "https://esm.sh/test@0.0.1/lib/mod.js",
+          "export function test() {return 5;}",
+          &[("content-type", "application/typescript")],
+        )
+        .add_remote_file_with_headers(
+          "https://esm.sh/test@0.0.1/lib/mod.d.ts",
+          "declare function test(): number;",
+          &[("content-type", "application/typescript")],
+        );
+    })
+    .transform()
+    .await
+    .unwrap();
+
+  assert_files!(
+    result.main.files,
+    &[("mod.ts", "import {test} from 'test/lib/mod.js';\n")]
+  );
+}
+
+#[tokio::test]
 async fn transform_import_map() {
   let result = TestBuilder::new()
     .with_loader(|loader| {
