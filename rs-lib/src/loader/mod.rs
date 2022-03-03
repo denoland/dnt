@@ -112,7 +112,7 @@ impl<'a> deno_graph::source::Loader for SourceLoader<'a> {
     Box::pin(async move {
       let resp = loader.load(specifier.clone()).await;
       resp.map(|r| {
-        r.map(|r| deno_graph::source::LoadResponse {
+        r.map(|r| deno_graph::source::LoadResponse::Module {
           specifier: r.specifier,
           content: Arc::new(r.content),
           maybe_headers: r.headers,
@@ -130,7 +130,7 @@ fn get_dummy_module(
     "content-type".to_string(),
     "application/javascript".to_string(),
   );
-  Box::pin(future::ready(Ok(Some(deno_graph::source::LoadResponse {
+  Box::pin(future::ready(Ok(Some(deno_graph::source::LoadResponse::Module{
     specifier: specifier.clone(),
     content: Arc::new(String::new()),
     maybe_headers: Some(headers),
