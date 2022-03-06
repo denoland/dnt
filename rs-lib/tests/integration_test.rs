@@ -298,6 +298,52 @@ async fn transform_shim_custom_shims() {
 }
 
 #[tokio::test]
+async fn transform_shim_node_custom_shims() {
+  let result = TestBuilder::new()
+    .with_loader(|loader| {
+      loader.add_local_file(
+        "/mod.ts",
+        "const readableStream = new ReadableStream();",
+      );
+    })
+    .add_shim(Shim::Module(ModuleShim {
+      module: "node:stream/web".to_string(),
+      global_names: vec![GlobalName {
+        name: "ReadableStream".to_string(),
+        export_name: None,
+        type_only: false,
+      }],
+    }))
+    .transform()
+    .await
+    .unwrap();
+
+  assert_files!(result.main.files, &[
+    (
+      "_dnt.shims.ts",
+      get_shim_file_text(
+        concat!(
+          "import { ReadableStream } from \"node:stream/web\";\n",
+          "export { ReadableStream } from \"node:stream/web\";\n",
+          "\n",
+          "const dntGlobals = {\n",
+          "  ReadableStream,\n",
+          "};\n",
+          "export const dntGlobalThis = createMergeProxy(globalThis, dntGlobals);\n",
+        ).to_string(),
+      ),
+    ),
+    (
+      "mod.ts",
+      concat!(
+        "import * as dntShim from \"./_dnt.shims.js\";\n",
+        "const readableStream = new dntShim.ReadableStream();"
+      ).to_string()
+    )
+  ]);
+}
+
+#[tokio::test]
 async fn no_transform_deno_ignored() {
   assert_identity_transforms(vec!["// dnt-shim-ignore\nDeno.readTextFile();"])
     .await;

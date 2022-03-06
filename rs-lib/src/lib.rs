@@ -186,7 +186,11 @@ pub struct ModuleShim {
 
 impl ModuleShim {
   pub fn maybe_specifier(&self) -> Option<ModuleSpecifier> {
-    ModuleSpecifier::parse(&self.module).ok()
+    if self.module.starts_with("node:") {
+      None
+    } else {
+      ModuleSpecifier::parse(&self.module).ok()
+    }
   }
 }
 
