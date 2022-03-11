@@ -7,10 +7,18 @@ import { isDeno } from "https://deno.land/x/which_runtime@0.2.0/mod.ts";
 
 Deno.test("should get data from web socket server", async (t) => {
   const server = Deno.run({
-    cmd: ["deno", "run", "-A", isDeno ? path.dirname(path.fromFileUrl(import.meta.url)) + "/../web_socket_server.ts" : "../../../web_socket_server.ts"],
+    cmd: [
+      "deno",
+      "run",
+      "-A",
+      isDeno
+        ? path.dirname(path.fromFileUrl(import.meta.url)) +
+          "/../web_socket_server.ts"
+        : "../../../web_socket_server.ts",
+    ],
   });
 
-  await new Promise(resolve => setTimeout(resolve, 250));
+  await new Promise((resolve) => setTimeout(resolve, 250));
 
   for (let i = 0; i < 2; i++) {
     await t.step(`attempt ${i + 1}`, async (t) => {
