@@ -16,9 +16,12 @@ Deno.test("should get data from web socket server", async (t) => {
           "/../web_socket_server.ts"
         : "../../../web_socket_server.ts",
     ],
+    stdout: "piped",
   });
 
-  await new Promise((resolve) => setTimeout(resolve, 1_000));
+  // wait for some output from the server
+  const byte = new Uint8Array(1);
+  await server.stdout.read(byte);
 
   for (let i = 0; i < 2; i++) {
     await t.step(`attempt ${i + 1}`, async (t) => {
