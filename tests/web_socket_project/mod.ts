@@ -10,8 +10,8 @@ export class Client {
   static create() {
     return new Promise<Client>((resolve, reject) => {
       const ws = new WebSocket("ws://localhost:8089");
-      ws.onerror = (event) => {
-        reject(event);
+      ws.onerror = (e) => {
+        reject((e as any).message);
       };
       ws.onopen = () => {
         resolve(new Client(ws));

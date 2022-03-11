@@ -14,5 +14,8 @@ function handleReq(req: Request): Response {
     value++;
     socket.send(value.toString());
   };
+  socket.onerror = (e) => {
+    console.log("Had error:", (e as any).message);
+  };
   return response;
 }
