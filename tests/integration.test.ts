@@ -624,6 +624,21 @@ Deno.test("should build the import map project", async () => {
   });
 });
 
+Deno.test("should shim web sockets", async () => {
+  await runTest("web_socket_project", {
+    entryPoints: ["mod.ts"],
+    outDir: "./npm",
+    shims: {
+      deno: "dev",
+      webSocket: true,
+    },
+    package: {
+      name: "server",
+      version: "1.0.0",
+    },
+  });
+});
+
 export interface Output {
   packageJson: any;
   npmIgnore: string;
@@ -641,7 +656,8 @@ async function runTest(
     | "module_mappings_project"
     | "shim_project"
     | "test_project"
-    | "tla_project",
+    | "tla_project"
+    | "web_socket_project",
   options: BuildOptions,
   checkOutput?: (output: Output) => (Promise<void> | void),
 ) {
