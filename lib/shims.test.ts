@@ -14,6 +14,7 @@ Deno.test("should get when all true", () => {
     domException: true,
     undici: true,
     weakRef: true,
+    webSocket: true,
     custom: [{
       package: {
         name: "main",
@@ -30,8 +31,8 @@ Deno.test("should get when all true", () => {
     }],
   });
 
-  assertEquals(result.shims.length, 9);
-  assertEquals(result.testShims.length, 10);
+  assertEquals(result.shims.length, 10);
+  assertEquals(result.testShims.length, 11);
 });
 
 Deno.test("should get when all dev", () => {
@@ -44,10 +45,11 @@ Deno.test("should get when all dev", () => {
     domException: "dev",
     undici: "dev",
     weakRef: "dev",
+    webSocket: "dev",
   });
 
   assertEquals(result.shims.length, 0);
-  assertEquals(result.testShims.length, 8);
+  assertEquals(result.testShims.length, 9);
 });
 
 Deno.test("should get when all false", () => {
@@ -60,6 +62,7 @@ Deno.test("should get when all false", () => {
     domException: false,
     undici: false,
     weakRef: false,
+    webSocket: false,
   });
 
   assertEquals(result.shims.length, 0);
