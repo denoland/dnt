@@ -1,6 +1,8 @@
 import { serve } from "https://deno.land/std@0.128.0/http/mod.ts";
 
-serve(handleReq, { port: 8089 });
+const port = 8089;
+serve(handleReq, { port });
+console.log(`Listening on ${port}...`);
 
 function handleReq(req: Request): Response {
   const upgrade = req.headers.get("upgrade") || "";

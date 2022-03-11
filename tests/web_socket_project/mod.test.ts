@@ -18,7 +18,7 @@ Deno.test("should get data from web socket server", async (t) => {
     ],
   });
 
-  await new Promise((resolve) => setTimeout(resolve, 250));
+  await new Promise((resolve) => setTimeout(resolve, 1_000));
 
   for (let i = 0; i < 2; i++) {
     await t.step(`attempt ${i + 1}`, async (t) => {
