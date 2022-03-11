@@ -36,6 +36,7 @@ Deno.test("should get data from web socket server", async (t) => {
     });
   }
 
+  server.stdout.close();
   server.kill("SIGTERM");
   server.close();
 });
