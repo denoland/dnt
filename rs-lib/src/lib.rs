@@ -408,10 +408,7 @@ pub async fn transform(options: TransformOptions) -> Result<TransformOutput> {
       }
       ModuleKind::Asserted => {
         if let Some(source) = &module.maybe_source {
-          format!(
-            "export default {};",
-            strip_bom(source).trim(),
-          )
+          format!("export default {};", strip_bom(source).trim(),)
         } else {
           continue;
         }
