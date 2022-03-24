@@ -6,18 +6,15 @@ use std::path::Path;
 use std::path::PathBuf;
 
 use anyhow::Result;
+use deno_ast::TextChange;
+use deno_ast::apply_text_changes;
 use deno_ast::parse_module;
-use deno_ast::swc::common::BytePos;
-use deno_ast::swc::common::Span;
 use deno_ast::view::NodeTrait;
 use deno_ast::view::Program;
 use deno_ast::view::SpannedExt;
 use deno_ast::ModuleSpecifier;
 use deno_ast::ParseParams;
 use deno_ast::SourceTextInfo;
-
-use crate::text_changes::apply_text_changes;
-use crate::text_changes::TextChange;
 
 pub const BOM_CHAR: char = '\u{FEFF}';
 
@@ -174,7 +171,7 @@ pub fn prepend_statement_to_text(
       let text_change =
         text_change_for_prepend_statement_to_text(&program, statement_text);
       *file_text =
-        apply_text_changes(source.text().to_string(), vec![text_change]);
+        apply_text_changes(source.text_str(), vec![text_change]);
     }),
     Err(_) => {
       // should never happen... fallback...
@@ -189,23 +186,23 @@ pub fn text_change_for_prepend_statement_to_text(
 ) -> TextChange {
   let insert_pos = top_file_insert_pos(program);
   TextChange {
-    span: Span::new(insert_pos, insert_pos, Default::default()),
+    range: insert_pos..insert_pos,
     new_text: format!(
       "{}{}\n",
-      if insert_pos == BytePos(0) { "" } else { "\n" },
+      if insert_pos == 0 { "" } else { "\n" },
       statement_text,
     ),
   }
 }
 
-fn top_file_insert_pos(program: &Program) -> BytePos {
-  let mut pos = BytePos(0);
+fn top_file_insert_pos(program: &Program) -> usize {
+  let mut pos = 0;
   for comment in program.leading_comments() {
     // insert before any @ts-ignore or @ts-expect
     if comment.text_fast(program).to_lowercase().contains("@ts-") {
       break;
     }
-    pos = comment.hi();
+    pos = comment.hi().0 as usize;
   }
   pos
 }

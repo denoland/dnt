@@ -1,4 +1,9 @@
 {
+  "tasks": {
+    // todo: exclude going into node_modules folders once we add support for globbing
+    "test": "deno test -A",
+    "wasm": "deno run -A _build.ts"
+  },
   "fmt": {
     "options": {
       "proseWrap": "never"
