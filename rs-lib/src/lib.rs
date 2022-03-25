@@ -13,8 +13,8 @@ use anyhow::Result;
 
 use analyze::get_ignore_line_indexes;
 use anyhow::bail;
-use deno_ast::TextChange;
 use deno_ast::apply_text_changes;
+use deno_ast::TextChange;
 use deno_graph::ModuleKind;
 use graph::ModuleGraphOptions;
 use mappings::Mappings;
@@ -400,11 +400,8 @@ pub async fn transform(options: TransformOptions) -> Result<TransformOutput> {
             )
           })?;
 
-          eprintln!("{:#?}", text_changes);
-        apply_text_changes(
-          parsed_source.source().text_str(),
-          text_changes,
-        )
+        eprintln!("{:#?}", text_changes);
+        apply_text_changes(parsed_source.source().text_str(), text_changes)
       }
       ModuleKind::Asserted => {
         if let Some(source) = &module.maybe_source {

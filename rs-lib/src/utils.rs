@@ -6,7 +6,6 @@ use std::path::Path;
 use std::path::PathBuf;
 
 use anyhow::Result;
-use deno_ast::TextChange;
 use deno_ast::apply_text_changes;
 use deno_ast::parse_module;
 use deno_ast::view::NodeTrait;
@@ -15,6 +14,7 @@ use deno_ast::view::SpannedExt;
 use deno_ast::ModuleSpecifier;
 use deno_ast::ParseParams;
 use deno_ast::SourceTextInfo;
+use deno_ast::TextChange;
 
 pub const BOM_CHAR: char = '\u{FEFF}';
 
@@ -170,8 +170,7 @@ pub fn prepend_statement_to_text(
     Ok(parsed_module) => parsed_module.with_view(|program| {
       let text_change =
         text_change_for_prepend_statement_to_text(&program, statement_text);
-      *file_text =
-        apply_text_changes(source.text_str(), vec![text_change]);
+      *file_text = apply_text_changes(source.text_str(), vec![text_change]);
     }),
     Err(_) => {
       // should never happen... fallback...
