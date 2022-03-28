@@ -1,5 +1,7 @@
 // Copyright 2018-2022 the Deno authors. All rights reserved. MIT license.
 
+// This code isn't bullet proof and is lazily designed
+// for the purpose of the test. Don't use it elsewhere.
 export class Client {
   #ws: WebSocket;
 
@@ -15,14 +17,21 @@ export class Client {
       };
       ws.onopen = () => {
         resolve(new Client(ws));
-        // @ts-ignore: waiting on https://github.com/DefinitelyTyped/DefinitelyTyped/pull/59237
         ws.onerror = null;
+        ws.onopen = null;
       };
     });
   }
 
   close() {
-    this.#ws.close();
+    // Attempt to prevent left over ops.
+    return new Promise<void>((resolve, reject) => {
+      this.#ws.onerror = (e) => {
+        reject((e as any).message);
+      };
+      this.#ws.onclose = () => resolve();
+      this.#ws.close();
+    });
   }
 
   getValue() {

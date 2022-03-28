@@ -32,7 +32,7 @@ Deno.test("should get data from web socket server", async (t) => {
         assertEquals(await server.getValue(), "2");
       });
 
-      server.close();
+      await server.close();
     });
   }
 

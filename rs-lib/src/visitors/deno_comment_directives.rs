@@ -1,14 +1,11 @@
 // Copyright 2018-2022 the Deno authors. All rights reserved. MIT license.
 
 use deno_ast::swc::common::comments::Comment;
-use deno_ast::swc::common::BytePos;
-use deno_ast::swc::common::Span;
 use deno_ast::swc::common::Spanned;
 use deno_ast::view::*;
+use deno_ast::TextChange;
 use once_cell::sync::Lazy;
 use regex::Regex;
-
-use crate::text_changes::TextChange;
 
 // lifted from deno_graph
 /// Matched the `@deno-types` pragma.
@@ -41,7 +38,7 @@ pub fn get_deno_comment_directive_text_changes(
         {
           text_changes.push(TextChange {
             new_text: String::new(),
-            span: get_extended_comment_span(program, comment),
+            range: get_extended_comment_range(program, comment),
           });
         }
       }
@@ -53,7 +50,7 @@ pub fn get_deno_comment_directive_text_changes(
     if DENO_TYPES_RE.is_match(&comment.text) {
       text_changes.push(TextChange {
         new_text: String::new(),
-        span: get_extended_comment_span(program, comment),
+        range: get_extended_comment_range(program, comment),
       });
     }
   }
@@ -61,11 +58,14 @@ pub fn get_deno_comment_directive_text_changes(
   text_changes
 }
 
-fn get_extended_comment_span(program: &Program, comment: &Comment) -> Span {
+fn get_extended_comment_range(
+  program: &Program,
+  comment: &Comment,
+) -> std::ops::Range<usize> {
   let file_text = program.source_file().unwrap().text();
   let span = comment.span();
   let end_pos = get_next_non_whitespace_pos(file_text, span.hi.0 as usize);
-  Span::new(span.lo, BytePos(end_pos as u32), Default::default())
+  (span.lo.0 as usize)..end_pos
 }
 
 fn get_next_non_whitespace_pos(text: &str, start_pos: usize) -> usize {
