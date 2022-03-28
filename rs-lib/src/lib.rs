@@ -13,6 +13,8 @@ use anyhow::Result;
 
 use analyze::get_ignore_line_indexes;
 use anyhow::bail;
+use deno_ast::apply_text_changes;
+use deno_ast::TextChange;
 use deno_graph::ModuleKind;
 use graph::ModuleGraphOptions;
 use mappings::Mappings;
@@ -22,8 +24,6 @@ use polyfills::build_polyfill_file;
 use polyfills::polyfills_for_target;
 use polyfills::Polyfill;
 use specifiers::Specifiers;
-use text_changes::apply_text_changes;
-use text_changes::TextChange;
 use utils::get_relative_specifier;
 use utils::prepend_statement_to_text;
 use visitors::fill_polyfills;
@@ -50,7 +50,6 @@ mod mappings;
 mod parser;
 mod polyfills;
 mod specifiers;
-mod text_changes;
 mod utils;
 mod visitors;
 
@@ -401,10 +400,8 @@ pub async fn transform(options: TransformOptions) -> Result<TransformOutput> {
             )
           })?;
 
-        apply_text_changes(
-          parsed_source.source().text().to_string(),
-          text_changes,
-        )
+        eprintln!("{:#?}", text_changes);
+        apply_text_changes(parsed_source.source().text_str(), text_changes)
       }
       ModuleKind::Asserted => {
         if let Some(source) = &module.maybe_source {

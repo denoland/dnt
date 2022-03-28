@@ -249,7 +249,7 @@ function getWebSocketShim(): Shim {
     },
     typesPackage: {
       name: "@types/ws",
-      version: "^8.5.2",
+      version: "^8.5.3",
     },
     globalNames: [{
       name: "WebSocket",

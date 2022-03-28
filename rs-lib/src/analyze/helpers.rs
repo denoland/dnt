@@ -3,8 +3,6 @@
 use deno_ast::swc::common::Spanned;
 use deno_ast::view::*;
 
-// todo(dsherret): unit tests
-
 pub fn is_in_type(mut node: Node) -> bool {
   // todo: add unit tests and investigate if there's something in swc that does this?
   while let Some(parent) = node.parent() {
@@ -89,6 +87,7 @@ pub fn is_in_type(mut node: Node) -> bool {
       | Node::NewExpr(_)
       | Node::ObjectLit(_)
       | Node::ObjectPat(_)
+      | Node::OptCall(_)
       | Node::OptChainExpr(_)
       | Node::Param(_)
       | Node::ParenExpr(_)
@@ -121,7 +120,8 @@ pub fn is_in_type(mut node: Node) -> bool {
       | Node::TsModuleBlock(_)
       | Node::TsModuleDecl(_)
       | Node::TsNamespaceDecl(_)
-      | Node::TsNamespaceExportDecl(_) => Some(false),
+      | Node::TsNamespaceExportDecl(_)
+      | Node::TsInstantiation(_) => Some(false),
 
       Node::TsArrayType(_)
       | Node::TsCallSignatureDecl(_)

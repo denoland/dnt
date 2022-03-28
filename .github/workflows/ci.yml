@@ -17,6 +17,10 @@ jobs:
     - uses: denoland/setup-deno@v1
       with:
         deno-version: ~1.x
+    - uses: actions/setup-node@v2
+      with:
+        node-version: '16'
+        registry-url: 'https://registry.npmjs.org'
 
     - name: Format
       run: |
@@ -25,17 +29,11 @@ jobs:
     - name: Lint
       run: |
         cargo clippy --all-targets --all-features --release
-        deno lint --config deno.json
+        deno lint
 
     - name: Build
       run: cargo build --all-targets --all-features --release
     - name: Test (Rust)
       run: cargo test --all-targets --all-features --release
-
-    - uses: actions/setup-node@v2
-      with:
-        node-version: '16'
-        registry-url: 'https://registry.npmjs.org'
-
     - name: Test (Deno)
-      run: deno test -A
+      run: deno task test

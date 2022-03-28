@@ -6,9 +6,9 @@ use deno_ast::swc::common::Spanned;
 use deno_ast::swc::common::SyntaxContext;
 use deno_ast::swc::utils::ident::IdentLike;
 use deno_ast::view::*;
+use deno_ast::TextChange;
 
 use crate::analyze::is_in_type;
-use crate::text_changes::TextChange;
 use crate::utils::text_change_for_prepend_statement_to_text;
 
 pub struct GetGlobalTextChangesParams<'a> {
@@ -96,10 +96,10 @@ fn visit_children(node: Node, import_name: &str, context: &mut Context) {
             context.text_changes.push(text_change);
             context.import_shim = true;
           } else {
-            context.text_changes.push(TextChange {
-              span: ident.span(),
-              new_text: "globalThis".to_string(),
-            });
+            context.text_changes.push(TextChange::from_span_and_text(
+              ident.span(),
+              "globalThis".to_string(),
+            ));
           }
         }
         return;
@@ -122,10 +122,10 @@ fn visit_children(node: Node, import_name: &str, context: &mut Context) {
           && !context.top_level_decls.contains(name)
           && !should_ignore(ident.into(), context)
         {
-          context.text_changes.push(TextChange {
-            span: ident.span(),
-            new_text: format!("{}.{}", import_name, ident_text),
-          });
+          context.text_changes.push(TextChange::from_span_and_text(
+            ident.span(),
+            format!("{}.{}", import_name, ident_text),
+          ));
           context.import_shim = true;
           return;
         }
@@ -147,15 +147,15 @@ fn get_global_this_text_change(
       Node::TsQualifiedName(parent) => {
         let right_name = parent.right.text_fast(context.program);
         if context.shim_global_names.contains(&right_name) {
-          Some(TextChange {
-            span: parent.span(),
-            new_text: format!(
+          Some(TextChange::from_span_and_text(
+            parent.span(),
+            format!(
               "{}.{}",
               import_name,
               // doesn't seem exactly right... will wait for a bug to open
               parent.right.text_fast(context.program),
             ),
-          })
+          ))
         } else {
           None
         }
@@ -163,10 +163,10 @@ fn get_global_this_text_change(
       _ => None,
     }
   } else {
-    Some(TextChange {
-      span: ident.span(),
-      new_text: format!("{}.dntGlobalThis", import_name),
-    })
+    Some(TextChange::from_span_and_text(
+      ident.span(),
+      format!("{}.dntGlobalThis", import_name),
+    ))
   }
 }
 

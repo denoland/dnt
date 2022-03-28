@@ -4,15 +4,13 @@ use std::collections::HashMap;
 use std::path::PathBuf;
 
 use anyhow::Result;
-use deno_ast::swc::common::BytePos;
-use deno_ast::swc::common::Span;
 use deno_ast::swc::common::Spanned;
 use deno_ast::view::*;
 use deno_ast::ModuleSpecifier;
+use deno_ast::TextChange;
 
 use crate::graph::ModuleGraph;
 use crate::mappings::Mappings;
-use crate::text_changes::TextChange;
 use crate::utils::get_relative_specifier;
 
 pub struct GetImportExportsTextChangesParams<'a> {
@@ -85,11 +83,8 @@ fn visit_children(node: Node, context: &mut Context) -> Result<()> {
               let comma_token =
                 assert_arg.previous_token_fast(context.program).unwrap();
               context.text_changes.push(TextChange {
-                span: Span::new(
-                  comma_token.span().lo,
-                  assert_arg.span().hi,
-                  Default::default(),
-                ),
+                range: (comma_token.span().lo.0 as usize)
+                  ..(assert_arg.span().hi.0 as usize),
                 new_text: String::new(),
               });
             }
@@ -127,11 +122,7 @@ fn visit_module_specifier(str: &Str, context: &mut Context) {
   };
 
   context.text_changes.push(TextChange {
-    span: Span::new(
-      str.span().lo + BytePos(1),
-      str.span().hi - BytePos(1),
-      Default::default(),
-    ),
+    range: (str.span().lo.0 as usize + 1)..(str.span().hi.0 as usize - 1),
     new_text,
   });
 }
@@ -142,11 +133,8 @@ fn visit_asserts(asserts: &ObjectLit, context: &mut Context) {
   let previous_token =
     assert_token.previous_token_fast(context.program).unwrap();
   context.text_changes.push(TextChange {
-    span: Span::new(
-      previous_token.span().hi,
-      asserts.span().hi,
-      Default::default(),
-    ),
+    range: (previous_token.span().hi.0 as usize)
+      ..(asserts.span().hi.0 as usize),
     new_text: String::new(),
   });
 }
