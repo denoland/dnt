@@ -1763,7 +1763,7 @@ async fn json_module_import_default() {
     result.main.files,
     &[
       ("mod.ts", r#"import jsonData from './data.js';"#),
-      ("data.js", r#"export default JSON.parse(`{ "prop": 5 }`);"#)
+      ("data.js", r#"export default { "prop": 5 };"#)
     ]
   );
 }
@@ -1790,7 +1790,7 @@ async fn json_module_dynamic_import() {
         "mod.ts",
         r#"const jsonData = (await import('./data.js')).default;"#
       ),
-      ("data.js", r#"export default JSON.parse(`{ "prop": 5 }`);"#)
+      ("data.js", r#"export default { "prop": 5 };"#)
     ]
   );
 }
@@ -1814,7 +1814,7 @@ async fn json_module_re_export() {
     result.main.files,
     &[
       ("mod.ts", r#"export { default as Test } from './data.js';"#),
-      ("data.js", r#"export default JSON.parse(`{ "prop": 5 }`);"#)
+      ("data.js", r#"export default { "prop": 5 };"#)
     ]
   );
 }

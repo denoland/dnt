@@ -1,7 +1,12 @@
 import { getDynamicOutput, getOutput } from "./mod.ts";
 
 Deno.test("should get output", () => {
-  if (getOutput() !== 5) {
+  // @ts-expect-error: not assignable to string
+  const _err: string = getOutput();
+  // is assignable to number
+  const value: number = getOutput();
+
+  if (value !== 5) {
     throw new Error("Was not expected output.");
   }
 });
