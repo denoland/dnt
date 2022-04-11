@@ -8,7 +8,7 @@ import {
 import { build, BuildOptions, ShimOptions } from "../mod.ts";
 
 const versions = {
-  denoShim: "~0.4.3",
+  denoShim: "~0.5.0",
   denoTestShim: "~0.3.2",
   cryptoShim: "~0.2.0",
   domExceptionShim: "^4.0.0",
