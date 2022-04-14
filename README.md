@@ -2,6 +2,8 @@
 
 [![deno doc](https://doc.deno.land/badge.svg)](https://doc.deno.land/https/deno.land/x/dnt/mod.ts)
 
+**English** | [中文](./README.zh-CN.md)
+
 Deno to npm package build tool.
 
 This tool is under active early development and hasn't been tested in a lot of scenarios. Examine its output thoroughly before publishing. If you encounter any problems or challenges, please open an [issue](https://github.com/denoland/dnt/issues) to help us improve it.
