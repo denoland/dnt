@@ -1,11 +1,11 @@
 // Copyright 2018-2022 the Deno authors. All rights reserved. MIT license.
 
+use deno_ast::swc::common::comments::Comment;
+use deno_ast::view::*;
 use deno_ast::RootNode;
 use deno_ast::SourceRanged;
 use deno_ast::SourceRangedForSpanned;
 use deno_ast::SourceTextInfoProvider;
-use deno_ast::swc::common::comments::Comment;
-use deno_ast::view::*;
 use deno_ast::TextChange;
 use once_cell::sync::Lazy;
 use regex::Regex;
@@ -69,7 +69,10 @@ fn get_extended_comment_range(
   let start_pos = text_info.range().start;
   let file_text = text_info.text_str();
   let range = comment.range();
-  let end_pos = get_next_non_whitespace_pos(file_text, range.end().as_byte_index(start_pos));
+  let end_pos = get_next_non_whitespace_pos(
+    file_text,
+    range.end().as_byte_index(start_pos),
+  );
   range.start().as_byte_index(start_pos)..end_pos
 }
 

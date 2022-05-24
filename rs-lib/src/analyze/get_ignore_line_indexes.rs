@@ -1,8 +1,8 @@
 use std::collections::HashSet;
 
+use deno_ast::view::*;
 use deno_ast::RootNode;
 use deno_ast::SourceRangedForSpanned;
-use deno_ast::view::*;
 
 pub struct IgnoredLineIndexes {
   pub warnings: Vec<String>,

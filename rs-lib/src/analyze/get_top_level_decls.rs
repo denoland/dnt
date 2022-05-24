@@ -2,9 +2,9 @@
 
 use std::collections::HashSet;
 
-use deno_ast::SourceRanged;
 use deno_ast::swc::common::SyntaxContext;
 use deno_ast::view::*;
+use deno_ast::SourceRanged;
 
 pub fn get_top_level_decls(
   program: &Program,
@@ -38,10 +38,18 @@ fn is_local_declaration_ident(node: Node) -> bool {
     match parent {
       Node::BindingIdent(decl) => decl.id.range().contains(&node.range()),
       Node::ClassDecl(decl) => decl.ident.range().contains(&node.range()),
-      Node::ClassExpr(decl) => decl.ident.as_ref().map(|i| i.range().contains(&node.range())).unwrap_or(false),
+      Node::ClassExpr(decl) => decl
+        .ident
+        .as_ref()
+        .map(|i| i.range().contains(&node.range()))
+        .unwrap_or(false),
       Node::TsInterfaceDecl(decl) => decl.id.range().contains(&node.range()),
       Node::FnDecl(decl) => decl.ident.range().contains(&node.range()),
-      Node::FnExpr(decl) => decl.ident.as_ref().map(|i| i.range().contains(&node.range())).unwrap_or(false),
+      Node::FnExpr(decl) => decl
+        .ident
+        .as_ref()
+        .map(|i| i.range().contains(&node.range()))
+        .unwrap_or(false),
       Node::TsModuleDecl(decl) => decl.id.range().contains(&node.range()),
       Node::TsNamespaceDecl(decl) => decl.id.range().contains(&node.range()),
       Node::VarDeclarator(decl) => decl.name.range().contains(&node.range()),

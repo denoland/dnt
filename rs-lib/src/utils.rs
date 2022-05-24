@@ -6,15 +6,15 @@ use std::path::Path;
 use std::path::PathBuf;
 
 use anyhow::Result;
-use deno_ast::SourceRangedForSpanned;
-use deno_ast::SourceTextInfoProvider;
 use deno_ast::apply_text_changes;
 use deno_ast::parse_module;
 use deno_ast::view::NodeTrait;
 use deno_ast::view::Program;
 use deno_ast::ModuleSpecifier;
 use deno_ast::ParseParams;
+use deno_ast::SourceRangedForSpanned;
 use deno_ast::SourceTextInfo;
+use deno_ast::SourceTextInfoProvider;
 use deno_ast::TextChange;
 
 pub const BOM_CHAR: char = '\u{FEFF}';
@@ -202,7 +202,9 @@ fn top_file_insert_pos(program: &Program) -> usize {
     if comment.text_fast(program).to_lowercase().contains("@ts-") {
       break;
     }
-    pos = comment.end().as_byte_index(program.text_info().range().start);
+    pos = comment
+      .end()
+      .as_byte_index(program.text_info().range().start);
   }
   pos
 }
