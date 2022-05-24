@@ -1,12 +1,11 @@
 // Copyright 2018-2022 the Deno authors. All rights reserved. MIT license.
 
-use deno_ast::swc::common::Spanned;
+use deno_ast::SourceRanged;
 use deno_ast::view::Expr;
 use deno_ast::view::Node;
 use deno_ast::view::ObjectPatProp;
 use deno_ast::view::Pat;
 use deno_ast::view::PropName;
-use deno_ast::view::SpannedExt;
 
 use super::Polyfill;
 use super::PolyfillVisitContext;
@@ -23,10 +22,14 @@ impl Polyfill for ObjectHasOwnPolyfill {
     match node {
       // Object.hasOwn
       Node::MemberExpr(member_expr) => {
-        member_expr.obj.span().ctxt == context.top_level_context
-          && !context.top_level_decls.contains("Object")
-          && member_expr.obj.text_fast(context.program) == "Object"
-          && member_expr.prop.text_fast(context.program) == "hasOwn"
+        if let Expr::Ident(obj_ident) = &member_expr.obj {
+          obj_ident.ctxt() == context.unresolved_context
+            && !context.top_level_decls.contains("Object")
+            && obj_ident.text_fast(context.program) == "Object"
+            && member_expr.prop.text_fast(context.program) == "hasOwn"
+        } else {
+          false
+        }
       }
       // const { hasOwn } = Object;
       Node::VarDeclarator(decl) => {
@@ -38,7 +41,7 @@ impl Polyfill for ObjectHasOwnPolyfill {
           Pat::Object(obj) => &obj.props,
           _ => return false,
         };
-        init.span().ctxt == context.top_level_context
+        init.ctxt() == context.unresolved_context
           && !context.top_level_decls.contains("Object")
           && init.text_fast(context.program) == "Object"
           && props.iter().any(|prop| {

@@ -4,7 +4,11 @@ use std::collections::HashMap;
 use std::path::PathBuf;
 
 use anyhow::Result;
-use deno_ast::swc::common::Spanned;
+use deno_ast::SourcePos;
+use deno_ast::SourceRange;
+use deno_ast::SourceRanged;
+use deno_ast::SourceRangedForSpanned;
+use deno_ast::SourceTextInfoProvider;
 use deno_ast::view::*;
 use deno_ast::ModuleSpecifier;
 use deno_ast::TextChange;
@@ -83,8 +87,7 @@ fn visit_children(node: Node, context: &mut Context) -> Result<()> {
               let comma_token =
                 assert_arg.previous_token_fast(context.program).unwrap();
               context.text_changes.push(TextChange {
-                range: (comma_token.span().lo.0 as usize)
-                  ..(assert_arg.span().hi.0 as usize),
+                range: create_range(comma_token.start(), assert_arg.end(), context),
                 new_text: String::new(),
               });
             }
@@ -122,7 +125,7 @@ fn visit_module_specifier(str: &Str, context: &mut Context) {
   };
 
   context.text_changes.push(TextChange {
-    range: (str.span().lo.0 as usize + 1)..(str.span().hi.0 as usize - 1),
+    range: create_range(str.start() + 1, str.end() - 1, context),
     new_text,
   });
 }
@@ -133,8 +136,11 @@ fn visit_asserts(asserts: &ObjectLit, context: &mut Context) {
   let previous_token =
     assert_token.previous_token_fast(context.program).unwrap();
   context.text_changes.push(TextChange {
-    range: (previous_token.span().hi.0 as usize)
-      ..(asserts.span().hi.0 as usize),
+    range: create_range(previous_token.end(),asserts.end(),context),
     new_text: String::new(),
   });
+}
+
+fn create_range(start: SourcePos, end: SourcePos, context: &Context) -> std::ops::Range<usize> {
+  SourceRange::new(start, end).as_byte_range(context.program.text_info().range().start)
 }

@@ -25,12 +25,12 @@ impl SourceParser for ScopeAnalysisParser {
   fn parse_module(
     &self,
     specifier: &ModuleSpecifier,
-    source: Arc<String>,
+    source: Arc<str>,
     media_type: MediaType,
   ) -> Result<ParsedSource, Diagnostic> {
     parse_module(ParseParams {
       specifier: specifier.to_string(),
-      source: SourceTextInfo::new(source),
+      text_info: SourceTextInfo::new(source),
       media_type,
       capture_tokens: true,
       scope_analysis: true,

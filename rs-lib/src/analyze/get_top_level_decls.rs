@@ -2,58 +2,58 @@
 
 use std::collections::HashSet;
 
-use deno_ast::swc::common::Spanned;
+use deno_ast::SourceRanged;
 use deno_ast::swc::common::SyntaxContext;
 use deno_ast::view::*;
 
 pub fn get_top_level_decls(
   program: &Program,
-  top_level_context: SyntaxContext,
+  unresolved_context: SyntaxContext,
 ) -> HashSet<String> {
   let mut results = HashSet::new();
 
-  visit_children(program.into(), top_level_context, &mut results);
+  visit_children(program.into(), unresolved_context, &mut results);
 
   results
 }
 
 fn visit_children(
   node: Node,
-  top_level_context: SyntaxContext,
+  unresolved_context: SyntaxContext,
   results: &mut HashSet<String>,
 ) {
   if let Node::Ident(ident) = node {
-    if ident.ctxt() == top_level_context && is_local_declaration_ident(node) {
+    if ident.ctxt() == unresolved_context && is_local_declaration_ident(node) {
       results.insert(ident.sym().to_string());
     }
   }
 
   for child in node.children() {
-    visit_children(child, top_level_context, results);
+    visit_children(child, unresolved_context, results);
   }
 }
 
 fn is_local_declaration_ident(node: Node) -> bool {
   if let Some(parent) = node.parent() {
     match parent {
-      Node::BindingIdent(decl) => decl.id.span().contains(node.span()),
-      Node::ClassDecl(decl) => decl.ident.span().contains(node.span()),
-      Node::ClassExpr(decl) => decl.ident.span().contains(node.span()),
-      Node::TsInterfaceDecl(decl) => decl.id.span().contains(node.span()),
-      Node::FnDecl(decl) => decl.ident.span().contains(node.span()),
-      Node::FnExpr(decl) => decl.ident.span().contains(node.span()),
-      Node::TsModuleDecl(decl) => decl.id.span().contains(node.span()),
-      Node::TsNamespaceDecl(decl) => decl.id.span().contains(node.span()),
-      Node::VarDeclarator(decl) => decl.name.span().contains(node.span()),
+      Node::BindingIdent(decl) => decl.id.range().contains(&node.range()),
+      Node::ClassDecl(decl) => decl.ident.range().contains(&node.range()),
+      Node::ClassExpr(decl) => decl.ident.as_ref().map(|i| i.range().contains(&node.range())).unwrap_or(false),
+      Node::TsInterfaceDecl(decl) => decl.id.range().contains(&node.range()),
+      Node::FnDecl(decl) => decl.ident.range().contains(&node.range()),
+      Node::FnExpr(decl) => decl.ident.as_ref().map(|i| i.range().contains(&node.range())).unwrap_or(false),
+      Node::TsModuleDecl(decl) => decl.id.range().contains(&node.range()),
+      Node::TsNamespaceDecl(decl) => decl.id.range().contains(&node.range()),
+      Node::VarDeclarator(decl) => decl.name.range().contains(&node.range()),
       Node::ImportNamedSpecifier(decl) => {
-        decl.local.span().contains(node.span())
+        decl.local.range().contains(&node.range())
       }
       Node::ImportDefaultSpecifier(decl) => {
-        decl.local.span().contains(node.span())
+        decl.local.range().contains(&node.range())
       }
-      Node::ImportStarAsSpecifier(decl) => decl.span().contains(node.span()),
-      Node::KeyValuePatProp(decl) => decl.key.span().contains(node.span()),
-      Node::AssignPatProp(decl) => decl.key.span().contains(node.span()),
+      Node::ImportStarAsSpecifier(decl) => decl.range().contains(&node.range()),
+      Node::KeyValuePatProp(decl) => decl.key.range().contains(&node.range()),
+      Node::AssignPatProp(decl) => decl.key.range().contains(&node.range()),
       _ => false,
     }
   } else {

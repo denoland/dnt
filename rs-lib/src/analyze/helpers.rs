@@ -1,6 +1,6 @@
 // Copyright 2018-2022 the Deno authors. All rights reserved. MIT license.
 
-use deno_ast::swc::common::Spanned;
+use deno_ast::SourceRanged;
 use deno_ast::view::*;
 
 pub fn is_in_type(mut node: Node) -> bool {
@@ -169,9 +169,9 @@ pub fn is_in_type(mut node: Node) -> bool {
 
       // may be a type
       Node::TsTypeAssertion(expr) => {
-        Some(expr.type_ann.span().contains(node.span()))
+        Some(expr.type_ann.range().contains(&node.range()))
       }
-      Node::TsAsExpr(expr) => Some(expr.type_ann.span().contains(node.span())),
+      Node::TsAsExpr(expr) => Some(expr.type_ann.range().contains(&node.range())),
 
       // still need more info
       Node::BigInt(_)

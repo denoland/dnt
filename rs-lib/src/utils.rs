@@ -6,11 +6,12 @@ use std::path::Path;
 use std::path::PathBuf;
 
 use anyhow::Result;
+use deno_ast::SourceRangedForSpanned;
+use deno_ast::SourceTextInfoProvider;
 use deno_ast::apply_text_changes;
 use deno_ast::parse_module;
 use deno_ast::view::NodeTrait;
 use deno_ast::view::Program;
-use deno_ast::view::SpannedExt;
 use deno_ast::ModuleSpecifier;
 use deno_ast::ParseParams;
 use deno_ast::SourceTextInfo;
@@ -157,24 +158,24 @@ pub fn prepend_statement_to_text(
 ) {
   // It's not great to have to reparse the file for this. Perhaps there is a utility
   // function in swc or maybe add one to deno_ast for parsing out the leading comments
-  let source = SourceTextInfo::from_string(std::mem::take(file_text));
+  let text_info = SourceTextInfo::from_string(std::mem::take(file_text));
   let parsed_module = parse_module(ParseParams {
     specifier: file_path.to_string_lossy().to_string(),
     capture_tokens: true,
     maybe_syntax: None,
     media_type: file_path.into(),
     scope_analysis: false,
-    source: source.clone(),
+    text_info: text_info.clone(),
   });
   match parsed_module {
     Ok(parsed_module) => parsed_module.with_view(|program| {
       let text_change =
         text_change_for_prepend_statement_to_text(&program, statement_text);
-      *file_text = apply_text_changes(source.text_str(), vec![text_change]);
+      *file_text = apply_text_changes(text_info.text_str(), vec![text_change]);
     }),
     Err(_) => {
       // should never happen... fallback...
-      *file_text = format!("{}\n{}", statement_text, source.text_str(),);
+      *file_text = format!("{}\n{}", statement_text, text_info.text_str(),);
     }
   }
 }
@@ -201,7 +202,7 @@ fn top_file_insert_pos(program: &Program) -> usize {
     if comment.text_fast(program).to_lowercase().contains("@ts-") {
       break;
     }
-    pos = comment.hi().0 as usize;
+    pos = comment.end().as_byte_index(program.text_info().range().start);
   }
   pos
 }

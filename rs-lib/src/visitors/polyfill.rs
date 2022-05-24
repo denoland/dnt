@@ -10,7 +10,7 @@ use crate::polyfills::PolyfillVisitContext;
 
 pub struct FillPolyfillsParams<'a> {
   pub program: &'a Program<'a>,
-  pub top_level_context: SyntaxContext,
+  pub unresolved_context: SyntaxContext,
   pub top_level_decls: &'a HashSet<String>,
   pub searching_polyfills: &'a mut Vec<Box<dyn Polyfill>>,
   pub found_polyfills: &'a mut Vec<Box<dyn Polyfill>>,
@@ -26,7 +26,7 @@ pub fn fill_polyfills(params: &mut FillPolyfillsParams<'_>) {
   let mut context = Context {
     visit_context: PolyfillVisitContext {
       program: params.program,
-      top_level_context: params.top_level_context,
+      unresolved_context: params.unresolved_context,
       top_level_decls: params.top_level_decls,
     },
     searching_polyfills: params.searching_polyfills,
