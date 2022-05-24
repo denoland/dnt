@@ -1,8 +1,11 @@
 // Copyright 2018-2022 the Deno authors. All rights reserved. MIT license.
 
 use deno_ast::swc::common::comments::Comment;
-use deno_ast::swc::common::Spanned;
 use deno_ast::view::*;
+use deno_ast::RootNode;
+use deno_ast::SourceRanged;
+use deno_ast::SourceRangedForSpanned;
+use deno_ast::SourceTextInfoProvider;
 use deno_ast::TextChange;
 use once_cell::sync::Lazy;
 use regex::Regex;
@@ -46,7 +49,7 @@ pub fn get_deno_comment_directive_text_changes(
   }
 
   // strip all `@deno-types` comments
-  for comment in program.comment_container().unwrap().all_comments() {
+  for comment in program.comment_container().all_comments() {
     if DENO_TYPES_RE.is_match(&comment.text) {
       text_changes.push(TextChange {
         new_text: String::new(),
@@ -62,10 +65,15 @@ fn get_extended_comment_range(
   program: &Program,
   comment: &Comment,
 ) -> std::ops::Range<usize> {
-  let file_text = program.source_file().unwrap().text();
-  let span = comment.span();
-  let end_pos = get_next_non_whitespace_pos(file_text, span.hi.0 as usize);
-  (span.lo.0 as usize)..end_pos
+  let text_info = program.text_info();
+  let start_pos = text_info.range().start;
+  let file_text = text_info.text_str();
+  let range = comment.range();
+  let end_pos = get_next_non_whitespace_pos(
+    file_text,
+    range.end().as_byte_index(start_pos),
+  );
+  range.start().as_byte_index(start_pos)..end_pos
 }
 
 fn get_next_non_whitespace_pos(text: &str, start_pos: usize) -> usize {

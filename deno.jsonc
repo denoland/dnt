@@ -2,7 +2,7 @@
   "tasks": {
     // todo: exclude going into node_modules folders once we add support for globbing
     "test": "deno test -A",
-    "wasm": "deno run -A _build.ts"
+    "wasm": "deno run -A --no-check _build.ts"
   },
   "fmt": {
     "options": {

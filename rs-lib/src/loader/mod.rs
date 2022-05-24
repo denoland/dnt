@@ -114,7 +114,7 @@ impl<'a> deno_graph::source::Loader for SourceLoader<'a> {
       resp.map(|r| {
         r.map(|r| deno_graph::source::LoadResponse::Module {
           specifier: r.specifier,
-          content: Arc::new(r.content),
+          content: r.content.into(),
           maybe_headers: r.headers,
         })
       })
@@ -133,7 +133,7 @@ fn get_dummy_module(
   Box::pin(future::ready(Ok(Some(
     deno_graph::source::LoadResponse::Module {
       specifier: specifier.clone(),
-      content: Arc::new(String::new()),
+      content: "".into(),
       maybe_headers: Some(headers),
     },
   ))))
