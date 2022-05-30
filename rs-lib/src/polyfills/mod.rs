@@ -20,7 +20,7 @@ pub trait Polyfill {
 
 pub struct PolyfillVisitContext<'a> {
   pub program: &'a Program<'a>,
-  pub top_level_context: SyntaxContext,
+  pub unresolved_context: SyntaxContext,
   pub top_level_decls: &'a HashSet<String>,
 }
 
@@ -78,18 +78,18 @@ impl PolyfillTester {
     let parsed_source = parser
       .parse_module(
         &ModuleSpecifier::parse("file://test.ts").unwrap(),
-        std::sync::Arc::new(text.to_string()),
+        text.into(),
         MediaType::TypeScript,
       )
       .unwrap();
     parsed_source.with_view(|program| {
       let mut searching_polyfills = vec![(self.create_polyfill)()];
       let mut found_polyfills = Vec::new();
-      let top_level_context = parsed_source.top_level_context();
-      let top_level_decls = get_top_level_decls(&program, top_level_context);
+      let unresolved_context = parsed_source.unresolved_context();
+      let top_level_decls = get_top_level_decls(&program, unresolved_context);
       fill_polyfills(&mut FillPolyfillsParams {
         program: &program,
-        top_level_context,
+        unresolved_context,
         top_level_decls: &top_level_decls,
         searching_polyfills: &mut searching_polyfills,
         found_polyfills: &mut found_polyfills,

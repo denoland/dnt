@@ -15,8 +15,8 @@ serialization = ["serde"]
 [dependencies]
 anyhow = "1.0.51"
 base64 = "0.13.0"
-deno_ast = { version = "0.13.2", features = ["module_specifier", "transforms", "view", "visit", "utils"] }
-deno_graph = { version = "0.25.0", features = [] }
+deno_ast = { version = "0.15.0", features = ["module_specifier", "transforms", "view", "visit", "utils"] }
+deno_graph = { version = "0.27.0", features = [] }
 futures = "0.3.17"
 import_map = "0.9.0"
 once_cell = "1.9.0"

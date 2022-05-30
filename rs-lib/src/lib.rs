@@ -1,5 +1,8 @@
 // Copyright 2018-2022 the Deno authors. All rights reserved. MIT license.
 
+#![deny(clippy::disallowed_methods)]
+#![deny(clippy::disallowed_types)]
+
 use std::collections::BTreeMap;
 use std::collections::HashMap;
 use std::collections::HashSet;
@@ -341,18 +344,18 @@ pub async fn transform(options: TransformOptions) -> Result<TransformOutput> {
 
         let text_changes = parsed_source
           .with_view(|program| -> Result<Vec<TextChange>> {
-            let top_level_context = parsed_source.top_level_context();
+            let unresolved_context = parsed_source.unresolved_context();
             let ignore_line_indexes =
               get_ignore_line_indexes(parsed_source.specifier(), &program);
             let top_level_decls =
-              get_top_level_decls(&program, top_level_context);
+              get_top_level_decls(&program, unresolved_context);
             warnings.extend(ignore_line_indexes.warnings);
 
             fill_polyfills(&mut FillPolyfillsParams {
               found_polyfills: &mut env_context.found_polyfills,
               searching_polyfills: &mut env_context.searching_polyfills,
               program: &program,
-              top_level_context: parsed_source.top_level_context(),
+              unresolved_context: parsed_source.unresolved_context(),
               top_level_decls: &top_level_decls,
             });
 
@@ -367,7 +370,7 @@ pub async fn transform(options: TransformOptions) -> Result<TransformOutput> {
               let result =
                 get_global_text_changes(&GetGlobalTextChangesParams {
                   program: &program,
-                  top_level_context,
+                  unresolved_context,
                   shim_specifier: &shim_relative_specifier,
                   shim_global_names: &env_context.shim_global_names,
                   ignore_line_indexes: &ignore_line_indexes.line_indexes,
@@ -401,7 +404,7 @@ pub async fn transform(options: TransformOptions) -> Result<TransformOutput> {
           })?;
 
         eprintln!("{:#?}", text_changes);
-        apply_text_changes(parsed_source.source().text_str(), text_changes)
+        apply_text_changes(parsed_source.text_info().text_str(), text_changes)
       }
       ModuleKind::Asserted => {
         if let Some(source) = &module.maybe_source {

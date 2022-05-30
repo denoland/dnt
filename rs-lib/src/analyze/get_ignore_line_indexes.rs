@@ -1,6 +1,8 @@
 use std::collections::HashSet;
 
 use deno_ast::view::*;
+use deno_ast::RootNode;
+use deno_ast::SourceRangedForSpanned;
 
 pub struct IgnoredLineIndexes {
   pub warnings: Vec<String>,
@@ -13,7 +15,7 @@ pub fn get_ignore_line_indexes(
 ) -> IgnoredLineIndexes {
   let mut warnings = Vec::new();
   let mut line_indexes = HashSet::new();
-  for comment in program.comment_container().unwrap().all_comments() {
+  for comment in program.comment_container().all_comments() {
     let lowercase_text = comment.text.trim().to_lowercase();
     let starts_with_deno_shim_ignore =
       lowercase_text.starts_with("deno-shim-ignore");
