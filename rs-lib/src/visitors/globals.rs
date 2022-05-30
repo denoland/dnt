@@ -2,18 +2,20 @@
 
 use std::collections::HashSet;
 
-use deno_ast::swc::common::Spanned;
 use deno_ast::swc::common::SyntaxContext;
-use deno_ast::swc::utils::ident::IdentLike;
 use deno_ast::view::*;
+use deno_ast::SourcePos;
+use deno_ast::SourceRange;
+use deno_ast::SourceRanged;
+use deno_ast::SourceTextInfoProvider;
+use deno_ast::TextChange;
 
 use crate::analyze::is_in_type;
-use crate::text_changes::TextChange;
 use crate::utils::text_change_for_prepend_statement_to_text;
 
 pub struct GetGlobalTextChangesParams<'a> {
   pub program: &'a Program<'a>,
-  pub top_level_context: SyntaxContext,
+  pub unresolved_context: SyntaxContext,
   pub shim_specifier: &'a str,
   pub shim_global_names: &'a HashSet<&'a str>,
   pub ignore_line_indexes: &'a HashSet<usize>,
@@ -27,7 +29,7 @@ pub struct GetGlobalTextChangesResult {
 
 struct Context<'a> {
   program: &'a Program<'a>,
-  top_level_context: SyntaxContext,
+  unresolved_context: SyntaxContext,
   top_level_decls: &'a HashSet<String>,
   shim_global_names: &'a HashSet<&'a str>,
   import_shim: bool,
@@ -40,7 +42,7 @@ pub fn get_global_text_changes(
 ) -> GetGlobalTextChangesResult {
   let mut context = Context {
     program: params.program,
-    top_level_context: params.top_level_context,
+    unresolved_context: params.unresolved_context,
     top_level_decls: params.top_level_decls,
     shim_global_names: params.shim_global_names,
     import_shim: false,
@@ -81,10 +83,10 @@ fn visit_children(node: Node, import_name: &str, context: &mut Context) {
 
   if let Node::Ident(ident) = node {
     let id = ident.inner.to_id();
-    let is_top_level_context = id.1 == context.top_level_context;
+    let is_unresolved_context = id.1 == context.unresolved_context;
     let ident_text = ident.text_fast(context.program);
 
-    if is_top_level_context {
+    if is_unresolved_context {
       // change `window` -> `globalThis`
       if ident_text == "window" {
         if !context.top_level_decls.contains("window")
@@ -97,7 +99,7 @@ fn visit_children(node: Node, import_name: &str, context: &mut Context) {
             context.import_shim = true;
           } else {
             context.text_changes.push(TextChange {
-              span: ident.span(),
+              range: create_range(ident.start(), ident.end(), context),
               new_text: "globalThis".to_string(),
             });
           }
@@ -123,7 +125,7 @@ fn visit_children(node: Node, import_name: &str, context: &mut Context) {
           && !should_ignore(ident.into(), context)
         {
           context.text_changes.push(TextChange {
-            span: ident.span(),
+            range: create_range(ident.start(), ident.end(), context),
             new_text: format!("{}.{}", import_name, ident_text),
           });
           context.import_shim = true;
@@ -148,7 +150,7 @@ fn get_global_this_text_change(
         let right_name = parent.right.text_fast(context.program);
         if context.shim_global_names.contains(&right_name) {
           Some(TextChange {
-            span: parent.span(),
+            range: create_range(parent.start(), parent.end(), context),
             new_text: format!(
               "{}.{}",
               import_name,
@@ -164,7 +166,7 @@ fn get_global_this_text_change(
     }
   } else {
     Some(TextChange {
-      span: ident.span(),
+      range: create_range(ident.start(), ident.end(), context),
       new_text: format!("{}.dntGlobalThis", import_name),
     })
   }
@@ -180,7 +182,7 @@ fn should_ignore_global_this(ident: &Ident, context: &Context) -> bool {
   // don't inject the globals when it's a member expression
   // not like `globalThis.<globalName>`
   if let Some(parent_member_expr) = ident.parent().to::<MemberExpr>() {
-    if parent_member_expr.obj.span().contains(ident.span()) {
+    if parent_member_expr.obj.range().contains(&ident.range()) {
       match parent_member_expr.prop {
         MemberProp::Ident(prop_ident) => {
           if !context
@@ -212,29 +214,43 @@ fn should_ignore(node: Node, context: &Context) -> bool {
 fn has_ignore_comment(node: Node, context: &Context) -> bool {
   context
     .ignore_line_indexes
-    .contains(&node.span().start_line_fast(context.program))
+    .contains(&node.start_line_fast(context.program))
 }
 
 fn is_declaration_ident(node: Node) -> bool {
   if let Some(parent) = node.parent() {
     match parent {
-      Node::BindingIdent(decl) => decl.id.span().contains(node.span()),
-      Node::ClassDecl(decl) => decl.ident.span().contains(node.span()),
-      Node::ClassExpr(decl) => decl.ident.span().contains(node.span()),
-      Node::TsInterfaceDecl(decl) => decl.id.span().contains(node.span()),
-      Node::FnDecl(decl) => decl.ident.span().contains(node.span()),
-      Node::FnExpr(decl) => decl.ident.span().contains(node.span()),
-      Node::TsModuleDecl(decl) => decl.id.span().contains(node.span()),
-      Node::TsNamespaceDecl(decl) => decl.id.span().contains(node.span()),
-      Node::VarDeclarator(decl) => decl.name.span().contains(node.span()),
-      Node::ImportNamedSpecifier(decl) => decl.span().contains(node.span()),
-      Node::ExportNamedSpecifier(decl) => decl.span().contains(node.span()),
-      Node::ImportDefaultSpecifier(decl) => decl.span().contains(node.span()),
-      Node::ExportDefaultSpecifier(decl) => decl.span().contains(node.span()),
-      Node::ImportStarAsSpecifier(decl) => decl.span().contains(node.span()),
-      Node::ExportNamespaceSpecifier(decl) => decl.span().contains(node.span()),
-      Node::KeyValuePatProp(decl) => decl.key.span().contains(node.span()),
-      Node::AssignPatProp(decl) => decl.key.span().contains(node.span()),
+      Node::BindingIdent(decl) => decl.id.range().contains(&node.range()),
+      Node::ClassDecl(decl) => decl.ident.range().contains(&node.range()),
+      Node::ClassExpr(decl) => decl
+        .ident
+        .as_ref()
+        .map(|i| i.range().contains(&node.range()))
+        .unwrap_or(false),
+      Node::TsInterfaceDecl(decl) => decl.id.range().contains(&node.range()),
+      Node::FnDecl(decl) => decl.ident.range().contains(&node.range()),
+      Node::FnExpr(decl) => decl
+        .ident
+        .as_ref()
+        .map(|i| i.range().contains(&node.range()))
+        .unwrap_or(false),
+      Node::TsModuleDecl(decl) => decl.id.range().contains(&node.range()),
+      Node::TsNamespaceDecl(decl) => decl.id.range().contains(&node.range()),
+      Node::VarDeclarator(decl) => decl.name.range().contains(&node.range()),
+      Node::ImportNamedSpecifier(decl) => decl.range().contains(&node.range()),
+      Node::ExportNamedSpecifier(decl) => decl.range().contains(&node.range()),
+      Node::ImportDefaultSpecifier(decl) => {
+        decl.range().contains(&node.range())
+      }
+      Node::ExportDefaultSpecifier(decl) => {
+        decl.range().contains(&node.range())
+      }
+      Node::ImportStarAsSpecifier(decl) => decl.range().contains(&node.range()),
+      Node::ExportNamespaceSpecifier(decl) => {
+        decl.range().contains(&node.range())
+      }
+      Node::KeyValuePatProp(decl) => decl.key.range().contains(&node.range()),
+      Node::AssignPatProp(decl) => decl.key.range().contains(&node.range()),
       _ => false,
     }
   } else {
@@ -266,4 +282,13 @@ fn get_unique_name(name: &str, all_idents: &HashSet<String>) -> String {
     new_name = format!("{}{}", name, count);
   }
   new_name
+}
+
+fn create_range(
+  start: SourcePos,
+  end: SourcePos,
+  context: &Context,
+) -> std::ops::Range<usize> {
+  SourceRange::new(start, end)
+    .as_byte_range(context.program.text_info().range().start)
 }

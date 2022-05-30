@@ -122,7 +122,7 @@ export interface BuildOptions {
   };
 }
 
-/** Emits the specified Deno module to an npm package using the TypeScript compiler. */
+/** Builds the specified Deno module to an npm package using the TypeScript compiler. */
 export async function build(options: BuildOptions): Promise<void> {
   // set defaults
   options = {

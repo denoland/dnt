@@ -3,7 +3,7 @@
 use deno_ast::view::Callee;
 use deno_ast::view::Expr;
 use deno_ast::view::Node;
-use deno_ast::view::SpannedExt;
+use deno_ast::SourceRanged;
 
 use super::Polyfill;
 use super::PolyfillVisitContext;

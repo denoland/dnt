@@ -60,8 +60,7 @@ pub fn get_specifiers(
     while !pending.is_empty() {
       if let Some(module) = pending
         .pop()
-        .map(|s| modules.remove(&module_graph.resolve(s)))
-        .flatten()
+        .and_then(|s| modules.remove(&module_graph.resolve(s)))
       {
         if let Some(mapped_entry) =
           specifiers.mapped_packages.remove(&module.specifier)
@@ -112,7 +111,11 @@ pub fn get_specifiers(
     }
   }
 
-  let types = resolve_declaration_file_mappings(module_graph, &all_modules)?;
+  let types = resolve_declaration_file_mappings(
+    module_graph,
+    &all_modules,
+    &found_mapped_specifiers,
+  )?;
   let mut declaration_specifiers = HashSet::new();
   for value in types.values() {
     declaration_specifiers.insert(&value.selected.specifier);

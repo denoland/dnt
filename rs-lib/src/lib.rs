@@ -1,5 +1,8 @@
 // Copyright 2018-2022 the Deno authors. All rights reserved. MIT license.
 
+#![deny(clippy::disallowed_methods)]
+#![deny(clippy::disallowed_types)]
+
 use std::collections::BTreeMap;
 use std::collections::HashMap;
 use std::collections::HashSet;
@@ -13,6 +16,8 @@ use anyhow::Result;
 
 use analyze::get_ignore_line_indexes;
 use anyhow::bail;
+use deno_ast::apply_text_changes;
+use deno_ast::TextChange;
 use deno_graph::ModuleKind;
 use graph::ModuleGraphOptions;
 use mappings::Mappings;
@@ -22,8 +27,6 @@ use polyfills::build_polyfill_file;
 use polyfills::polyfills_for_target;
 use polyfills::Polyfill;
 use specifiers::Specifiers;
-use text_changes::apply_text_changes;
-use text_changes::TextChange;
 use utils::get_relative_specifier;
 use utils::prepend_statement_to_text;
 use visitors::fill_polyfills;
@@ -50,7 +53,6 @@ mod mappings;
 mod parser;
 mod polyfills;
 mod specifiers;
-mod text_changes;
 mod utils;
 mod visitors;
 
@@ -186,7 +188,11 @@ pub struct ModuleShim {
 
 impl ModuleShim {
   pub fn maybe_specifier(&self) -> Option<ModuleSpecifier> {
-    ModuleSpecifier::parse(&self.module).ok()
+    if self.module.starts_with("node:") {
+      None
+    } else {
+      ModuleSpecifier::parse(&self.module).ok()
+    }
   }
 }
 
@@ -288,8 +294,7 @@ pub async fn transform(options: TransformOptions) -> Result<TransformOutput> {
     shim_global_names: options
       .shims
       .iter()
-      .map(|s| s.global_names().iter().map(|s| s.name.as_str()))
-      .flatten()
+      .flat_map(|s| s.global_names().iter().map(|s| s.name.as_str()))
       .collect(),
     shims: &options.shims,
     used_shim: false,
@@ -310,8 +315,7 @@ pub async fn transform(options: TransformOptions) -> Result<TransformOutput> {
     shim_global_names: options
       .test_shims
       .iter()
-      .map(|s| s.global_names().iter().map(|s| s.name.as_str()))
-      .flatten()
+      .flat_map(|s| s.global_names().iter().map(|s| s.name.as_str()))
       .collect(),
     shims: &options.test_shims,
     used_shim: false,
@@ -340,18 +344,18 @@ pub async fn transform(options: TransformOptions) -> Result<TransformOutput> {
 
         let text_changes = parsed_source
           .with_view(|program| -> Result<Vec<TextChange>> {
-            let top_level_context = parsed_source.top_level_context();
+            let unresolved_context = parsed_source.unresolved_context();
             let ignore_line_indexes =
               get_ignore_line_indexes(parsed_source.specifier(), &program);
             let top_level_decls =
-              get_top_level_decls(&program, top_level_context);
+              get_top_level_decls(&program, unresolved_context);
             warnings.extend(ignore_line_indexes.warnings);
 
             fill_polyfills(&mut FillPolyfillsParams {
               found_polyfills: &mut env_context.found_polyfills,
               searching_polyfills: &mut env_context.searching_polyfills,
               program: &program,
-              top_level_context: parsed_source.top_level_context(),
+              unresolved_context: parsed_source.unresolved_context(),
               top_level_decls: &top_level_decls,
             });
 
@@ -366,7 +370,7 @@ pub async fn transform(options: TransformOptions) -> Result<TransformOutput> {
               let result =
                 get_global_text_changes(&GetGlobalTextChangesParams {
                   program: &program,
-                  top_level_context,
+                  unresolved_context,
                   shim_specifier: &shim_relative_specifier,
                   shim_global_names: &env_context.shim_global_names,
                   ignore_line_indexes: &ignore_line_indexes.line_indexes,
@@ -399,17 +403,12 @@ pub async fn transform(options: TransformOptions) -> Result<TransformOutput> {
             )
           })?;
 
-        apply_text_changes(
-          parsed_source.source().text().to_string(),
-          text_changes,
-        )
+        eprintln!("{:#?}", text_changes);
+        apply_text_changes(parsed_source.text_info().text_str(), text_changes)
       }
       ModuleKind::Asserted => {
         if let Some(source) = &module.maybe_source {
-          format!(
-            "export default JSON.parse(`{}`);",
-            strip_bom(&source.replace("`", "\\`").replace("${", "\\${"))
-          )
+          format!("export default {};", strip_bom(source).trim(),)
         } else {
           continue;
         }
@@ -620,7 +619,7 @@ fn check_add_shim_file_to_environment(
     }
 
     text.push_str("const dntGlobals = {\n");
-    for global_name in shims.iter().map(|s| s.global_names().iter()).flatten() {
+    for global_name in shims.iter().flat_map(|s| s.global_names().iter()) {
       if !global_name.type_only {
         text.push_str(&format!("  {},\n", global_name.name));
       }

@@ -1,0 +1,35 @@
+{
+  "tasks": {
+    // todo: exclude going into node_modules folders once we add support for globbing
+    "test": "deno test -A",
+    "wasm": "deno run -A --no-check _build.ts"
+  },
+  "fmt": {
+    "options": {
+      "proseWrap": "never"
+    },
+    "files": {
+      "exclude": [
+        "target/",
+        "wasm/target/",
+        "lib/pkg/"
+      ]
+    }
+  },
+  "lint": {
+    "rules": {
+      "exclude": [
+        "no-explicit-any",
+        "camelcase"
+      ]
+    },
+    "files": {
+      "exclude": [
+        "target/",
+        "wasm/target/",
+        "lib/pkg/",
+        "rs-lib/src/polyfills/scripts/"
+      ]
+    }
+  }
+}

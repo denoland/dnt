@@ -4,22 +4,22 @@ import {
   assertEquals,
   assertRejects,
   assertStringIncludes,
-} from "https://deno.land/std@0.119.0/testing/asserts.ts";
+} from "https://deno.land/std@0.140.0/testing/asserts.ts";
 import { ShimValue } from "../lib/shims.ts";
 import { build, BuildOptions, ShimOptions } from "../mod.ts";
 
 const versions = {
-  denoShim: "~0.3.0",
-  denoTestShim: "~0.3.0",
-  cryptoShim: "~0.2.0",
+  denoShim: "~0.6.0",
+  denoTestShim: "~0.3.2",
+  cryptoShim: "~0.3.0",
   domExceptionShim: "^4.0.0",
   domExceptionShimTypes: "^2.0.1",
   promptsShim: "~0.1.0",
   timersShim: "~0.1.0",
   weakRefSham: "~0.1.0",
-  undici: "^4.12.1",
+  undici: "^5.3.0",
   chalk: "4.1.2",
-  nodeTypes: "16.11.1",
+  nodeTypes: "16.11.26",
   tsLib: "2.3.1",
 };
 
@@ -74,15 +74,18 @@ Deno.test("should build test project", async () => {
 esm/mod.test.js
 script/mod.test.js
 types/mod.test.d.ts
-esm/deps/deno.land/std@0.119.0/fmt/colors.js
-script/deps/deno.land/std@0.119.0/fmt/colors.js
-types/deps/deno.land/std@0.119.0/fmt/colors.d.ts
-esm/deps/deno.land/std@0.119.0/testing/_diff.js
-script/deps/deno.land/std@0.119.0/testing/_diff.js
-types/deps/deno.land/std@0.119.0/testing/_diff.d.ts
-esm/deps/deno.land/std@0.119.0/testing/asserts.js
-script/deps/deno.land/std@0.119.0/testing/asserts.js
-types/deps/deno.land/std@0.119.0/testing/asserts.d.ts
+esm/deps/deno.land/std@0.140.0/fmt/colors.js
+script/deps/deno.land/std@0.140.0/fmt/colors.js
+types/deps/deno.land/std@0.140.0/fmt/colors.d.ts
+esm/deps/deno.land/std@0.140.0/testing/_diff.js
+script/deps/deno.land/std@0.140.0/testing/_diff.js
+types/deps/deno.land/std@0.140.0/testing/_diff.d.ts
+esm/deps/deno.land/std@0.140.0/testing/_format.js
+script/deps/deno.land/std@0.140.0/testing/_format.js
+types/deps/deno.land/std@0.140.0/testing/_format.d.ts
+esm/deps/deno.land/std@0.140.0/testing/asserts.js
+script/deps/deno.land/std@0.140.0/testing/asserts.js
+types/deps/deno.land/std@0.140.0/testing/asserts.d.ts
 esm/_dnt.test_shims.js
 script/_dnt.test_shims.js
 types/_dnt.test_shims.d.ts
@@ -312,15 +315,18 @@ Deno.test("should build with source maps", async () => {
       `esm/mod.test.js
 script/mod.test.js
 types/mod.test.d.ts
-esm/deps/deno.land/std@0.119.0/fmt/colors.js
-script/deps/deno.land/std@0.119.0/fmt/colors.js
-types/deps/deno.land/std@0.119.0/fmt/colors.d.ts
-esm/deps/deno.land/std@0.119.0/testing/_diff.js
-script/deps/deno.land/std@0.119.0/testing/_diff.js
-types/deps/deno.land/std@0.119.0/testing/_diff.d.ts
-esm/deps/deno.land/std@0.119.0/testing/asserts.js
-script/deps/deno.land/std@0.119.0/testing/asserts.js
-types/deps/deno.land/std@0.119.0/testing/asserts.d.ts
+esm/deps/deno.land/std@0.140.0/fmt/colors.js
+script/deps/deno.land/std@0.140.0/fmt/colors.js
+types/deps/deno.land/std@0.140.0/fmt/colors.d.ts
+esm/deps/deno.land/std@0.140.0/testing/_diff.js
+script/deps/deno.land/std@0.140.0/testing/_diff.js
+types/deps/deno.land/std@0.140.0/testing/_diff.d.ts
+esm/deps/deno.land/std@0.140.0/testing/_format.js
+script/deps/deno.land/std@0.140.0/testing/_format.js
+types/deps/deno.land/std@0.140.0/testing/_format.d.ts
+esm/deps/deno.land/std@0.140.0/testing/asserts.js
+script/deps/deno.land/std@0.140.0/testing/asserts.js
+types/deps/deno.land/std@0.140.0/testing/asserts.d.ts
 esm/_dnt.test_shims.js
 script/_dnt.test_shims.js
 types/_dnt.test_shims.d.ts
@@ -628,6 +634,35 @@ Deno.test("should build the import map project", async () => {
   });
 });
 
+Deno.test("should shim web sockets", async () => {
+  await runTest("web_socket_project", {
+    entryPoints: ["mod.ts"],
+    outDir: "./npm",
+    shims: {
+      deno: "dev",
+      webSocket: true,
+    },
+    package: {
+      name: "server",
+      version: "1.0.0",
+    },
+  });
+});
+
+Deno.test("should build undici project", async () => {
+  await runTest("undici_project", {
+    entryPoints: ["mod.ts"],
+    outDir: "./npm",
+    shims: {
+      undici: true,
+    },
+    package: {
+      name: "undici-project",
+      version: "1.0.0",
+    },
+  });
+});
+
 export interface Output {
   packageJson: any;
   npmIgnore: string;
@@ -643,9 +678,11 @@ async function runTest(
     | "package_mappings_project"
     | "polyfill_project"
     | "module_mappings_project"
+    | "undici_project"
     | "shim_project"
     | "test_project"
-    | "tla_project",
+    | "tla_project"
+    | "web_socket_project",
   options: BuildOptions,
   checkOutput?: (output: Output) => (Promise<void> | void),
 ) {

@@ -11,39 +11,29 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 30
     steps:
-    - uses: actions/checkout@v2
-    - uses: actions-rs/toolchain@v1
-      with:
-        profile: minimal
-        toolchain: 1.58.0
-        override: true
+    - uses: actions/checkout@v3
+    - uses: dtolnay/rust-toolchain@stable
     - uses: Swatinem/rust-cache@v1
-
-    - name: Install clippy and rustfmt
-      run: |
-        rustup component add clippy
-        rustup component add rustfmt
-
-    - name: Format
-      run: cargo fmt --all -- --check
-    - name: Lint
-      run: cargo clippy --all-targets --all-features --release
-
     - uses: denoland/setup-deno@v1
       with:
-        deno-version: ~1.17
-    - run: deno lint --config deno.json
-    - run: deno fmt --config deno.json --check
-
-    - name: Build
-      run: cargo build --all-targets --all-features --release
-    - name: Test (Rust)
-      run: cargo test --all-targets --all-features --release
-
+        deno-version: ~1.x
     - uses: actions/setup-node@v2
       with:
         node-version: '16'
         registry-url: 'https://registry.npmjs.org'
 
+    - name: Format
+      run: |
+        cargo fmt --all -- --check
+        deno fmt --check
+    - name: Lint
+      run: |
+        cargo clippy --all-targets --all-features --release
+        deno lint
+
+    - name: Build
+      run: cargo build --all-targets --all-features --release
+    - name: Test (Rust)
+      run: cargo test --all-targets --all-features --release
     - name: Test (Deno)
-      run: deno test -A
+      run: deno task test

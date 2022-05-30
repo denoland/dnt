@@ -6,18 +6,16 @@ use std::path::Path;
 use std::path::PathBuf;
 
 use anyhow::Result;
+use deno_ast::apply_text_changes;
 use deno_ast::parse_module;
-use deno_ast::swc::common::BytePos;
-use deno_ast::swc::common::Span;
 use deno_ast::view::NodeTrait;
 use deno_ast::view::Program;
-use deno_ast::view::SpannedExt;
 use deno_ast::ModuleSpecifier;
 use deno_ast::ParseParams;
+use deno_ast::SourceRangedForSpanned;
 use deno_ast::SourceTextInfo;
-
-use crate::text_changes::apply_text_changes;
-use crate::text_changes::TextChange;
+use deno_ast::SourceTextInfoProvider;
+use deno_ast::TextChange;
 
 pub const BOM_CHAR: char = '\u{FEFF}';
 
@@ -29,7 +27,7 @@ pub fn get_relative_specifier(
   let relative_path_str = relative_path
     .to_string_lossy()
     .to_string()
-    .replace("\\", "/");
+    .replace('\\', "/");
 
   if relative_path_str.starts_with("../") || relative_path_str.starts_with("./")
   {
@@ -160,25 +158,24 @@ pub fn prepend_statement_to_text(
 ) {
   // It's not great to have to reparse the file for this. Perhaps there is a utility
   // function in swc or maybe add one to deno_ast for parsing out the leading comments
-  let source = SourceTextInfo::from_string(std::mem::take(file_text));
+  let text_info = SourceTextInfo::from_string(std::mem::take(file_text));
   let parsed_module = parse_module(ParseParams {
     specifier: file_path.to_string_lossy().to_string(),
     capture_tokens: true,
     maybe_syntax: None,
     media_type: file_path.into(),
     scope_analysis: false,
-    source: source.clone(),
+    text_info: text_info.clone(),
   });
   match parsed_module {
     Ok(parsed_module) => parsed_module.with_view(|program| {
       let text_change =
         text_change_for_prepend_statement_to_text(&program, statement_text);
-      *file_text =
-        apply_text_changes(source.text().to_string(), vec![text_change]);
+      *file_text = apply_text_changes(text_info.text_str(), vec![text_change]);
     }),
     Err(_) => {
       // should never happen... fallback...
-      *file_text = format!("{}\n{}", statement_text, source.text_str(),);
+      *file_text = format!("{}\n{}", statement_text, text_info.text_str(),);
     }
   }
 }
@@ -189,23 +186,25 @@ pub fn text_change_for_prepend_statement_to_text(
 ) -> TextChange {
   let insert_pos = top_file_insert_pos(program);
   TextChange {
-    span: Span::new(insert_pos, insert_pos, Default::default()),
+    range: insert_pos..insert_pos,
     new_text: format!(
       "{}{}\n",
-      if insert_pos == BytePos(0) { "" } else { "\n" },
+      if insert_pos == 0 { "" } else { "\n" },
       statement_text,
     ),
   }
 }
 
-fn top_file_insert_pos(program: &Program) -> BytePos {
-  let mut pos = BytePos(0);
+fn top_file_insert_pos(program: &Program) -> usize {
+  let mut pos = 0;
   for comment in program.leading_comments() {
     // insert before any @ts-ignore or @ts-expect
     if comment.text_fast(program).to_lowercase().contains("@ts-") {
       break;
     }
-    pos = comment.hi();
+    pos = comment
+      .end()
+      .as_byte_index(program.text_info().range().start);
   }
   pos
 }

@@ -146,7 +146,7 @@ Then write a statement like so...
 Deno.readTextFileSync(...);
 ```
 
-...dnt will create a shim file in the output, re-exporting the [@deno/shim-deno](https://github.com/denoland/node_deno_shims) npm shim package and change the Deno global be used as a property of this object.
+...dnt will create a shim file in the output, re-exporting the [@deno/shim-deno](https://github.com/denoland/node_deno_shims) npm shim package and change the Deno global to be used as a property of this object.
 
 ```ts
 import * as dntShim from "./_dnt.shims.js";
@@ -193,6 +193,7 @@ Set any of these properties to `true` (distribution and test) or `"dev"` (test o
 - `domException` - Shim the `DOMException` global using the "domexception" package (https://www.npmjs.com/package/domexception)
 - `undici` - Shim `fetch`, `File`, `FormData`, `Headers`, `Request`, and `Response` by using the "undici" package (https://www.npmjs.com/package/undici).
 - `weakRef` - Sham for the `WeakRef` global, which uses `globalThis.WeakRef` when it exists. The sham will throw at runtime when calling `deref()` and `WeakRef` doesn't globally exist, so this is only intended to help type check code that won't actually use it.
+- `webSocket` - Shim `WebSocket` by using the [ws](https://www.npmjs.com/package/ws) package.
 
 ##### `Deno.test`-only shim
 

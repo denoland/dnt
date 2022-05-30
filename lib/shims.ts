@@ -43,6 +43,8 @@ export interface ShimOptions {
    * won't actually use it.
    */
   weakRef?: ShimValue;
+  /** Shim `WebSocket` with the `ws` package (https://www.npmjs.com/package/ws). */
+  webSocket?: boolean | "dev";
   /** Custom shims to use. */
   custom?: Shim[];
   /** Custom shims to use only for the test code. */
@@ -72,6 +74,7 @@ export function shimOptionsToTransformShims(options: ShimOptions) {
   add(options.domException, getDomExceptionShim);
   add(options.undici, getUndiciShim);
   add(options.weakRef, getWeakRefShim);
+  add(options.webSocket, getWebSocketShim);
 
   if (options.custom) {
     shims.push(...options.custom);
@@ -100,7 +103,7 @@ function getDenoShim(): Shim {
   return {
     package: {
       name: "@deno/shim-deno",
-      version: "~0.3.0",
+      version: "~0.6.0",
     },
     globalNames: ["Deno"],
   };
@@ -110,7 +113,7 @@ function getDenoTestShim(): Shim {
   return {
     package: {
       name: "@deno/shim-deno-test",
-      version: "~0.3.0",
+      version: "~0.3.2",
     },
     globalNames: ["Deno"],
   };
@@ -120,7 +123,7 @@ function getCryptoShim(): Shim {
   return {
     package: {
       name: "@deno/shim-crypto",
-      version: "~0.2.0",
+      version: "~0.3.0",
     },
     globalNames: [
       "crypto",
@@ -194,7 +197,7 @@ function getUndiciShim(): Shim {
   return {
     package: {
       name: "undici",
-      version: "^4.12.1",
+      version: "^5.3.0",
     },
     globalNames: [
       "fetch",
@@ -235,6 +238,23 @@ function getWeakRefShim(): Shim {
       version: "~0.1.0",
     },
     globalNames: ["WeakRef", typeOnly("WeakRefConstructor")],
+  };
+}
+
+function getWebSocketShim(): Shim {
+  return {
+    package: {
+      name: "ws",
+      version: "^8.5.0",
+    },
+    typesPackage: {
+      name: "@types/ws",
+      version: "^8.5.3",
+    },
+    globalNames: [{
+      name: "WebSocket",
+      exportName: "default",
+    }],
   };
 }
 

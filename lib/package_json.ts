@@ -64,7 +64,7 @@ export function getPackageJson({
     : {};
   const devDependencies = {
     ...(shouldIncludeTypesNode() ? {
-        "@types/node": "16.11.1",
+        "@types/node": "16.11.26",
       } : {}),
     ...testDevDependencies,
     // override with specified dependencies
@@ -120,7 +120,7 @@ export function getPackageJson({
       if (shims.deno.test) {
         return true;
       }
-    } else if (shims.deno) {
+    } else if (shims.deno || shims.undici) {
       return true;
     } else {
       return false;
