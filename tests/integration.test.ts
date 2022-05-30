@@ -16,7 +16,7 @@ const versions = {
   promptsShim: "~0.1.0",
   timersShim: "~0.1.0",
   weakRefSham: "~0.1.0",
-  undici: "^4.12.1",
+  undici: "^5.3.0",
   chalk: "4.1.2",
   nodeTypes: "16.11.26",
   tsLib: "2.3.1",
@@ -645,6 +645,20 @@ Deno.test("should shim web sockets", async () => {
   });
 });
 
+Deno.test("should build undici project", async () => {
+  await runTest("undici_project", {
+    entryPoints: ["mod.ts"],
+    outDir: "./npm",
+    shims: {
+      undici: true,
+    },
+    package: {
+      name: "undici-project",
+      version: "1.0.0",
+    },
+  });
+});
+
 export interface Output {
   packageJson: any;
   npmIgnore: string;
@@ -660,6 +674,7 @@ async function runTest(
     | "package_mappings_project"
     | "polyfill_project"
     | "module_mappings_project"
+    | "undici_project"
     | "shim_project"
     | "test_project"
     | "tla_project"
