@@ -4,7 +4,10 @@
 
 Deno to npm package build tool.
 
-This tool is under active early development and hasn't been tested in a lot of scenarios. Examine its output thoroughly before publishing. If you encounter any problems or challenges, please open an [issue](https://github.com/denoland/dnt/issues) to help us improve it.
+This tool is under active early development and hasn't been tested in a lot of
+scenarios. Examine its output thoroughly before publishing. If you encounter any
+problems or challenges, please open an
+[issue](https://github.com/denoland/dnt/issues) to help us improve it.
 
 ## What does this do?
 
@@ -12,15 +15,22 @@ Takes a Deno module and creates an npm package for use in Node.js.
 
 There are several steps done in a pipeline:
 
-1. Transforms Deno code to Node/canonical TypeScript including files found by `deno test`.
+1. Transforms Deno code to Node/canonical TypeScript including files found by
+   `deno test`.
    - Rewrites module specifiers.
-   - Injects [shims](https://github.com/denoland/node_deno_shims) for any `Deno` namespace or other global name usages as specified.
-   - Rewrites [Skypack](https://www.skypack.dev/) and [esm.sh](https://esm.sh/) specifiers to bare specifiers and includes these dependencies in a package.json.
-   - When remote modules cannot be resolved to an npm package, it downloads them and rewrites specifiers to make them local.
+   - Injects [shims](https://github.com/denoland/node_deno_shims) for any `Deno`
+     namespace or other global name usages as specified.
+   - Rewrites [Skypack](https://www.skypack.dev/) and [esm.sh](https://esm.sh/)
+     specifiers to bare specifiers and includes these dependencies in a
+     package.json.
+   - When remote modules cannot be resolved to an npm package, it downloads them
+     and rewrites specifiers to make them local.
    - Allows mapping any specifier to an npm package.
 1. Type checks the output.
-1. Emits ESM, CommonJS, and TypeScript declaration files along with a _package.json_ file.
-1. Runs the final output in Node.js through a test runner calling all `Deno.test` calls.
+1. Emits ESM, CommonJS, and TypeScript declaration files along with a
+   _package.json_ file.
+1. Runs the final output in Node.js through a test runner calling all
+   `Deno.test` calls.
 
 ## Setup
 
@@ -60,7 +70,8 @@ There are several steps done in a pipeline:
    Deno.copyFileSync("README.md", "npm/README.md");
    ```
 
-1. Ignore the output directory with your source control if you desire (ex. add `npm/` to `.gitignore`).
+1. Ignore the output directory with your source control if you desire (ex. add
+   `npm/` to `.gitignore`).
 
 1. Run it and `npm publish`:
 
@@ -104,7 +115,8 @@ test escapeChar ... ok
 
 ### Disabling Type Checking, Testing, Declaration Emit, or CommonJS/UMD Output
 
-Use the following options to disable any one of these, which are enabled by default:
+Use the following options to disable any one of these, which are enabled by
+default:
 
 ```ts
 await build({
@@ -118,7 +130,10 @@ await build({
 
 ### Top Level Await
 
-Top level await doesn't work in CommonJS/UMD and dnt will error if a top level await is used and you are outputting CommonJS/UMD code. If you want to output a CommonJS/UMD package then you'll have to restructure your code to not use any top level awaits. Otherwise, set the `scriptModule` build option to `false`:
+Top level await doesn't work in CommonJS/UMD and dnt will error if a top level
+await is used and you are outputting CommonJS/UMD code. If you want to output a
+CommonJS/UMD package then you'll have to restructure your code to not use any
+top level awaits. Otherwise, set the `scriptModule` build option to `false`:
 
 ```ts
 await build({
@@ -129,7 +144,8 @@ await build({
 
 ### Shims
 
-dnt will shim the globals specified in the build options. For example, if you specify the following build options:
+dnt will shim the globals specified in the build options. For example, if you
+specify the following build options:
 
 ```ts
 await build({
@@ -146,7 +162,9 @@ Then write a statement like so...
 Deno.readTextFileSync(...);
 ```
 
-...dnt will create a shim file in the output, re-exporting the [@deno/shim-deno](https://github.com/denoland/node_deno_shims) npm shim package and change the Deno global to be used as a property of this object.
+...dnt will create a shim file in the output, re-exporting the
+[@deno/shim-deno](https://github.com/denoland/node_deno_shims) npm shim package
+and change the Deno global to be used as a property of this object.
 
 ```ts
 import * as dntShim from "./_dnt.shims.js";
@@ -156,9 +174,12 @@ dntShim.Deno.readTextFileSync(...);
 
 #### Test-Only Shimming
 
-If you want a shim to only be used in your test code as a dev dependency, then specify `"dev"` for the option.
+If you want a shim to only be used in your test code as a dev dependency, then
+specify `"dev"` for the option.
 
-For example, to use the `Deno` namespace only for development and the `setTimeout` and `setInterval` browser/Deno compatible shims in the distributed code, you would do:
+For example, to use the `Deno` namespace only for development and the
+`setTimeout` and `setInterval` browser/Deno compatible shims in the distributed
+code, you would do:
 
 ```ts
 await build({
@@ -183,17 +204,26 @@ Deno.readTextFileSync(...);
 
 #### Built-In Shims
 
-Set any of these properties to `true` (distribution and test) or `"dev"` (test only) to use them.
+Set any of these properties to `true` (distribution and test) or `"dev"` (test
+only) to use them.
 
 - `deno` - Shim the `Deno` namespace.
-- `timers` - Shim the global `setTimeout` and `setInterval` functions with Deno and browser compatible versions.
+- `timers` - Shim the global `setTimeout` and `setInterval` functions with Deno
+  and browser compatible versions.
 - `prompts` - Shim the global `confirm`, `alert`, and `prompt` functions.
 - `blob` - Shim the `Blob` global with the one from the `"buffer"` module.
 - `crypto` - Shim the `crypto` global.
-- `domException` - Shim the `DOMException` global using the "domexception" package (https://www.npmjs.com/package/domexception)
-- `undici` - Shim `fetch`, `File`, `FormData`, `Headers`, `Request`, and `Response` by using the "undici" package (https://www.npmjs.com/package/undici).
-- `weakRef` - Sham for the `WeakRef` global, which uses `globalThis.WeakRef` when it exists. The sham will throw at runtime when calling `deref()` and `WeakRef` doesn't globally exist, so this is only intended to help type check code that won't actually use it.
-- `webSocket` - Shim `WebSocket` by using the [ws](https://www.npmjs.com/package/ws) package.
+- `domException` - Shim the `DOMException` global using the "domexception"
+  package (https://www.npmjs.com/package/domexception)
+- `undici` - Shim `fetch`, `File`, `FormData`, `Headers`, `Request`, and
+  `Response` by using the "undici" package
+  (https://www.npmjs.com/package/undici).
+- `weakRef` - Sham for the `WeakRef` global, which uses `globalThis.WeakRef`
+  when it exists. The sham will throw at runtime when calling `deref()` and
+  `WeakRef` doesn't globally exist, so this is only intended to help type check
+  code that won't actually use it.
+- `webSocket` - Shim `WebSocket` by using the
+  [ws](https://www.npmjs.com/package/ws) package.
 
 ##### `Deno.test`-only shim
 
@@ -210,11 +240,13 @@ await build({
 });
 ```
 
-This may be useful in Node v14 and below where the full deno shim doesn't always work. See the section on Node v14 below for more details
+This may be useful in Node v14 and below where the full deno shim doesn't always
+work. See the section on Node v14 below for more details
 
 #### Custom Shims (Advanced)
 
-In addition to the pre-defined shim options, you may specify your own custom packages to use to shim globals.
+In addition to the pre-defined shim options, you may specify your own custom
+packages to use to shim globals.
 
 For example:
 
@@ -300,7 +332,10 @@ This is useful in situations where you want to implement your own shim.
 
 ### Specifier to Npm Package Mappings
 
-In most cases, dnt won't know about an npm package being available for one of your dependencies and will download remote modules to include in your package. There are scenarios though where an npm package may exist and you want to use it instead. This can be done by providing a specifier to npm package mapping.
+In most cases, dnt won't know about an npm package being available for one of
+your dependencies and will download remote modules to include in your package.
+There are scenarios though where an npm package may exist and you want to use it
+instead. This can be done by providing a specifier to npm package mapping.
 
 For example:
 
@@ -318,14 +353,19 @@ await build({
 
 This will:
 
-1. Change all `"https://deno.land/x/code_block_writer@11.0.0/mod.ts"` specifiers to `"code-block-writer"`
+1. Change all `"https://deno.land/x/code_block_writer@11.0.0/mod.ts"` specifiers
+   to `"code-block-writer"`
 2. Add a package.json dependency for `"code-block-writer": "^11.0.0"`.
 
-Note that dnt will error if you specify a mapping and it is not found in the code. This is done to prevent the scenario where a remote specifier's version is bumped and the mapping isn't updated.
+Note that dnt will error if you specify a mapping and it is not found in the
+code. This is done to prevent the scenario where a remote specifier's version is
+bumped and the mapping isn't updated.
 
 #### Mapping specifier to npm package subpath
 
-Say an npm package called `example` had a subpath at `sub_path.js` and you wanted to map `https://deno.land/x/example@0.1.0/sub_path.ts` to that subpath. To specify this, you would do the following:
+Say an npm package called `example` had a subpath at `sub_path.js` and you
+wanted to map `https://deno.land/x/example@0.1.0/sub_path.ts` to that subpath.
+To specify this, you would do the following:
 
 ```ts
 await build({
@@ -356,7 +396,8 @@ import * as mod from "example/sub_path.js";
 
 ### Multiple Entry Points
 
-To do this, specify multiple entry points like so (ex. an entry point at `.` and another at `./internal`):
+To do this, specify multiple entry points like so (ex. an entry point at `.` and
+another at `./internal`):
 
 ```ts
 await build({
@@ -392,11 +433,15 @@ This will create a package.json with these as exports:
 }
 ```
 
-Now these entry points could be imported like `import * as main from "your-package"` and `import * as internal from "your-package/internal";`.
+Now these entry points could be imported like
+`import * as main from "your-package"` and
+`import * as internal from "your-package/internal";`.
 
 ### Bin/CLI Packages
 
-To publish an npm [bin package](https://docs.npmjs.com/cli/v7/configuring-npm/package-json#bin) similar to `deno install`, add a `kind: "bin"` entry point:
+To publish an npm
+[bin package](https://docs.npmjs.com/cli/v7/configuring-npm/package-json#bin)
+similar to `deno install`, add a `kind: "bin"` entry point:
 
 ```ts
 await build({
@@ -409,19 +454,26 @@ await build({
 });
 ```
 
-This will add a `"bin"` entry to the package.json and add `#!/usr/bin/env node` to the top of the specified entry point.
+This will add a `"bin"` entry to the package.json and add `#!/usr/bin/env node`
+to the top of the specified entry point.
 
 ### Node and Deno Specific Code
 
-You may find yourself in a scenario where you want to run certain code based on whether someone is in Deno or if someone is in Node and feature testing is not possible. For example, say you want to run the `deno` executable when the code is running in Deno and the `node` executable when it's running in Node.
+You may find yourself in a scenario where you want to run certain code based on
+whether someone is in Deno or if someone is in Node and feature testing is not
+possible. For example, say you want to run the `deno` executable when the code
+is running in Deno and the `node` executable when it's running in Node.
 
 #### `which_runtime`
 
-One option to handle this, is to use the [`which_runtime`](https://deno.land/x/which_runtime) deno.land/x module which provides some exports saying if the code is running in Deno or Node.
+One option to handle this, is to use the
+[`which_runtime`](https://deno.land/x/which_runtime) deno.land/x module which
+provides some exports saying if the code is running in Deno or Node.
 
 #### Node and Deno Specific Modules
 
-Another option is to create node and deno specific modules. This can be done by specifying a mapping to a module:
+Another option is to create node and deno specific modules. This can be done by
+specifying a mapping to a module:
 
 ```ts
 await build({
@@ -432,20 +484,27 @@ await build({
 });
 ```
 
-Then within the file, use `// dnt-shim-ignore` directives to disable shimming if you desire.
+Then within the file, use `// dnt-shim-ignore` directives to disable shimming if
+you desire.
 
-A mapped module should be written similar to how you write Deno code (ex. use extensions on imports), except you can also import built-in node modules such as `import fs from "fs";` (just remember to include an `@types/node` dev dependency, if necessary).
+A mapped module should be written similar to how you write Deno code (ex. use
+extensions on imports), except you can also import built-in node modules such as
+`import fs from "fs";` (just remember to include an `@types/node` dev dependency
+under the `package.devDependencies` object when calling the `build` function, if
+necessary).
 
 ### Pre & Post Build Steps
 
-Since the file you're calling is a script, simply add statements before and after the `await build({ ... })` statement:
+Since the file you're calling is a script, simply add statements before and
+after the `await build({ ... })` statement:
 
 ```ts
+import { build, emptyDir } from "https://deno.land/x/dnt/mod.ts";
+
 // run pre-build steps here
+await emptyDir("./npm");
 
-// ex. maybe consider deleting the output directory before build
-await Deno.remove("npm", { recursive: true }).catch((_) => {});
-
+// build
 await build({
   // ...etc..
 });
@@ -457,7 +516,9 @@ await Deno.copyFile("README.md", "npm/README.md");
 
 ### Including Test Data Files
 
-Your Deno tests might rely on test data files. One way of handling this is to copy these files to be in the output directory at the same relative path your Deno tests run with.
+Your Deno tests might rely on test data files. One way of handling this is to
+copy these files to be in the output directory at the same relative path your
+Deno tests run with.
 
 For example:
 
@@ -481,11 +542,16 @@ await Deno.writeTextFile(
 );
 ```
 
-Alternatively, you could also use the [`which_runtime`](https://deno.land/x/which_runtime) module and use a different directory path when the tests are running in Node. This is probably more ideal if you have a lot of test data.
+Alternatively, you could also use the
+[`which_runtime`](https://deno.land/x/which_runtime) module and use a different
+directory path when the tests are running in Node. This is probably more ideal
+if you have a lot of test data.
 
 ### Test File Matching
 
-By default, dnt uses the same search [pattern](https://deno.land/manual/testing) that `deno test` uses to find test files. To override this, provide a `testPattern` and/or `rootTestDir` option:
+By default, dnt uses the same search [pattern](https://deno.land/manual/testing)
+that `deno test` uses to find test files. To override this, provide a
+`testPattern` and/or `rootTestDir` option:
 
 ```ts
 await build({
@@ -499,7 +565,8 @@ await build({
 
 ### GitHub Actions - Npm Publish on Tag
 
-1. Ensure your build script accepts a version as a CLI argument and sets that in the package.json object. For example:
+1. Ensure your build script accepts a version as a CLI argument and sets that in
+   the package.json object. For example:
 
    ```ts
    await build({
@@ -511,13 +578,18 @@ await build({
    });
    ```
 
-   Note: You may wish to remove the leading `v` in the tag name if it exists (ex. `Deno.args[0]?.replace(/^v/, "")`)
+   Note: You may wish to remove the leading `v` in the tag name if it exists
+   (ex. `Deno.args[0]?.replace(/^v/, "")`)
 
-1. In your npm settings, create an _automation_ access token (see [Creating and Viewing Access Tokens](https://docs.npmjs.com/creating-and-viewing-access-tokens)).
+1. In your npm settings, create an _automation_ access token (see
+   [Creating and Viewing Access Tokens](https://docs.npmjs.com/creating-and-viewing-access-tokens)).
 
-1. In your GitHub repo or organization, add a secret for `NPM_TOKEN` with the value created in the previous step (see [Creating Encrypted Secrets for a Repository](https://docs.github.com/en/actions/security-guides/encrypted-secrets#creating-encrypted-secrets-for-a-repository)).
+1. In your GitHub repo or organization, add a secret for `NPM_TOKEN` with the
+   value created in the previous step (see
+   [Creating Encrypted Secrets for a Repository](https://docs.github.com/en/actions/security-guides/encrypted-secrets#creating-encrypted-secrets-for-a-repository)).
 
-1. In your GitHub Actions workflow, get the tag name, setup node, run your build script, then publish to npm.
+1. In your GitHub Actions workflow, get the tag name, setup node, run your build
+   script, then publish to npm.
 
    ```yml
    # ...setup deno and run `deno test` here as you normally would...
@@ -539,13 +611,16 @@ await build({
      run: cd npm && npm publish
    ```
 
-   Note that the build script always runs even when not publishing. This is to ensure your build and tests pass on each commit.
+   Note that the build script always runs even when not publishing. This is to
+   ensure your build and tests pass on each commit.
 
-1. Ensure the workflow will run on tag creation. For example, see [Trigger GitHub Action Only on New Tags](https://stackoverflow.com/q/61891328/188246)).
+1. Ensure the workflow will run on tag creation. For example, see
+   [Trigger GitHub Action Only on New Tags](https://stackoverflow.com/q/61891328/188246)).
 
 ### Using Another Package Manager
 
-You may want to use another Node.js package manager instead of npm, such as Yarn or pnpm. To do this, override the `packageManager` option in the build options.
+You may want to use another Node.js package manager instead of npm, such as Yarn
+or pnpm. To do this, override the `packageManager` option in the build options.
 
 For example:
 
@@ -556,7 +631,8 @@ await build({
 });
 ```
 
-You can even specify an absolute path to the executable file of the package manager:
+You can even specify an absolute path to the executable file of the package
+manager:
 
 ```ts
 await build({
@@ -567,15 +643,26 @@ await build({
 
 ### Node v14 and Below
 
-dnt should be able to target old versions of Node by specifying a `{ compilerOption: { target: ... }}` value in the build options (see [Node Target Mapping](https://github.com/microsoft/TypeScript/wiki/Node-Target-Mapping) for what target maps to what Node version). A problem though is that certain shims might not work in old versions of Node.
+dnt should be able to target old versions of Node by specifying a
+`{ compilerOption: { target: ... }}` value in the build options (see
+[Node Target Mapping](https://github.com/microsoft/TypeScript/wiki/Node-Target-Mapping)
+for what target maps to what Node version). A problem though is that certain
+shims might not work in old versions of Node.
 
-If wanting to target a version of Node v14 and below, its recommend to use the `Deno.test`-only shim (described above) and then making use of the "mappings" feature to write Node-only files where you can handle differences. Alternatively, see if changes to the shim libraries might make it run on old versions of Node. Unfortunately, certain features are impossible or infeasible to get working.
+If wanting to target a version of Node v14 and below, its recommend to use the
+`Deno.test`-only shim (described above) and then making use of the "mappings"
+feature to write Node-only files where you can handle differences.
+Alternatively, see if changes to the shim libraries might make it run on old
+versions of Node. Unfortunately, certain features are impossible or infeasible
+to get working.
 
-See [this thread](https://github.com/denoland/node_deno_shims/issues/15) in node_deno_shims for more details.
+See [this thread](https://github.com/denoland/node_deno_shims/issues/15) in
+node_deno_shims for more details.
 
 ## JS API Example
 
-For only the Deno to canonical TypeScript transform which may be useful for bundlers, use the following:
+For only the Deno to canonical TypeScript transform which may be useful for
+bundlers, use the following:
 
 ```ts
 // docs: https://doc.deno.land/https/deno.land/x/dnt/transform.ts
