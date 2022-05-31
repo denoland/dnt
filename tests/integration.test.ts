@@ -103,7 +103,9 @@ Deno.test("should build with all options off", async () => {
     outDir: "./npm",
     shims: {
       ...getAllShimOptions(false),
-      deno: "dev",
+      deno: {
+        test: true
+      },
     },
     typeCheck: false,
     scriptModule: false,
@@ -124,7 +126,9 @@ Deno.test("should build with all options off", async () => {
         },
       },
       dependencies: {},
-      devDependencies: {},
+      devDependencies: {
+        "@types/node": versions.nodeTypes,
+      },
     });
 
     output.assertNotExists("script/mod.js");
@@ -496,8 +500,6 @@ import { setInterval, setTimeout } from "@deno/shim-timers";
 export { setInterval, setTimeout } from "@deno/shim-timers";
 import { default as DOMException } from "domexception";
 export { default as DOMException } from "domexception";
-import { default as URL } from "url";
-export { default as URL } from "url";
 import { File, FormData, Headers, Request, Response } from "undici";
 export { File, FormData, Headers, Request, Response } from "undici";
 import { default as fetch } from "node-fetch";
@@ -515,7 +517,6 @@ const dntGlobals = {
   setInterval,
   setTimeout,
   DOMException,
-  URL,
   File,
   FormData,
   Headers,

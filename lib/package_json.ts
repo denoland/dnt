@@ -119,6 +119,8 @@ export function getPackageJson({
     if (typeof shims.deno === "object") {
       if (shims.deno.test) {
         return true;
+      } else {
+        return false;
       }
     } else if (shims.deno || shims.undici) {
       return true;
