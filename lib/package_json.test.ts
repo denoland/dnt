@@ -232,7 +232,7 @@ Deno.test("multiple entrypoints", () => {
     includeScriptModule: true,
     includeDeclarations: true,
     includeTsLib: false,
-    shims: { deno: true }
+    shims: { deno: true },
   };
 
   assertEquals(getPackageJson(props), {
@@ -297,7 +297,7 @@ Deno.test("binary entrypoints", () => {
     includeScriptModule: true,
     includeDeclarations: true,
     includeTsLib: false,
-    shims: { deno: true }
+    shims: { deno: true },
   };
 
   assertEquals(getPackageJson(props), {

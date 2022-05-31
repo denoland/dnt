@@ -104,7 +104,7 @@ Deno.test("should build with all options off", async () => {
     shims: {
       ...getAllShimOptions(false),
       deno: {
-        test: true
+        test: true,
       },
     },
     typeCheck: false,

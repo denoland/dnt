@@ -162,12 +162,10 @@ fn get_global_this_text_change(
           None
         }
       }
-      Node::TsTypeQuery(_) => {
-        Some(TextChange {
-          range: create_range(ident.start(), ident.end(), context),
-          new_text: format!("{}.dntGlobalThis", import_name),
-        })
-      }
+      Node::TsTypeQuery(_) => Some(TextChange {
+        range: create_range(ident.start(), ident.end(), context),
+        new_text: format!("{}.dntGlobalThis", import_name),
+      }),
       _ => None,
     }
   } else {

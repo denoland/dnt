@@ -63,9 +63,11 @@ export function getPackageJson({
     })
     : {};
   const devDependencies = {
-    ...(shouldIncludeTypesNode() ? {
+    ...(shouldIncludeTypesNode()
+      ? {
         "@types/node": "16.11.37",
-      } : {}),
+      }
+      : {}),
     ...testDevDependencies,
     // override with specified dependencies
     ...(packageJsonObj.devDependencies ?? {}),
