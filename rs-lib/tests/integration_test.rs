@@ -403,7 +403,7 @@ async fn transform_global_this_shim() {
       "typeof dntShim.dntGlobalThis;",
       "dntShim.dntGlobalThis == null;",
       "dntShim.dntGlobalThis ? true : false;",
-      "type Test1 = typeof globalThis;",
+      "type Test1 = typeof dntShim.dntGlobalThis;",
       "type Test2 = typeof globalThis.Window;",
       "type Test3 = typeof dntShim.Deno;",
       "type Test4 = globalThis.Something;",

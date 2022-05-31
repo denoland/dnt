@@ -5,7 +5,7 @@ import { getPackageJson, GetPackageJsonOptions } from "./package_json.ts";
 
 const versions = {
   chalk: "4.1.2",
-  nodeTypes: "16.11.26",
+  nodeTypes: "16.11.37",
   tsLib: "2.3.1",
 };
 

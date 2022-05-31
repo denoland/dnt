@@ -13,13 +13,13 @@ const versions = {
   denoTestShim: "~0.3.2",
   cryptoShim: "~0.3.0",
   domExceptionShim: "^4.0.0",
-  domExceptionShimTypes: "^2.0.1",
+  domExceptionShimTypes: "^4.0.0",
   promptsShim: "~0.1.0",
   timersShim: "~0.1.0",
   weakRefSham: "~0.1.0",
   undici: "^5.3.0",
   chalk: "4.1.2",
-  nodeTypes: "16.11.26",
+  nodeTypes: "16.11.37",
   tsLib: "2.3.1",
 };
 
@@ -403,7 +403,7 @@ pnpm-lock.yaml
   });
 });
 
-Deno.test("should build shim project", async () => {
+Deno.test("should build shim project with everything enabled", async () => {
   await runTest("shim_project", {
     entryPoints: ["mod.ts"],
     outDir: "./npm",
