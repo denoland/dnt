@@ -114,7 +114,7 @@ impl Loader for InMemoryLoader {
       });
     let result = match result {
       Some(Ok(result)) => Ok(Some(result)),
-      Some(Err(err)) => Err(anyhow!("{}", err.to_string())),
+      Some(Err(err)) => Err(anyhow!("{}", err)),
       None => Ok(None),
     };
     Box::pin(futures::future::ready(result))
