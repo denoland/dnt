@@ -134,9 +134,10 @@ export function getCompilerLibOption(target: ScriptTarget): LibFileName[] {
       return ["lib.es2021.d.ts"];
     case "Latest":
       return ["lib.esnext.d.ts"];
-    default:
+    default: {
       const _assertNever: never = target;
       throw new Error(`Unknown target compiler option: ${target}`);
+    }
   }
 }
 
