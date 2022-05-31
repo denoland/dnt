@@ -1,5 +1,6 @@
 // Copyright 2018-2022 the Deno authors. All rights reserved. MIT license.
 
+#![allow(clippy::bool_assert_comparison)]
 #![deny(clippy::disallowed_methods)]
 #![deny(clippy::disallowed_types)]
 
