@@ -5,6 +5,7 @@ import {
   assertRejects,
   assertStringIncludes,
 } from "https://deno.land/std@0.140.0/testing/asserts.ts";
+import { ShimValue } from "../lib/shims.ts";
 import { build, BuildOptions, ShimOptions } from "../mod.ts";
 
 const versions = {
@@ -12,13 +13,13 @@ const versions = {
   denoTestShim: "~0.3.2",
   cryptoShim: "~0.3.0",
   domExceptionShim: "^4.0.0",
-  domExceptionShimTypes: "^2.0.1",
+  domExceptionShimTypes: "^4.0.0",
   promptsShim: "~0.1.0",
   timersShim: "~0.1.0",
   weakRefSham: "~0.1.0",
   undici: "^5.3.0",
   chalk: "4.1.2",
-  nodeTypes: "16.11.26",
+  nodeTypes: "16.11.37",
   tsLib: "2.3.1",
 };
 
@@ -102,7 +103,9 @@ Deno.test("should build with all options off", async () => {
     outDir: "./npm",
     shims: {
       ...getAllShimOptions(false),
-      deno: "dev",
+      deno: {
+        test: true,
+      },
     },
     typeCheck: false,
     scriptModule: false,
@@ -123,7 +126,9 @@ Deno.test("should build with all options off", async () => {
         },
       },
       dependencies: {},
-      devDependencies: {},
+      devDependencies: {
+        "@types/node": versions.nodeTypes,
+      },
     });
 
     output.assertNotExists("script/mod.js");
@@ -398,7 +403,7 @@ pnpm-lock.yaml
   });
 });
 
-Deno.test("should build shim project", async () => {
+Deno.test("should build shim project with everything enabled", async () => {
   await runTest("shim_project", {
     entryPoints: ["mod.ts"],
     outDir: "./npm",
@@ -722,7 +727,7 @@ async function runTest(
   }
 }
 
-function getAllShimOptions(value: boolean | "dev"): ShimOptions {
+function getAllShimOptions(value: ShimValue): ShimOptions {
   return {
     deno: value,
     timers: value,

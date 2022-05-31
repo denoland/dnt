@@ -403,7 +403,6 @@ pub async fn transform(options: TransformOptions) -> Result<TransformOutput> {
             )
           })?;
 
-        eprintln!("{:#?}", text_changes);
         apply_text_changes(parsed_source.text_info().text_str(), text_changes)
       }
       ModuleKind::Asserted => {

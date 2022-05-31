@@ -38,6 +38,33 @@ export function getCompilerScriptTarget(target: ScriptTarget) {
   }
 }
 
+export function getCompilerLibOption(target: ScriptTarget): string[] {
+  switch (target) {
+    case "ES3":
+      return [];
+    case "ES5":
+      return ["lib.es5.d.ts"];
+    case "ES2015":
+      return ["lib.es2015.d.ts"];
+    case "ES2016":
+      return ["lib.es2016.d.ts"];
+    case "ES2017":
+      return ["lib.es2017.d.ts"];
+    case "ES2018":
+      return ["lib.es2018.d.ts"];
+    case "ES2019":
+      return ["lib.es2019.d.ts"];
+    case "ES2020":
+      return ["lib.es2020.d.ts"];
+    case "ES2021":
+      return ["lib.es2021.d.ts"];
+    case "Latest":
+      return ["lib.esnext.d.ts"];
+    default:
+      throw new Error(`Unknown target compiler option: ${target}`);
+  }
+}
+
 export type SourceMapOptions = "inline" | boolean;
 
 export function getCompilerSourceMapOptions(

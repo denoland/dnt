@@ -5,7 +5,7 @@ import { getPackageJson, GetPackageJsonOptions } from "./package_json.ts";
 
 const versions = {
   chalk: "4.1.2",
-  nodeTypes: "16.11.26",
+  nodeTypes: "16.11.37",
   tsLib: "2.3.1",
 };
 
@@ -45,6 +45,9 @@ Deno.test("single entrypoint", () => {
     includeScriptModule: true,
     includeDeclarations: true,
     includeTsLib: false,
+    shims: {
+      deno: "dev",
+    },
   };
 
   assertEquals(getPackageJson(props), {
@@ -89,7 +92,9 @@ Deno.test("single entrypoint", () => {
       dependencies: {
         dep: "^1.0.0",
       },
-      devDependencies: {},
+      devDependencies: {
+        "@types/node": versions.nodeTypes,
+      },
       scripts: undefined,
       exports: {
         ".": {
@@ -116,7 +121,9 @@ Deno.test("single entrypoint", () => {
       dependencies: {
         dep: "^1.0.0",
       },
-      devDependencies: {},
+      devDependencies: {
+        "@types/node": versions.nodeTypes,
+      },
       scripts: undefined,
       exports: {
         ".": {
@@ -144,7 +151,9 @@ Deno.test("single entrypoint", () => {
       dependencies: {
         dep: "^1.0.0",
       },
-      devDependencies: {},
+      devDependencies: {
+        "@types/node": versions.nodeTypes,
+      },
       scripts: undefined,
       exports: {
         ".": {
@@ -175,7 +184,9 @@ Deno.test("single entrypoint", () => {
         tslib: versions.tsLib,
         dep: "^1.0.0",
       },
-      devDependencies: {},
+      devDependencies: {
+        "@types/node": versions.nodeTypes,
+      },
       scripts: undefined,
       exports: {
         ".": {
@@ -221,6 +232,7 @@ Deno.test("multiple entrypoints", () => {
     includeScriptModule: true,
     includeDeclarations: true,
     includeTsLib: false,
+    shims: { deno: true },
   };
 
   assertEquals(getPackageJson(props), {
@@ -285,6 +297,7 @@ Deno.test("binary entrypoints", () => {
     includeScriptModule: true,
     includeDeclarations: true,
     includeTsLib: false,
+    shims: { deno: true },
   };
 
   assertEquals(getPackageJson(props), {

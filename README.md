@@ -249,7 +249,7 @@ await build({
       },
       typesPackage: {
         name: "@types/domexception",
-        version: "^2.0.1",
+        version: "^4.0.0",
       },
       globalNames: [{
         name: "DOMException",
