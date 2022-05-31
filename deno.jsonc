@@ -5,9 +5,6 @@
     "wasm": "deno run -A --no-check _build.ts"
   },
   "fmt": {
-    "options": {
-      "proseWrap": "never"
-    },
     "files": {
       "exclude": [
         "target/",
