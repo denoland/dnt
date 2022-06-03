@@ -564,8 +564,8 @@ Deno.test("should build and test polyfill project", async () => {
     },
     compilerOptions: {
       // ensure it works with the latest declarations enabled
-      lib: ["esnext", "dom"]
-    }
+      lib: ["esnext", "dom"],
+    },
   }, (output) => {
     output.assertExists("esm/_dnt.polyfills.js");
   });
