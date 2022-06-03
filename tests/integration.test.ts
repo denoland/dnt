@@ -535,8 +535,25 @@ export const dntGlobalThis = createMergeProxy(globalThis, dntGlobals);
   });
 });
 
-Deno.test("should build polyfill project", async () => {
+Deno.test("should build and test polyfill project", async () => {
   await runTest("polyfill_project", {
+    entryPoints: ["mod.ts"],
+    outDir: "./npm",
+    shims: {
+      ...getAllShimOptions(false),
+      deno: "dev",
+    },
+    package: {
+      name: "polyfill-package",
+      version: "1.0.0",
+    },
+  }, (output) => {
+    output.assertExists("esm/_dnt.polyfills.js");
+  });
+});
+
+Deno.test("should build and test the array find last polyfill project", async () => {
+  await runTest("polyfill_array_find_last_project", {
     entryPoints: ["mod.ts"],
     outDir: "./npm",
     shims: {
@@ -678,6 +695,7 @@ async function runTest(
     | "json_module_project"
     | "package_mappings_project"
     | "polyfill_project"
+    | "polyfill_array_find_last_project"
     | "module_mappings_project"
     | "undici_project"
     | "shim_project"
