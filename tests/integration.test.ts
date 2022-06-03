@@ -550,6 +550,25 @@ Deno.test("should build and test polyfill project", async () => {
   }, (output) => {
     output.assertExists("esm/_dnt.polyfills.js");
   });
+
+  await runTest("polyfill_project", {
+    entryPoints: ["mod.ts"],
+    outDir: "./npm",
+    shims: {
+      ...getAllShimOptions(false),
+      deno: "dev",
+    },
+    package: {
+      name: "polyfill-package",
+      version: "1.0.0",
+    },
+    compilerOptions: {
+      // ensure it works with the latest declarations enabled
+      lib: ["esnext", "dom"]
+    }
+  }, (output) => {
+    output.assertExists("esm/_dnt.polyfills.js");
+  });
 });
 
 Deno.test("should build and test the array find last polyfill project", async () => {
