@@ -5,7 +5,8 @@ import {
   getCompilerScriptTarget,
   getCompilerSourceMapOptions,
   getTopLevelAwaitLocation,
-  LibFileName,
+  LibName,
+  libNamesToCompilerOption,
   outputDiagnostics,
   SourceMapOptions,
   transformCodeToTarget,
@@ -20,7 +21,7 @@ import * as compilerTransforms from "./lib/compiler_transforms.ts";
 import { getPackageJson } from "./lib/package_json.ts";
 import { getTestRunnerCode } from "./lib/test_runner/get_test_runner_code.ts";
 
-export type { LibFileName, SourceMapOptions } from "./lib/compiler.ts";
+export type { LibName, SourceMapOptions } from "./lib/compiler.ts";
 export type { ShimOptions } from "./lib/shims.ts";
 export { emptyDir } from "./lib/mod.deps.ts";
 
@@ -120,7 +121,7 @@ export interface BuildOptions {
      */
     inlineSources?: boolean;
     /** Default set of library options to use. See https://www.typescriptlang.org/tsconfig/#lib */
-    lib?: LibFileName[];
+    lib?: LibName[];
   };
 }
 
@@ -216,7 +217,9 @@ export async function build(options: BuildOptions): Promise<void> {
       module: ts.ModuleKind.ESNext,
       moduleResolution: ts.ModuleResolutionKind.NodeJs,
       target: compilerScriptTarget,
-      lib: options.compilerOptions?.lib ?? getCompilerLibOption(scriptTarget),
+      lib: libNamesToCompilerOption(
+        options.compilerOptions?.lib ?? getCompilerLibOption(scriptTarget),
+      ),
       allowSyntheticDefaultImports: true,
       importHelpers: options.compilerOptions?.importHelpers,
       ...getCompilerSourceMapOptions(options.compilerOptions?.sourceMap),

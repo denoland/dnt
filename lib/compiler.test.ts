@@ -3,6 +3,7 @@ import {
   getCompilerScriptTarget,
   getCompilerSourceMapOptions,
   getTopLevelAwaitLocation,
+  libNamesToCompilerOption,
   SourceMapOptions,
 } from "./compiler.ts";
 import { ts } from "./mod.deps.ts";
@@ -51,7 +52,10 @@ Deno.test("compiler lib option should have expected outputs", () => {
 
   for (const key in cases) {
     const scriptTarget = key as ScriptTarget;
-    assertEquals(getCompilerLibOption(scriptTarget), cases[scriptTarget]);
+    assertEquals(
+      libNamesToCompilerOption(getCompilerLibOption(scriptTarget)),
+      cases[scriptTarget],
+    );
   }
 
   assertThrows(() => getCompilerScriptTarget("invalid" as any));
