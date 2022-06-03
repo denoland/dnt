@@ -8,6 +8,7 @@ use deno_ast::view::Program;
 
 use crate::ScriptTarget;
 
+mod array_find_last;
 mod error_cause;
 mod object_has_own;
 mod string_replace_all;
@@ -36,6 +37,7 @@ fn all_polyfills() -> Vec<Box<dyn Polyfill>> {
     Box::new(object_has_own::ObjectHasOwnPolyfill),
     Box::new(error_cause::ErrorCausePolyfill),
     Box::new(string_replace_all::StringReplaceAllPolyfill),
+    Box::new(array_find_last::ArrayFindLastPolyfill),
   ]
 }
 
