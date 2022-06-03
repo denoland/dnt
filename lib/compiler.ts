@@ -38,107 +38,117 @@ export function getCompilerScriptTarget(target: ScriptTarget) {
   }
 }
 
-// Created from https://github.com/dsherret/ts-morph/blob/latest/packages/common/src/data/libFiles.ts
-export type LibFileName =
-  | "lib.d.ts"
-  | "lib.dom.d.ts"
-  | "lib.dom.iterable.d.ts"
-  | "lib.es2015.collection.d.ts"
-  | "lib.es2015.core.d.ts"
-  | "lib.es2015.d.ts"
-  | "lib.es2015.generator.d.ts"
-  | "lib.es2015.iterable.d.ts"
-  | "lib.es2015.promise.d.ts"
-  | "lib.es2015.proxy.d.ts"
-  | "lib.es2015.reflect.d.ts"
-  | "lib.es2015.symbol.d.ts"
-  | "lib.es2015.symbol.wellknown.d.ts"
-  | "lib.es2016.array.include.d.ts"
-  | "lib.es2016.d.ts"
-  | "lib.es2016.full.d.ts"
-  | "lib.es2017.d.ts"
-  | "lib.es2017.full.d.ts"
-  | "lib.es2017.intl.d.ts"
-  | "lib.es2017.object.d.ts"
-  | "lib.es2017.sharedmemory.d.ts"
-  | "lib.es2017.string.d.ts"
-  | "lib.es2017.typedarrays.d.ts"
-  | "lib.es2018.asyncgenerator.d.ts"
-  | "lib.es2018.asynciterable.d.ts"
-  | "lib.es2018.d.ts"
-  | "lib.es2018.full.d.ts"
-  | "lib.es2018.intl.d.ts"
-  | "lib.es2018.promise.d.ts"
-  | "lib.es2018.regexp.d.ts"
-  | "lib.es2019.array.d.ts"
-  | "lib.es2019.d.ts"
-  | "lib.es2019.full.d.ts"
-  | "lib.es2019.object.d.ts"
-  | "lib.es2019.string.d.ts"
-  | "lib.es2019.symbol.d.ts"
-  | "lib.es2020.bigint.d.ts"
-  | "lib.es2020.d.ts"
-  | "lib.es2020.date.d.ts"
-  | "lib.es2020.full.d.ts"
-  | "lib.es2020.intl.d.ts"
-  | "lib.es2020.number.d.ts"
-  | "lib.es2020.promise.d.ts"
-  | "lib.es2020.sharedmemory.d.ts"
-  | "lib.es2020.string.d.ts"
-  | "lib.es2020.symbol.wellknown.d.ts"
-  | "lib.es2021.d.ts"
-  | "lib.es2021.full.d.ts"
-  | "lib.es2021.intl.d.ts"
-  | "lib.es2021.promise.d.ts"
-  | "lib.es2021.string.d.ts"
-  | "lib.es2021.weakref.d.ts"
-  | "lib.es2022.array.d.ts"
-  | "lib.es2022.d.ts"
-  | "lib.es2022.error.d.ts"
-  | "lib.es2022.full.d.ts"
-  | "lib.es2022.intl.d.ts"
-  | "lib.es2022.object.d.ts"
-  | "lib.es2022.string.d.ts"
-  | "lib.es5.d.ts"
-  | "lib.es6.d.ts"
-  | "lib.esnext.d.ts"
-  | "lib.esnext.full.d.ts"
-  | "lib.esnext.intl.d.ts"
-  | "lib.esnext.promise.d.ts"
-  | "lib.esnext.string.d.ts"
-  | "lib.esnext.weakref.d.ts"
-  | "lib.scripthost.d.ts"
-  | "lib.webworker.d.ts"
-  | "lib.webworker.importscripts.d.ts"
-  | "lib.webworker.iterable.d.ts";
+// Created from https://github.com/microsoft/TypeScript/blob/0ad5f82d6243db80d42bc0abb7a191dd380e980e/src/compiler/commandLineParser.ts
+export type LibName =
+  | "es5"
+  | "es6"
+  | "es2015"
+  | "es7"
+  | "es2016"
+  | "es2017"
+  | "es2018"
+  | "es2019"
+  | "es2020"
+  | "es2021"
+  | "es2022"
+  | "esnext"
+  | "dom"
+  | "dom.iterable"
+  | "webworker"
+  | "webworker.importscripts"
+  | "webworker.iterable"
+  | "scripthost"
+  | "es2015.core"
+  | "es2015.collection"
+  | "es2015.generator"
+  | "es2015.iterable"
+  | "es2015.promise"
+  | "es2015.proxy"
+  | "es2015.reflect"
+  | "es2015.symbol"
+  | "es2015.symbol.wellknown"
+  | "es2016.array.include"
+  | "es2017.object"
+  | "es2017.sharedmemory"
+  | "es2017.string"
+  | "es2017.intl"
+  | "es2017.typedarrays"
+  | "es2018.asyncgenerator"
+  | "es2018.asynciterable"
+  | "es2018.intl"
+  | "es2018.promise"
+  | "es2018.regexp"
+  | "es2019.array"
+  | "es2019.object"
+  | "es2019.string"
+  | "es2019.symbol"
+  | "es2020.bigint"
+  | "es2020.date"
+  | "es2020.promise"
+  | "es2020.sharedmemory"
+  | "es2020.string"
+  | "es2020.symbol.wellknown"
+  | "es2020.intl"
+  | "es2020.number"
+  | "es2021.promise"
+  | "es2021.string"
+  | "es2021.weakref"
+  | "es2021.intl"
+  | "es2022.array"
+  | "es2022.error"
+  | "es2022.intl"
+  | "es2022.object"
+  | "es2022.string"
+  | "esnext.array"
+  | "esnext.symbol"
+  | "esnext.asynciterable"
+  | "esnext.intl"
+  | "esnext.bigint"
+  | "esnext.string"
+  | "esnext.promise"
+  | "esnext.weakref";
 
-export function getCompilerLibOption(target: ScriptTarget): LibFileName[] {
+export function getCompilerLibOption(target: ScriptTarget): LibName[] {
   switch (target) {
     case "ES3":
       return [];
     case "ES5":
-      return ["lib.es5.d.ts"];
+      return ["es5"];
     case "ES2015":
-      return ["lib.es2015.d.ts"];
+      return ["es2015"];
     case "ES2016":
-      return ["lib.es2016.d.ts"];
+      return ["es2016"];
     case "ES2017":
-      return ["lib.es2017.d.ts"];
+      return ["es2017"];
     case "ES2018":
-      return ["lib.es2018.d.ts"];
+      return ["es2018"];
     case "ES2019":
-      return ["lib.es2019.d.ts"];
+      return ["es2019"];
     case "ES2020":
-      return ["lib.es2020.d.ts"];
+      return ["es2020"];
     case "ES2021":
-      return ["lib.es2021.d.ts"];
+      return ["es2021"];
     case "Latest":
-      return ["lib.esnext.d.ts"];
+      return ["esnext"];
     default: {
       const _assertNever: never = target;
       throw new Error(`Unknown target compiler option: ${target}`);
     }
   }
+}
+
+export function libNamesToCompilerOption(names: LibName[]) {
+  const libFileNames: string[] = [];
+  const libMap = (ts as any).libMap as Map<string, string>;
+  for (const name of names) {
+    const fileName = libMap.get(name);
+    if (fileName == null) {
+      throw new Error(`Could not find filename for lib: ${name}`);
+    } else {
+      libFileNames.push(fileName);
+    }
+  }
+  return libFileNames;
 }
 
 export type SourceMapOptions = "inline" | boolean;

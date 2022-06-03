@@ -641,6 +641,20 @@ await build({
 });
 ```
 
+### DOM Types
+
+If you wish to compile with DOM types for type checking, you may specify a "dom"
+lib compiler option when building:
+
+```ts
+await build({
+  // ...etc...
+  compilerOptions: {
+    lib: ["es2021", "dom"],
+  },
+});
+```
+
 ### Node v14 and Below
 
 dnt should be able to target old versions of Node by specifying a
