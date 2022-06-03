@@ -275,15 +275,26 @@ export async function build(options: BuildOptions): Promise<void> {
     }
   }
 
-  let program = project.createProgram();
+  // When creating the program and type checking, we need to ensure that
+  // the cwd is the directory that contains the node_modules directory
+  // so that TypeScript will read it and resolve any @types/ packages.
+  // This is done in `getAutomaticTypeDirectiveNames` of TypeScript's code.
+  const originalDir = Deno.cwd();
+  let program: ts.Program;
+  Deno.chdir(options.outDir);
+  try {
+    program = project.createProgram();
 
-  if (options.typeCheck) {
-    log("Type checking...");
-    const diagnostics = ts.getPreEmitDiagnostics(program);
-    if (diagnostics.length > 0) {
-      outputDiagnostics(diagnostics);
-      throw new Error(`Had ${diagnostics.length} diagnostics.`);
+    if (options.typeCheck) {
+      log("Type checking...");
+      const diagnostics = ts.getPreEmitDiagnostics(program);
+      if (diagnostics.length > 0) {
+        outputDiagnostics(diagnostics);
+        throw new Error(`Had ${diagnostics.length} diagnostics.`);
+      }
     }
+  } finally {
+    Deno.chdir(originalDir);
   }
 
   // emit only the .d.ts files

@@ -700,6 +700,23 @@ Deno.test("should build undici project", async () => {
   });
 });
 
+Deno.test("should build and type check node types project", async () => {
+  await runTest("node_types_project", {
+    scriptModule: false,
+    test: false,
+    entryPoints: ["main.ts"],
+    outDir: "./npm",
+    shims: {},
+    package: {
+      name: "node_types",
+      version: "0.0.0",
+      devDependencies: {
+        "@types/node": versions.nodeTypes,
+      },
+    },
+  });
+});
+
 export interface Output {
   packageJson: any;
   npmIgnore: string;
@@ -716,6 +733,7 @@ async function runTest(
     | "polyfill_project"
     | "polyfill_array_find_last_project"
     | "module_mappings_project"
+    | "node_types_project"
     | "undici_project"
     | "shim_project"
     | "test_project"
