@@ -717,6 +717,19 @@ Deno.test("should build and type check node types project", async () => {
   });
 });
 
+Deno.test("should build and type check declaration import project", async () => {
+  await runTest("declaration_import_project", {
+    test: false,
+    entryPoints: ["mod.ts"],
+    outDir: "./npm",
+    shims: {},
+    package: {
+      name: "declaration_project",
+      version: "0.0.0",
+    },
+  });
+});
+
 export interface Output {
   packageJson: any;
   npmIgnore: string;
@@ -727,6 +740,7 @@ export interface Output {
 
 async function runTest(
   project:
+    | "declaration_import_project"
     | "import_map_project"
     | "json_module_project"
     | "package_mappings_project"

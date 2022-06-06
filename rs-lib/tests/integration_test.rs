@@ -1251,7 +1251,7 @@ async fn esm_module_with_deno_types() {
         .add_local_file(
           "/mod.ts",
           concat!(
-            "// @deno-types=\"https://esm.sh/test@0.0.1/lib/mod.d.ts\"\n",
+            "// @deno-types=\"https://localhost/mod.d.ts\"\n",
             "import {test} from 'https://esm.sh/test@0.0.1/lib/mod.js';\n",
           ),
         )
@@ -1261,7 +1261,7 @@ async fn esm_module_with_deno_types() {
           &[("content-type", "application/typescript")],
         )
         .add_remote_file_with_headers(
-          "https://esm.sh/test@0.0.1/lib/mod.d.ts",
+          "https://localhost/mod.d.ts",
           "declare function test(): number;",
           &[("content-type", "application/typescript")],
         );
@@ -1272,7 +1272,16 @@ async fn esm_module_with_deno_types() {
 
   assert_files!(
     result.main.files,
-    &[("mod.ts", "import {test} from 'test/lib/mod.js';\n")]
+    &[
+      // this is a bug... it should create a proxy here instead,
+      // but will wait for someone to open this as it's probably
+      // rare for this to occur in the wild
+      ("mod.ts", "import {test} from 'test/lib/mod.js';\n"),
+      (
+        "deps/localhost/mod.d.ts",
+        "declare function test(): number;",
+      )
+    ]
   );
 }
 
@@ -1841,6 +1850,58 @@ async fn issue_104() {
       ("test.ts", "export function test() {} export type other = string;"),
     ]
   );
+}
+
+#[tokio::test]
+async fn local_declaration_file_import() {
+  let result = TestBuilder::new()
+    .with_loader(|loader| {
+      loader
+        .add_local_file("/mod.ts", "import type { A } from './types.d.ts';")
+        .add_local_file("/types.d.ts", "export interface A {}");
+    })
+    .transform()
+    .await
+    .unwrap();
+
+  assert_files!(
+    result.main.files,
+    &[
+      ("mod.ts", "import type { A } from './types';"),
+      ("types.d.ts", "export interface A {}"),
+    ]
+  );
+}
+
+#[tokio::test]
+async fn remote_declaration_file_import() {
+  let result = TestBuilder::new()
+    .with_loader(|loader| {
+      loader
+        .add_local_file(
+          "/mod.ts",
+          concat!(
+            "import type { RawSourceMap } from 'https://esm.sh/source-map@0.7.3/source-map.d.ts';\n",
+            "import type { Other } from 'https://localhost/source-map.d.ts';",
+          )
+        )
+        .add_remote_file("https://esm.sh/source-map@0.7.3/source-map.d.ts", "export interface RawSourceMap {}")
+        .add_remote_file("https://localhost/source-map.d.ts", "export interface Other {}");
+    })
+    .transform()
+    .await
+    .unwrap();
+
+  assert_files!(result.main.files, &[
+    (
+      "mod.ts",
+      concat!(
+        "import type { RawSourceMap } from './deps/esm.sh/source-map@0.7.3/source-map';\n",
+        "import type { Other } from './deps/localhost/source-map';",
+    )),
+    ("deps/esm.sh/source-map@0.7.3/source-map.d.ts", "export interface RawSourceMap {}"),
+    ("deps/localhost/source-map.d.ts", "export interface Other {}"),
+  ]);
 }
 
 fn get_shim_file_text(mut text: String) -> String {

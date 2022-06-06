@@ -51,7 +51,6 @@ impl ModuleGraph {
     };
     let mut loader = SourceLoader::new(
       loader,
-      // todo: support configuring this in the future
       get_all_specifier_mappers(),
       options.specifier_mappings,
     );

@@ -18,6 +18,7 @@ use crate::specifiers::Specifiers;
 use crate::utils::get_unique_path;
 use crate::utils::partition_by_root_specifiers;
 use crate::utils::url_to_file_path;
+use crate::utils::with_extension;
 
 pub struct SyntheticSpecifiers {
   pub polyfills: ModuleSpecifier,
@@ -98,7 +99,7 @@ impl Mappings {
           code_specifier
         );
       });
-      let new_file_path = file_path.with_extension("d.ts");
+      let new_file_path = with_extension(file_path, "d.ts");
       if let Some(past_path) = mappings.insert(to.clone(), new_file_path) {
         panic!(
           "dnt bug - Already had path {} in map when adding declaration file for {}. Adding: {}",
@@ -414,7 +415,7 @@ fn get_mapped_file_path(
     if media_type == MediaType::Unknown {
       path.as_ref().into()
     } else {
-      path.as_ref().with_extension("")
+      with_extension(path.as_ref(), "")
     }
   }
 
@@ -424,8 +425,9 @@ fn get_mapped_file_path(
     MediaType::Json => "js",
     _ => &media_type.as_ts_extension()[1..],
   };
-  filepath_no_ext.with_extension(
-    if let Some(sub_ext) = filepath_no_ext.extension() {
+  with_extension(
+    &filepath_no_ext,
+    &if let Some(sub_ext) = filepath_no_ext.extension() {
       format!("{}.{}", sub_ext.to_string_lossy(), extension)
     } else {
       extension.to_string()
