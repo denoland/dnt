@@ -1,11 +1,8 @@
 // Copyright 2018-2022 the Deno authors. All rights reserved. MIT license.
 
 import { path } from "./lib/transform.deps.ts";
-import init, * as wasmFuncs from "./lib/pkg/dnt_wasm.js";
-import { source } from "./lib/pkg/dnt_wasm_bg.ts";
+import { instantiate } from "./lib/pkg/dnt_wasm.generated.js";
 import { ScriptTarget } from "./lib/types.ts";
-
-await init(source);
 
 /** Specifier to specifier mappings. */
 export interface SpecifierMappings {
@@ -99,7 +96,7 @@ export interface OutputFile {
 /** Analyzes the provided entry point to get all the dependended on modules and
  * outputs canonical TypeScript code in memory. The output of this function
  * can then be sent to the TypeScript compiler or a bundler for further processing. */
-export function transform(options: TransformOptions): Promise<TransformOutput> {
+export async function transform(options: TransformOptions): Promise<TransformOutput> {
   if (options.entryPoints.length === 0) {
     throw new Error("Specify one or more entry points.");
   }
@@ -119,6 +116,7 @@ export function transform(options: TransformOptions): Promise<TransformOutput> {
       ? undefined
       : valueToUrl(options.importMap),
   };
+  const wasmFuncs = await instantiate();
   return wasmFuncs.transform(newOptions);
 }
 
