@@ -37,7 +37,7 @@ pub trait Loader {
   ) -> Pin<Box<dyn Future<Output = Result<Option<LoadResponse>>> + 'static>>;
 }
 
-#[derive(Default, Clone)]
+#[derive(Debug, Default, Clone)]
 pub struct LoaderSpecifiers {
   pub mapped_packages: BTreeMap<ModuleSpecifier, PackageMappedSpecifier>,
   pub mapped_modules: HashMap<ModuleSpecifier, ModuleSpecifier>,

@@ -1,4 +1,4 @@
-// Copyright 2018-2022 the Deno authors. All rights reserved. MIT license.
+// Copyright 2018-2022 &the Deno authors. All rights reserved. MIT license.
 
 use std::collections::BTreeMap;
 use std::collections::HashSet;
@@ -23,7 +23,20 @@ pub fn get_relative_specifier(
   from: impl AsRef<Path>,
   to: impl AsRef<Path>,
 ) -> String {
-  let relative_path = get_relative_path(from, to).with_extension("js");
+  let to = with_extension(
+    to.as_ref(),
+    if to
+      .as_ref()
+      .to_string_lossy()
+      .to_lowercase()
+      .ends_with(".d.ts")
+    {
+      ""
+    } else {
+      "js"
+    },
+  );
+  let relative_path = get_relative_path(from, &to);
   let relative_path_str = relative_path
     .to_string_lossy()
     .to_string()
@@ -209,6 +222,22 @@ fn top_file_insert_pos(program: &Program) -> usize {
   pos
 }
 
+/// `with_extension` that handles `.d.ts` files
+pub fn with_extension(path: &Path, ext: &str) -> PathBuf {
+  let lower = path.to_string_lossy().to_lowercase();
+  if lower.ends_with(".d.ts") {
+    let path_str = path.to_string_lossy();
+    let prefix = &path_str[..path_str.len() - 5];
+    PathBuf::from(if ext.is_empty() {
+      prefix.to_string()
+    } else {
+      format!("{}.{}", prefix, ext)
+    })
+  } else {
+    path.with_extension(ext)
+  }
+}
+
 #[cfg(test)]
 mod test {
   use std::collections::HashSet;
@@ -375,5 +404,25 @@ mod test {
       })
       .collect::<Vec<_>>();
     assert_eq!(output, expected);
+  }
+
+  #[test]
+  fn test_with_extension() {
+    assert_eq!(
+      with_extension(&PathBuf::from("/test/test.D.TS"), "js"),
+      PathBuf::from("/test/test.js")
+    );
+    assert_eq!(
+      with_extension(&PathBuf::from("/test/test.ts"), "d.ts"),
+      PathBuf::from("/test/test.d.ts")
+    );
+    assert_eq!(
+      with_extension(&PathBuf::from("/test/test.ts"), ""),
+      PathBuf::from("/test/test")
+    );
+    assert_eq!(
+      with_extension(&PathBuf::from("/test/test.d.ts"), ""),
+      PathBuf::from("/test/test")
+    );
   }
 }

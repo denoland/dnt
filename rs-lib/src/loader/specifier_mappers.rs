@@ -53,13 +53,22 @@ struct SkypackMapper {}
 
 impl SpecifierMapper for SkypackMapper {
   fn map(&self, specifier: &ModuleSpecifier) -> Option<PackageMappedSpecifier> {
-    SKYPACK_MAPPING_RE
-      .captures(specifier.as_str())
-      .map(|captures| PackageMappedSpecifier {
-        name: captures.get(1).unwrap().as_str().to_string(),
-        version: Some(captures.get(2).unwrap().as_str().to_string()),
-        sub_path: captures.get(3).map(|m| m.as_str().to_owned()),
-      })
+    let captures = SKYPACK_MAPPING_RE.captures(specifier.as_str())?;
+    let sub_path = captures.get(3).map(|m| m.as_str().to_owned());
+
+    // don't use the package for declaration file imports
+    if let Some(sub_path) = &sub_path {
+      // todo(dsherret): this should probably work on media type
+      if sub_path.to_lowercase().ends_with(".d.ts") {
+        return None;
+      }
+    }
+
+    Some(PackageMappedSpecifier {
+      name: captures.get(1).unwrap().as_str().to_string(),
+      version: Some(captures.get(2).unwrap().as_str().to_string()),
+      sub_path,
+    })
   }
 }
 
@@ -67,13 +76,22 @@ struct EsmShMapper {}
 
 impl SpecifierMapper for EsmShMapper {
   fn map(&self, specifier: &ModuleSpecifier) -> Option<PackageMappedSpecifier> {
-    ESMSH_MAPPING_RE
-      .captures(specifier.as_str())
-      .map(|captures| PackageMappedSpecifier {
-        name: captures.get(1).unwrap().as_str().to_string(),
-        version: Some(captures.get(2).unwrap().as_str().to_string()),
-        sub_path: captures.get(3).map(|m| m.as_str().to_owned()),
-      })
+    let captures = ESMSH_MAPPING_RE.captures(specifier.as_str())?;
+    let sub_path = captures.get(3).map(|m| m.as_str().to_owned());
+
+    // don't use the package for declaration file imports
+    if let Some(sub_path) = &sub_path {
+      // todo(dsherret): this should probably work on media type
+      if sub_path.to_lowercase().ends_with(".d.ts") {
+        return None;
+      }
+    }
+
+    Some(PackageMappedSpecifier {
+      name: captures.get(1).unwrap().as_str().to_string(),
+      version: Some(captures.get(2).unwrap().as_str().to_string()),
+      sub_path,
+    })
   }
 }
 
