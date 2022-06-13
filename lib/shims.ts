@@ -197,7 +197,7 @@ function getUndiciShim(): Shim {
   return {
     package: {
       name: "undici",
-      version: "^5.3.0",
+      version: "^5.5.1",
     },
     globalNames: [
       "fetch",
