@@ -17,7 +17,7 @@ const versions = {
   promptsShim: "~0.1.0",
   timersShim: "~0.1.0",
   weakRefSham: "~0.1.0",
-  undici: "^5.3.0",
+  undici: "^5.5.1",
   chalk: "4.1.2",
   nodeTypes: "16.11.37",
   tsLib: "2.3.1",
