@@ -125,7 +125,6 @@ Deno.test("should build with all options off", async () => {
           import: "./esm/mod.js",
         },
       },
-      dependencies: {},
       devDependencies: {
         "@types/node": versions.nodeTypes,
       },
@@ -190,13 +189,11 @@ Deno.test("should build bin project", async () => {
       scripts: {
         test: "node test_runner.js",
       },
-      dependencies: {},
       devDependencies: {
         "@types/node": versions.nodeTypes,
         chalk: versions.chalk,
         "@deno/shim-deno": versions.denoShim,
       },
-      exports: {},
     });
     const expectedText = "#!/usr/bin/env node\n";
     assertEquals(
@@ -286,7 +283,6 @@ Deno.test("not error for TLA when not using CommonJS", async () => {
         test: "node test_runner.js",
       },
       types: "./types/mod.d.ts",
-      dependencies: {},
       devDependencies: {
         "@types/node": versions.nodeTypes,
         chalk: versions.chalk,
@@ -400,6 +396,53 @@ yarn.lock
 pnpm-lock.yaml
 `,
     );
+  });
+});
+
+Deno.test("should build with peer depependencies in mappings", async () => {
+  await runTest("package_mappings_project", {
+    entryPoints: ["mod.ts"],
+    outDir: "./npm",
+    shims: {
+      deno: "dev",
+    },
+    package: {
+      name: "mappings",
+      version: "1.2.3",
+    },
+    mappings: {
+      "https://deno.land/x/code_block_writer@11.0.0/mod.ts": {
+        name: "code-block-writer",
+        version: "^11.0.0",
+        peerDependency: true,
+      },
+    },
+  }, (output) => {
+    assertEquals(output.packageJson, {
+      name: "mappings",
+      version: "1.2.3",
+      main: "./script/mod.js",
+      module: "./esm/mod.js",
+      exports: {
+        ".": {
+          import: "./esm/mod.js",
+          require: "./script/mod.js",
+          types: "./types/mod.d.ts",
+        },
+      },
+      scripts: {
+        test: "node test_runner.js",
+      },
+      types: "./types/mod.d.ts",
+      peerDependencies: {
+        "code-block-writer": "^11.0.0",
+      },
+      devDependencies: {
+        "@types/node": versions.nodeTypes,
+        chalk: versions.chalk,
+        "@deno/shim-deno": versions.denoShim,
+      },
+    });
   });
 });
 
@@ -754,7 +797,7 @@ async function runTest(
     | "tla_project"
     | "web_socket_project",
   options: BuildOptions,
-  checkOutput?: (output: Output) => (Promise<void> | void),
+  checkOutput?: (output: Output) => Promise<void> | void,
 ) {
   const originalCwd = Deno.cwd();
   Deno.chdir(`./tests/${project}`);

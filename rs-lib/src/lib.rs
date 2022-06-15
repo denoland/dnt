@@ -72,6 +72,8 @@ pub struct OutputFile {
 pub struct Dependency {
   pub name: String,
   pub version: String,
+  #[serde(default)]
+  pub peer_dependency: bool,
 }
 
 #[cfg_attr(feature = "serialization", derive(serde::Serialize))]
@@ -114,6 +116,9 @@ pub struct PackageMappedSpecifier {
   pub version: Option<String>,
   /// Sub path of the npm package to use in the module specifier.
   pub sub_path: Option<String>,
+  /// If this is suggested to be a peer dependency.
+  #[serde(default)]
+  pub peer_dependency: bool,
 }
 
 impl PackageMappedSpecifier {
@@ -539,6 +544,7 @@ fn check_add_shim_file_to_environment(
             env_context.environment.dependencies.push(Dependency {
               name: shim.package.name.to_string(),
               version: version.clone(),
+              peer_dependency: shim.package.peer_dependency,
             });
           }
         }
@@ -646,6 +652,7 @@ fn get_dependencies(
         Some(Dependency {
           name: entry.1.name,
           version,
+          peer_dependency: entry.1.peer_dependency,
         })
       } else {
         None

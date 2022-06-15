@@ -80,6 +80,7 @@ impl TestBuilder {
         name: "@deno/shim-deno".to_string(),
         version: Some("^0.1.0".to_string()),
         sub_path: None,
+        peer_dependency: false,
       },
       types_package: None,
       global_names: vec![GlobalName {
@@ -95,6 +96,7 @@ impl TestBuilder {
         name: "@deno/shim-timers".to_string(),
         version: Some("^0.1.0".to_string()),
         sub_path: None,
+        peer_dependency: false,
       },
       types_package: None,
       global_names: vec![
@@ -138,6 +140,7 @@ impl TestBuilder {
         name: bare_specifier.as_ref().to_string(),
         version: version.map(|v| v.to_string()),
         sub_path: path.map(|v| v.to_string()),
+        peer_dependency: false,
       }),
     );
     self

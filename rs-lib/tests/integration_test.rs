@@ -117,6 +117,7 @@ async fn transform_shim_custom_shims() {
         name: "node-fetch".to_string(),
         version: Some("~3.1.0".to_string()),
         sub_path: None,
+        peer_dependency: false,
       },
       types_package: None,
       global_names: vec![GlobalName {
@@ -130,6 +131,7 @@ async fn transform_shim_custom_shims() {
         name: "node-fetch".to_string(),
         version: Some("~3.1.0".to_string()),
         sub_path: Some("test".to_string()),
+        peer_dependency: false,
       },
       types_package: None,
       global_names: vec![GlobalName {
@@ -143,10 +145,12 @@ async fn transform_shim_custom_shims() {
         name: "domexception".to_string(),
         version: Some("^4.0.0".to_string()),
         sub_path: None,
+        peer_dependency: false,
       },
       types_package: Some(Dependency {
         name: "@types/domexception".to_string(),
         version: "^2.0.1".to_string(),
+        peer_dependency: false,
       }),
       global_names: vec![GlobalName {
         name: "DOMException".to_string(),
@@ -159,6 +163,7 @@ async fn transform_shim_custom_shims() {
         name: "buffer".to_string(),
         version: None,
         sub_path: None,
+        peer_dependency: false,
       },
       types_package: None,
       global_names: vec![
@@ -179,6 +184,7 @@ async fn transform_shim_custom_shims() {
         name: "type-only".to_string(),
         version: None,
         sub_path: None,
+        peer_dependency: false,
       },
       types_package: None,
       global_names: vec![GlobalName {
@@ -281,10 +287,12 @@ async fn transform_shim_custom_shims() {
       Dependency {
         name: "node-fetch".to_string(),
         version: "~3.1.0".to_string(),
+        peer_dependency: false,
       },
       Dependency {
         name: "domexception".to_string(),
         version: "^4.0.0".to_string(),
+        peer_dependency: false,
       }
     ]
   );
@@ -293,6 +301,7 @@ async fn transform_shim_custom_shims() {
     vec![Dependency {
       name: "@types/domexception".to_string(),
       version: "^2.0.1".to_string(),
+        peer_dependency: false,
     }]
   );
 }
@@ -1079,10 +1088,12 @@ async fn transform_specifier_mappings() {
       Dependency {
         name: "mod".to_string(),
         version: "~0.1.0".to_string(),
+        peer_dependency: false,
       },
       Dependency {
         name: "remote-module".to_string(),
         version: "1.0.0".to_string(),
+        peer_dependency: false,
       }
     ]
   );
@@ -1203,18 +1214,22 @@ async fn skypack_esm_module_mapping() {
       Dependency {
         name: "@scope/package-name".to_string(),
         version: "1".to_string(),
+        peer_dependency: false,
       },
       Dependency {
         name: "preact".to_string(),
         version: "^10.5.0".to_string(),
+        peer_dependency: false,
       },
       Dependency {
         name: "react".to_string(),
         version: "17.0.2".to_string(),
+        peer_dependency: false,
       },
       Dependency {
         name: "react-dom".to_string(),
         version: "17.0.2".to_string(),
+        peer_dependency: false,
       }
     ]
   );
@@ -1381,6 +1396,7 @@ async fn test_entry_points() {
     &[Dependency {
       name: "preact".to_string(),
       version: "^10.5.0".to_string(),
+        peer_dependency: false,
     },]
   );
   assert_eq!(result.main.entry_points, &[PathBuf::from("mod.ts")]);
@@ -1426,14 +1442,17 @@ async fn test_entry_points() {
       Dependency {
         name: "react".to_string(),
         version: "17.0.2".to_string(),
+        peer_dependency: false,
       },
       Dependency {
         name: "@deno/shim-deno".to_string(),
         version: "^0.1.0".to_string(),
+        peer_dependency: false,
       },
       Dependency {
         name: "@deno/shim-timers".to_string(),
         version: "^0.1.0".to_string(),
+        peer_dependency: false,
       }
     ]
   );

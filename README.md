@@ -330,7 +330,7 @@ export function fetch(/* etc... */) {
 
 This is useful in situations where you want to implement your own shim.
 
-### Specifier to Npm Package Mappings
+### Specifier to npm Package Mappings
 
 In most cases, dnt won't know about an npm package being available for one of
 your dependencies and will download remote modules to include in your package.
@@ -346,6 +346,8 @@ await build({
     "https://deno.land/x/code_block_writer@11.0.0/mod.ts": {
       name: "code-block-writer",
       version: "^11.0.0",
+      // optionally specify if this should be a peer dependency
+      peerDependency: false,
     },
   },
 });
