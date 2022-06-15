@@ -20,7 +20,7 @@ export interface RunTestDefinitionsOptions {
 
 export interface TestDefinition {
   name: string | undefined;
-  fn: (context: TestContext) => (Promise<void> | void);
+  fn: (context: TestContext) => Promise<void> | void;
   ignore?: boolean;
 }
 
@@ -32,7 +32,7 @@ export interface TestContext {
   getOutput(): string;
   step(
     nameOrDefinition: string | TestDefinition,
-    fn?: (context: TestContext) => (void | Promise<void>),
+    fn?: (context: TestContext) => void | Promise<void>,
   ): Promise<boolean>;
   status: "ok" | "fail" | "pending" | "ignored";
 }

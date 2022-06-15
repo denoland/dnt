@@ -26,6 +26,8 @@ export interface PackageMappedSpecifier {
    * name in the module specifier like so: `<package-name>/<sub-path>`
    */
   subPath?: string;
+  /** If this should be a peer dependency. */
+  peerDependency?: boolean;
 }
 
 export interface GlobalName {
@@ -74,6 +76,8 @@ export interface Dependency {
   name: string;
   /** Version specifier (ex. `^1.0.0`). */
   version: string;
+  /** If this is suggested to be a peer dependency. */
+  peerDependency?: boolean;
 }
 
 export interface TransformOutput {

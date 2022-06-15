@@ -43,10 +43,22 @@ export function getPackageJson({
       : {}),
     // add dependencies from transform
     ...Object.fromEntries(
-      transformOutput.main.dependencies.map((d) => [d.name, d.version]),
+      transformOutput.main.dependencies
+        .filter((d) => !d.peerDependency)
+        .map((d) => [d.name, d.version]),
     ),
     // override with specified dependencies
     ...(packageJsonObj.dependencies ?? {}),
+  };
+  const peerDependencies = {
+    // add dependencies from transform
+    ...Object.fromEntries(
+      transformOutput.main.dependencies
+        .filter((d) => d.peerDependency)
+        .map((d) => [d.name, d.version]),
+    ),
+    // override with specified dependencies
+    ...(packageJsonObj.peerDependencies ?? {}),
   };
   const testDevDependencies = testEnabled
     ? ({
@@ -57,6 +69,7 @@ export function getPackageJson({
         : {}),
       // add dependencies from transform
       ...Object.fromEntries(
+        // ignore peer dependencies on this
         transformOutput.test.dependencies.map((d) => [d.name, d.version]) ??
           [],
       ),
@@ -96,21 +109,24 @@ export function getPackageJson({
     ...mainExport,
     ...binaryExport,
     ...packageJsonObj,
-    exports: {
-      ...(packageJsonObj.exports ?? {}),
-      ...(Object.fromEntries(exports.map((e) => [e.name, {
-        import: `./esm/${e.path}`,
-        require: includeScriptModule ? `./script/${e.path}` : undefined,
-        types: includeDeclarations
-          ? (e.name === "." ? packageJsonObj.types : undefined) ??
-            `./types/${e.types}`
-          : undefined,
-        ...(packageJsonObj.exports?.[e.name] ?? {}),
-      }]))),
-    },
-    scripts,
-    dependencies,
-    devDependencies,
+    ...deleteEmptyKeys({
+      exports: {
+        ...(packageJsonObj.exports ?? {}),
+        ...(Object.fromEntries(exports.map((e) => [e.name, {
+          import: `./esm/${e.path}`,
+          require: includeScriptModule ? `./script/${e.path}` : undefined,
+          types: includeDeclarations
+            ? (e.name === "." ? packageJsonObj.types : undefined) ??
+              `./types/${e.types}`
+            : undefined,
+          ...(packageJsonObj.exports?.[e.name] ?? {}),
+        }]))),
+      },
+      scripts,
+      dependencies,
+      peerDependencies,
+      devDependencies,
+    }),
   };
 
   function shouldIncludeTypesNode() {
@@ -129,5 +145,18 @@ export function getPackageJson({
     } else {
       return false;
     }
+  }
+
+  function deleteEmptyKeys(obj: Record<string, unknown>) {
+    for (const key of Object.keys(obj)) {
+      const value = obj[key];
+      if (
+        typeof value === "object" && value != null &&
+        Object.keys(value).length === 0
+      ) {
+        delete obj[key];
+      }
+    }
+    return obj;
   }
 }

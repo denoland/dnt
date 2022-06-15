@@ -250,6 +250,7 @@ function getWebSocketShim(): Shim {
     typesPackage: {
       name: "@types/ws",
       version: "^8.5.3",
+      peerDependency: false,
     },
     globalNames: [{
       name: "WebSocket",

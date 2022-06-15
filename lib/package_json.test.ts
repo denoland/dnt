@@ -325,3 +325,81 @@ Deno.test("binary entrypoints", () => {
     scripts: undefined,
   });
 });
+
+Deno.test("peer dependencies", () => {
+  const props: GetPackageJsonOptions = {
+    transformOutput: {
+      main: {
+        files: [],
+        dependencies: [{
+          name: "dep",
+          version: "^1.0.0",
+        }, {
+          name: "peerDep",
+          version: "^2.0.0",
+          peerDependency: true,
+        }],
+        entryPoints: ["mod.ts"],
+      },
+      test: {
+        entryPoints: [],
+        files: [],
+        dependencies: [{
+          name: "test-dep",
+          version: "0.1.0",
+          // should be ignored
+          peerDependency: true,
+        }, {
+          name: "@deno/shim-deno",
+          version: "~0.1.0",
+        }],
+      },
+      warnings: [],
+    },
+    entryPoints: [{
+      name: ".",
+      path: "./mod.ts",
+    }],
+    package: {
+      name: "package",
+      version: "0.1.0",
+    },
+    testEnabled: true,
+    includeScriptModule: true,
+    includeDeclarations: true,
+    includeTsLib: false,
+    shims: {
+      deno: "dev",
+    },
+  };
+
+  assertEquals(getPackageJson(props), {
+    name: "package",
+    version: "0.1.0",
+    main: "./script/mod.js",
+    module: "./esm/mod.js",
+    types: "./types/mod.d.ts",
+    dependencies: {
+      dep: "^1.0.0",
+    },
+    peerDependencies: {
+      peerDep: "^2.0.0",
+    },
+    devDependencies: {
+      "@types/node": versions.nodeTypes,
+      "chalk": versions.chalk,
+      "test-dep": "0.1.0",
+      "@deno/shim-deno": "~0.1.0",
+    },
+    exports: {
+      ".": {
+        import: "./esm/mod.js",
+        require: "./script/mod.js",
+        types: "./types/mod.d.ts",
+      },
+    },
+    scripts: {
+      test: "node test_runner.js",
+    },
+  });
+});

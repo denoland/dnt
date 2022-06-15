@@ -68,6 +68,7 @@ impl SpecifierMapper for SkypackMapper {
       name: captures.get(1).unwrap().as_str().to_string(),
       version: Some(captures.get(2).unwrap().as_str().to_string()),
       sub_path,
+      peer_dependency: false,
     })
   }
 }
@@ -91,6 +92,7 @@ impl SpecifierMapper for EsmShMapper {
       name: captures.get(1).unwrap().as_str().to_string(),
       version: Some(captures.get(2).unwrap().as_str().to_string()),
       sub_path,
+      peer_dependency: false,
     })
   }
 }
@@ -120,6 +122,7 @@ impl SpecifierMapper for NodeSpecifierMapper {
         name: self.to_specifier.clone(),
         version: None,
         sub_path: None,
+        peer_dependency: false,
       })
     } else {
       None
