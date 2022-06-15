@@ -301,7 +301,7 @@ async fn transform_shim_custom_shims() {
     vec![Dependency {
       name: "@types/domexception".to_string(),
       version: "^2.0.1".to_string(),
-        peer_dependency: false,
+      peer_dependency: false,
     }]
   );
 }
@@ -1396,7 +1396,7 @@ async fn test_entry_points() {
     &[Dependency {
       name: "preact".to_string(),
       version: "^10.5.0".to_string(),
-        peer_dependency: false,
+      peer_dependency: false,
     },]
   );
   assert_eq!(result.main.entry_points, &[PathBuf::from("mod.ts")]);
