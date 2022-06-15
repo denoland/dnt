@@ -24,7 +24,7 @@ export function getPackageJson({
   includeTsLib,
   testEnabled,
   shims,
-}: GetPackageJsonOptions) {
+}: GetPackageJsonOptions): Record<string, unknown> {
   const finalEntryPoints = transformOutput
     .main.entryPoints.map((e, i) => ({
       name: entryPoints[i].name,
