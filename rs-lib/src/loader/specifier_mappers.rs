@@ -32,15 +32,15 @@ pub fn get_all_specifier_mappers() -> Vec<Box<dyn SpecifierMapper>> {
     Box::new(NodeSpecifierMapper::new("tty")),
     Box::new(NodeSpecifierMapper::new("url")),
     Box::new(NodeSpecifierMapper::new("util")),
-    Box::new(SkypackMapper {}),
-    Box::new(EsmShMapper {}),
+    Box::new(SkypackMapper),
+    Box::new(EsmShMapper),
   ]
 }
 
 // good enough for a first pass
 static SKYPACK_MAPPING_RE: Lazy<Regex> = Lazy::new(|| {
   Regex::new(
-    r"^https://cdn\.skypack\.dev/(@?[^@?]+)@([0-9.\^~\-A-Za-z]+)(?:/([^#?]+))?",
+    r"^https://cdn\.skypack\.dev/(\-/)?(@?[^@?]+)@([0-9.\^~\-A-Za-z]+)(?:/([^#?]+))?",
   )
   .unwrap()
 });
@@ -48,13 +48,22 @@ static ESMSH_MAPPING_RE: Lazy<Regex> = Lazy::new(|| {
   Regex::new(r"^https://esm\.sh/(@?[^@?]+)@([0-9.\^~\-A-Za-z]+)(?:/([^#?]+))?$")
     .unwrap()
 });
+static ESMSH_IGNORE_MAPPING_RE: Lazy<Regex> = Lazy::new(|| {
+  // internal urls
+  Regex::new(r"^https://esm\.sh/v[0-9]+/.*/.*/").unwrap()
+});
 
-struct SkypackMapper {}
+struct SkypackMapper;
 
 impl SpecifierMapper for SkypackMapper {
   fn map(&self, specifier: &ModuleSpecifier) -> Option<PackageMappedSpecifier> {
+    if specifier.path().starts_with("/-/") {
+      // ignore, it's an internal url
+      return None;
+    }
+
     let captures = SKYPACK_MAPPING_RE.captures(specifier.as_str())?;
-    let sub_path = captures.get(3).map(|m| m.as_str().to_owned());
+    let sub_path = captures.get(4).map(|m| m.as_str().to_owned());
 
     // don't use the package for declaration file imports
     if let Some(sub_path) = &sub_path {
@@ -64,20 +73,34 @@ impl SpecifierMapper for SkypackMapper {
       }
     }
 
+    let name = captures.get(2).unwrap().as_str().to_string();
+    let version = captures
+      .get(3)
+      .unwrap()
+      .as_str()
+      .trim_start_matches('v')
+      .to_string();
+
     Some(PackageMappedSpecifier {
-      name: captures.get(1).unwrap().as_str().to_string(),
-      version: Some(captures.get(2).unwrap().as_str().to_string()),
+      name,
+      version: Some(version),
       sub_path,
       peer_dependency: false,
     })
   }
 }
 
-struct EsmShMapper {}
+struct EsmShMapper;
 
 impl SpecifierMapper for EsmShMapper {
   fn map(&self, specifier: &ModuleSpecifier) -> Option<PackageMappedSpecifier> {
     let captures = ESMSH_MAPPING_RE.captures(specifier.as_str())?;
+
+    if ESMSH_IGNORE_MAPPING_RE.is_match(specifier.as_str()) {
+      // ignore, as it's internal
+      return None;
+    }
+
     let sub_path = captures.get(3).map(|m| m.as_str().to_owned());
 
     // don't use the package for declaration file imports
@@ -127,5 +150,68 @@ impl SpecifierMapper for NodeSpecifierMapper {
     } else {
       None
     }
+  }
+}
+
+#[cfg(test)]
+mod test {
+  use super::*;
+
+  #[test]
+  fn test_skypack_mapper() {
+    let mapper = SkypackMapper;
+    assert_eq!(
+      mapper.map(
+        &ModuleSpecifier::parse("https://cdn.skypack.dev/@project/name")
+          .unwrap()
+      ),
+      None,
+    );
+    assert_eq!(
+      mapper.map(
+        &ModuleSpecifier::parse("https://cdn.skypack.dev/@project/name@v5.6.2")
+          .unwrap()
+      ),
+      Some(PackageMappedSpecifier {
+        name: "@project/name".to_string(),
+        version: Some("5.6.2".to_string()),
+        peer_dependency: false,
+        sub_path: None,
+      }),
+    );
+    assert_eq!(
+      mapper.map(&ModuleSpecifier::parse("https://cdn.skypack.dev/-/@project/name@v5.6.2-hbht5UfbVmWkq5PkNraB/mode=imports/optimized/@project/name.js").unwrap()),
+      None,
+    );
+  }
+
+  #[test]
+  fn test_esm_sh_mapper() {
+    let mapper = EsmShMapper;
+    assert_eq!(
+      mapper
+        .map(&ModuleSpecifier::parse("https://esm.sh/@project/name").unwrap()),
+      None,
+    );
+    assert_eq!(
+      mapper.map(
+        &ModuleSpecifier::parse("https://esm.sh/@project/name@5.6.2").unwrap()
+      ),
+      Some(PackageMappedSpecifier {
+        name: "@project/name".to_string(),
+        version: Some("5.6.2".to_string()),
+        peer_dependency: false,
+        sub_path: None,
+      }),
+    );
+    assert_eq!(
+      mapper.map(
+        &ModuleSpecifier::parse(
+          "https://esm.sh/v86/@project/name@5.6.2/es2022/name.js"
+        )
+        .unwrap()
+      ),
+      None,
+    );
   }
 }
