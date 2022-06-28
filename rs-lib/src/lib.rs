@@ -107,7 +107,7 @@ pub enum MappedSpecifier {
 
 #[cfg_attr(feature = "serialization", derive(serde::Deserialize))]
 #[cfg_attr(feature = "serialization", serde(rename_all = "camelCase"))]
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, PartialEq)]
 pub struct PackageMappedSpecifier {
   /// Name being mapped to.
   pub name: String,
