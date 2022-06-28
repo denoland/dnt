@@ -122,6 +122,11 @@ export interface BuildOptions {
     inlineSources?: boolean;
     /** Default set of library options to use. See https://www.typescriptlang.org/tsconfig/#lib */
     lib?: LibName[];
+    /**
+     * Skip type checking of declaration files (those in dependencies).
+     * @default true
+     */
+    skipLibCheck?: boolean;
   };
 }
 
@@ -224,6 +229,7 @@ export async function build(options: BuildOptions): Promise<void> {
       importHelpers: options.compilerOptions?.importHelpers,
       ...getCompilerSourceMapOptions(options.compilerOptions?.sourceMap),
       inlineSources: options.compilerOptions?.inlineSources,
+      skipLibCheck: options.compilerOptions?.skipLibCheck ?? true,
     },
   });
 
