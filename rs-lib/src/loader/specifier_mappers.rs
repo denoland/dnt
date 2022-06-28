@@ -50,8 +50,7 @@ static ESMSH_MAPPING_RE: Lazy<Regex> = Lazy::new(|| {
 });
 static ESMSH_IGNORE_MAPPING_RE: Lazy<Regex> = Lazy::new(|| {
   // internal urls
-  Regex::new(r"^https://esm\.sh/v[0-9]+/.*/.*/")
-    .unwrap()
+  Regex::new(r"^https://esm\.sh/v[0-9]+/.*/.*/").unwrap()
 });
 
 struct SkypackMapper;
@@ -75,7 +74,12 @@ impl SpecifierMapper for SkypackMapper {
     }
 
     let name = captures.get(2).unwrap().as_str().to_string();
-    let version = captures.get(3).unwrap().as_str().trim_start_matches('v').to_string();
+    let version = captures
+      .get(3)
+      .unwrap()
+      .as_str()
+      .trim_start_matches('v')
+      .to_string();
 
     Some(PackageMappedSpecifier {
       name,
@@ -157,11 +161,17 @@ mod test {
   fn test_skypack_mapper() {
     let mapper = SkypackMapper;
     assert_eq!(
-      mapper.map(&ModuleSpecifier::parse("https://cdn.skypack.dev/@project/name").unwrap()),
+      mapper.map(
+        &ModuleSpecifier::parse("https://cdn.skypack.dev/@project/name")
+          .unwrap()
+      ),
       None,
     );
     assert_eq!(
-      mapper.map(&ModuleSpecifier::parse("https://cdn.skypack.dev/@project/name@v5.6.2").unwrap()),
+      mapper.map(
+        &ModuleSpecifier::parse("https://cdn.skypack.dev/@project/name@v5.6.2")
+          .unwrap()
+      ),
       Some(PackageMappedSpecifier {
         name: "@project/name".to_string(),
         version: Some("5.6.2".to_string()),
@@ -179,11 +189,14 @@ mod test {
   fn test_esm_sh_mapper() {
     let mapper = EsmShMapper;
     assert_eq!(
-      mapper.map(&ModuleSpecifier::parse("https://esm.sh/@project/name").unwrap()),
+      mapper
+        .map(&ModuleSpecifier::parse("https://esm.sh/@project/name").unwrap()),
       None,
     );
     assert_eq!(
-      mapper.map(&ModuleSpecifier::parse("https://esm.sh/@project/name@5.6.2").unwrap()),
+      mapper.map(
+        &ModuleSpecifier::parse("https://esm.sh/@project/name@5.6.2").unwrap()
+      ),
       Some(PackageMappedSpecifier {
         name: "@project/name".to_string(),
         version: Some("5.6.2".to_string()),
@@ -192,7 +205,12 @@ mod test {
       }),
     );
     assert_eq!(
-      mapper.map(&ModuleSpecifier::parse("https://esm.sh/v86/@project/name@5.6.2/es2022/name.js").unwrap()),
+      mapper.map(
+        &ModuleSpecifier::parse(
+          "https://esm.sh/v86/@project/name@5.6.2/es2022/name.js"
+        )
+        .unwrap()
+      ),
       None,
     );
   }
