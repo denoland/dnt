@@ -16,6 +16,8 @@ export interface NodeProcess {
 export interface RunTestDefinitionsOptions {
   chalk: Chalk;
   process: NodeProcess;
+  /** The file the tests are running in. */
+  origin: string;
 }
 
 export interface TestDefinition {
@@ -26,6 +28,8 @@ export interface TestDefinition {
 
 export interface TestContext {
   name: string | undefined;
+  parent: TestContext | undefined;
+  origin: string;
   err: any;
   children: TestContext[];
   hasFailingChild: boolean;
@@ -48,7 +52,7 @@ export async function runTestDefinitions(
       options.process.stdout.write(` ${options.chalk.gray("ignored")}\n`);
       continue;
     }
-    const context = getTestContext();
+    const context = getTestContext(undefined);
     let pass = false;
     try {
       await definition.fn(context);
@@ -85,9 +89,11 @@ export async function runTestDefinitions(
     options.process.exit(1);
   }
 
-  function getTestContext(): TestContext {
+  function getTestContext(parent: TestContext | undefined): TestContext {
     return {
       name: undefined,
+      parent,
+      origin: options.origin,
       /** @type {any} */
       err: undefined,
       status: "ok",
@@ -126,7 +132,7 @@ export async function runTestDefinitions(
       async step(nameOrTestDefinition, fn) {
         const definition = getDefinition();
 
-        const context = getTestContext();
+        const context = getTestContext(this);
         context.status = "pending";
         context.name = definition.name;
         context.status = "pending";
