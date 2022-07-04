@@ -49,8 +49,8 @@ export function getTestRunnerCode(options: {
           writer.writeLine(`process.chdir(__dirname + "/script");`);
           if (usesDenoTest) {
             writer.write(`const scriptTestContext = `).inlineBlock(() => {
-              writer.writeLine("origin: pathToFileURL(filePath).toString(),")
-              writer.writeLine("...testContext,")
+              writer.writeLine("origin: pathToFileURL(filePath).toString(),");
+              writer.writeLine("...testContext,");
             }).write(";").newLine();
           }
           writer.write("try ").inlineBlock(() => {
@@ -74,8 +74,8 @@ export function getTestRunnerCode(options: {
         writer.writeLine(`process.chdir(__dirname + "/esm");`);
         if (usesDenoTest) {
           writer.write(`const esmTestContext = `).inlineBlock(() => {
-            writer.writeLine("origin: pathToFileURL(filePath).toString(),")
-            writer.writeLine("...testContext,")
+            writer.writeLine("origin: pathToFileURL(filePath).toString(),");
+            writer.writeLine("...testContext,");
           }).write(";").newLine();
         }
         writer.writeLine(`await import(esmPath);`);
