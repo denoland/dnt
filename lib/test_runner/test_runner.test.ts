@@ -22,11 +22,20 @@ Deno.test("failing test definitions", async () => {
       }, {
         name: "case 2",
         fn: async (t) => {
-          await t.step("inner 1", async (t) => {
-            await t.step("fail 1", () => {
+          if (t.origin !== "file:///file.ts") {
+            throw new Error("Origin not equal.");
+          }
+          if (t.parent !== undefined) {
+            throw new Error("Parent should have been undefined");
+          }
+          await t.step("inner 1", async (tInner) => {
+            if (t !== tInner.parent) {
+              throw new Error("Parent should have equaled parent.");
+            }
+            await tInner.step("fail 1", () => {
               throw new Error("FAIL");
             });
-            await t.step("success 1", () => {});
+            await tInner.step("success 1", () => {});
           });
         },
       }], context);
@@ -96,6 +105,7 @@ function getContext() {
     get output() {
       return output;
     },
+    origin: "file:///file.ts",
     chalk: {
       red(text: string) {
         return `R${text}R`;
