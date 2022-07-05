@@ -42,6 +42,7 @@ Deno.test("single entrypoint", () => {
       version: "0.1.0",
     },
     testEnabled: true,
+    includeEsModule: true,
     includeScriptModule: true,
     includeDeclarations: true,
     includeTsLib: false,
