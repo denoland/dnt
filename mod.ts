@@ -415,6 +415,8 @@ export async function build(options: BuildOptions): Promise<void> {
       sourceMap: options.compilerOptions?.sourceMap,
       inlineSources: options.compilerOptions?.inlineSources,
       testFiles: transformOutput.test.files,
+      includeScriptModule: options.scriptModule !== false,
+      includeEsModule: options.esModule !== false,
     });
     writeFile(
       path.join(options.outDir, ".npmignore"),
