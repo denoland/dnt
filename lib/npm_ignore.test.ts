@@ -80,10 +80,10 @@ function runTest(options: {
 
   function getExpectedText() {
     let startText = options.expectHasSrcFolder ? "src/\n" : "";
+    startText += options.includeEsModule !== false ? "esm/mod.test.js\n" : "";
     startText += options.includeScriptModule !== false
       ? "script/mod.test.js\n"
       : "";
-    startText += options.includeEsModule !== false ? "esm/mod.test.js\n" : "";
     return startText +
       `types/mod.test.d.ts
 test_runner.js
