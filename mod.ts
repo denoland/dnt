@@ -136,7 +136,7 @@ export interface BuildOptions {
 
 /** Builds the specified Deno module to an npm package using the TypeScript compiler. */
 export async function build(options: BuildOptions): Promise<void> {
-  if (options.scriptModule == false && options.esModule == false) {
+  if (options.scriptModule === false && options.esModule === false) {
     throw new Error("`scriptModule` and `esModule` cannot both be `false`");
   }
   // set defaults
