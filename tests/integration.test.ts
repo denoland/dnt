@@ -137,7 +137,6 @@ Deno.test("should build test project without esm", async () => {
   }, (output) => {
     output.assertNotExists("script/mod.js.map");
     output.assertNotExists("esm/mod.js.map");
-    console.log(output.packageJson);
     assertEquals(output.packageJson, {
       name: "add",
       version: "1.0.0",
