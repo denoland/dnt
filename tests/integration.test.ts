@@ -117,6 +117,75 @@ pnpm-lock.yaml
   });
 });
 
+Deno.test("should build test project without esm", async () => {
+  await runTest("test_project", {
+    entryPoints: ["mod.ts"],
+    esModule: false,
+    outDir: "./npm",
+    shims: {
+      ...getAllShimOptions(false),
+      deno: "dev",
+      weakRef: true,
+    },
+    package: {
+      name: "add",
+      version: "1.0.0",
+    },
+    compilerOptions: {
+      importHelpers: true,
+    },
+  }, (output) => {
+    output.assertNotExists("script/mod.js.map");
+    output.assertNotExists("esm/mod.js.map");
+    assertEquals(output.packageJson, {
+      name: "add",
+      version: "1.0.0",
+      main: "./script/mod.js",
+      module: undefined,
+      exports: {
+        ".": {
+          import: undefined,
+          require: "./script/mod.js",
+          types: "./types/mod.d.ts",
+        },
+      },
+      scripts: {
+        test: "node test_runner.js",
+      },
+      types: "./types/mod.d.ts",
+      dependencies: {
+        tslib: versions.tsLib,
+      },
+      devDependencies: {
+        "@types/node": versions.nodeTypes,
+        chalk: versions.chalk,
+        "@deno/shim-deno": versions.denoShim,
+        "@deno/sham-weakref": versions.weakRefSham,
+      },
+    });
+    assertEquals(
+      output.npmIgnore,
+      `src/
+script/mod.test.js
+types/mod.test.d.ts
+script/deps/deno.land/std@0.143.0/fmt/colors.js
+types/deps/deno.land/std@0.143.0/fmt/colors.d.ts
+script/deps/deno.land/std@0.143.0/testing/_diff.js
+types/deps/deno.land/std@0.143.0/testing/_diff.d.ts
+script/deps/deno.land/std@0.143.0/testing/_format.js
+types/deps/deno.land/std@0.143.0/testing/_format.d.ts
+script/deps/deno.land/std@0.143.0/testing/asserts.js
+types/deps/deno.land/std@0.143.0/testing/asserts.d.ts
+script/_dnt.test_shims.js
+types/_dnt.test_shims.d.ts
+test_runner.js
+yarn.lock
+pnpm-lock.yaml
+`,
+    );
+  });
+});
+
 Deno.test("should build with all options off", async () => {
   await runTest("test_project", {
     entryPoints: ["mod.ts"],

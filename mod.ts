@@ -462,6 +462,7 @@ export async function build(options: BuildOptions): Promise<void> {
             ? "@deno/shim-deno/test-internals"
             : denoTestShimPackage.name,
           testEntryPoints: transformOutput.test.entryPoints,
+          includeEsModule: options.esModule !== false,
           includeScriptModule: options.scriptModule !== false,
         }),
         compilerScriptTarget,
