@@ -140,6 +140,35 @@ Deno.test("single entrypoint", () => {
     getPackageJson({
       ...props,
       testEnabled: false,
+      includeEsModule: false,
+    }),
+    {
+      name: "package",
+      version: "0.1.0",
+      main: "./script/mod.js",
+      module: undefined,
+      types: "./types/mod.d.ts",
+      dependencies: {
+        dep: "^1.0.0",
+      },
+      devDependencies: {
+        "@types/node": versions.nodeTypes,
+      },
+      scripts: undefined,
+      exports: {
+        ".": {
+          import: undefined,
+          require: "./script/mod.js",
+          types: "./types/mod.d.ts",
+        },
+      },
+    },
+  );
+
+  assertEquals(
+    getPackageJson({
+      ...props,
+      testEnabled: false,
       includeScriptModule: false,
       includeDeclarations: false,
     }),

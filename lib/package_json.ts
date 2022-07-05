@@ -115,7 +115,7 @@ export function getPackageJson({
       exports: {
         ...(packageJsonObj.exports ?? {}),
         ...(Object.fromEntries(exports.map((e) => [e.name, {
-          import: `./esm/${e.path}`,
+          import: includeEsModule ? `./esm/${e.path}` : undefined,
           require: includeScriptModule ? `./script/${e.path}` : undefined,
           types: includeDeclarations
             ? (e.name === "." ? packageJsonObj.types : undefined) ??
