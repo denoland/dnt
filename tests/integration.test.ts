@@ -23,6 +23,26 @@ const versions = {
   tsLib: "2.3.1",
 };
 
+Deno.test("should throw because both scriptModule and esModule are false", async () => {
+  await assertRejects(() =>
+    runTest("test_project", {
+      entryPoints: ["mod.ts"],
+      outDir: "./npm",
+      scriptModule: false,
+      esModule: false,
+      shims: {
+        ...getAllShimOptions(false),
+        deno: "dev",
+        weakRef: true,
+      },
+      package: {
+        name: "add",
+        version: "1.0.0",
+      },
+    })
+  );
+});
+
 Deno.test("should build test project", async () => {
   await runTest("test_project", {
     entryPoints: ["mod.ts"],
