@@ -8,6 +8,7 @@ export interface GetPackageJsonOptions {
   transformOutput: TransformOutput;
   entryPoints: EntryPoint[];
   package: PackageJsonObject;
+  includeEsModule: boolean | undefined;
   includeScriptModule: boolean | undefined;
   includeDeclarations: boolean | undefined;
   includeTsLib: boolean | undefined;
@@ -19,6 +20,7 @@ export function getPackageJson({
   transformOutput,
   entryPoints,
   package: packageJsonObj,
+  includeEsModule,
   includeScriptModule,
   includeDeclarations,
   includeTsLib,
@@ -94,7 +96,7 @@ export function getPackageJson({
     : packageJsonObj.scripts;
   const mainExport = exports.length > 0
     ? {
-      module: `./esm/${exports[0].path}`,
+      module: includeEsModule ? `./esm/${exports[0].path}` : undefined,
       main: includeScriptModule ? `./script/${exports[0].path}` : undefined,
       types: includeDeclarations ? `./types/${exports[0].types}` : undefined,
     }

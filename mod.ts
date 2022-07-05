@@ -60,6 +60,10 @@ export interface BuildOptions {
    * @default Defaults to CommonJS.
    */
   scriptModule?: "cjs" | "umd" | false;
+  /** Whether to emit ES module.
+   * @default true
+   */
+  esModule?: boolean;
   /** Skip outputting the canonical TypeScript in the output directory before emitting.
    * @default false
    */
@@ -132,10 +136,14 @@ export interface BuildOptions {
 
 /** Builds the specified Deno module to an npm package using the TypeScript compiler. */
 export async function build(options: BuildOptions): Promise<void> {
+  if (options.scriptModule == false && options.esModule == false) {
+    throw new Error("`scriptModule` and `esModule` cannot both be `false`");
+  }
   // set defaults
   options = {
     ...options,
     scriptModule: options.scriptModule ?? "cjs",
+    esModule: options.esModule ?? true,
     typeCheck: options.typeCheck ?? true,
     test: options.test ?? true,
     declaration: options.declaration ?? true,
@@ -309,18 +317,20 @@ export async function build(options: BuildOptions): Promise<void> {
     emit({ onlyDtsFiles: true });
   }
 
-  // emit the esm files
-  log("Emitting ESM package...");
-  project.compilerOptions.set({
-    declaration: false,
-    outDir: esmOutDir,
-  });
-  program = project.createProgram();
-  emit();
-  writeFile(
-    path.join(esmOutDir, "package.json"),
-    `{\n  "type": "module"\n}\n`,
-  );
+  if (options.esModule) {
+    // emit the esm files
+    log("Emitting ESM package...");
+    project.compilerOptions.set({
+      declaration: false,
+      outDir: esmOutDir,
+    });
+    program = project.createProgram();
+    emit();
+    writeFile(
+      path.join(esmOutDir, "package.json"),
+      `{\n  "type": "module"\n}\n`,
+    );
+  }
 
   // emit the script files
   if (options.scriptModule) {
@@ -388,6 +398,7 @@ export async function build(options: BuildOptions): Promise<void> {
       transformOutput,
       package: options.package,
       testEnabled: options.test,
+      includeEsModule: options.esModule !== false,
       includeScriptModule: options.scriptModule !== false,
       includeDeclarations: options.declaration,
       includeTsLib: options.compilerOptions?.importHelpers,
