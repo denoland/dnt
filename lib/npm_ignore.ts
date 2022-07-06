@@ -7,6 +7,8 @@ export function getNpmIgnoreText(options: {
   sourceMap?: SourceMapOptions;
   inlineSources?: boolean;
   testFiles: OutputFile[];
+  includeScriptModule: boolean | undefined;
+  includeEsModule: boolean | undefined;
 }) {
   // Try to make as little of this conditional in case a user edits settings
   // to exclude something, but then the output directory still has that file
@@ -24,8 +26,12 @@ export function getNpmIgnoreText(options: {
     for (const file of options.testFiles) {
       const filePath = file.filePath.replace(/\.ts$/i, ".js");
       const dtsFilePath = file.filePath.replace(/\.ts$/i, ".d.ts");
-      yield `esm/${filePath}`;
-      yield `script/${filePath}`;
+      if (options.includeEsModule) {
+        yield `esm/${filePath}`;
+      }
+      if (options.includeScriptModule) {
+        yield `script/${filePath}`;
+      }
       yield `types/${dtsFilePath}`;
     }
     yield "test_runner.js";

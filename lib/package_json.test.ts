@@ -42,6 +42,7 @@ Deno.test("single entrypoint", () => {
       version: "0.1.0",
     },
     testEnabled: true,
+    includeEsModule: true,
     includeScriptModule: true,
     includeDeclarations: true,
     includeTsLib: false,
@@ -129,6 +130,35 @@ Deno.test("single entrypoint", () => {
         ".": {
           import: "./esm/mod.js",
           require: undefined,
+          types: "./types/mod.d.ts",
+        },
+      },
+    },
+  );
+
+  assertEquals(
+    getPackageJson({
+      ...props,
+      testEnabled: false,
+      includeEsModule: false,
+    }),
+    {
+      name: "package",
+      version: "0.1.0",
+      main: "./script/mod.js",
+      module: undefined,
+      types: "./types/mod.d.ts",
+      dependencies: {
+        dep: "^1.0.0",
+      },
+      devDependencies: {
+        "@types/node": versions.nodeTypes,
+      },
+      scripts: undefined,
+      exports: {
+        ".": {
+          import: undefined,
+          require: "./script/mod.js",
           types: "./types/mod.d.ts",
         },
       },
@@ -229,6 +259,7 @@ Deno.test("multiple entrypoints", () => {
       version: "0.1.0",
     },
     testEnabled: false,
+    includeEsModule: true,
     includeScriptModule: true,
     includeDeclarations: true,
     includeTsLib: false,
@@ -294,6 +325,7 @@ Deno.test("binary entrypoints", () => {
       version: "0.1.0",
     },
     testEnabled: false,
+    includeEsModule: true,
     includeScriptModule: true,
     includeDeclarations: true,
     includeTsLib: false,
@@ -365,6 +397,7 @@ Deno.test("peer dependencies", () => {
       version: "0.1.0",
     },
     testEnabled: true,
+    includeEsModule: true,
     includeScriptModule: true,
     includeDeclarations: true,
     includeTsLib: false,

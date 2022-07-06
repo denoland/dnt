@@ -6,6 +6,7 @@ import { runTestDefinitions } from "./test_runner.ts";
 export function getTestRunnerCode(options: {
   testEntryPoints: string[];
   denoTestShimPackageName: string | undefined;
+  includeEsModule: boolean | undefined;
   includeScriptModule: boolean | undefined;
 }) {
   const usesDenoTest = options.denoTestShimPackageName != null;
@@ -64,25 +65,29 @@ export function getTestRunnerCode(options: {
               "await runTestDefinitions(testDefinitions.splice(0, testDefinitions.length), scriptTestContext);",
             );
           }
-          writer.blankLine();
         }
 
-        writer.writeLine(`const esmPath = "./esm/" + filePath;`);
-        writer.writeLine(
-          `console.log("\\nRunning tests in " + chalk.underline(esmPath) + "...\\n");`,
-        );
-        writer.writeLine(`process.chdir(__dirname + "/esm");`);
-        if (usesDenoTest) {
-          writer.write(`const esmTestContext = `).inlineBlock(() => {
-            writer.writeLine("origin: pathToFileURL(filePath).toString(),");
-            writer.writeLine("...testContext,");
-          }).write(";").newLine();
-        }
-        writer.writeLine(`await import(esmPath);`);
-        if (usesDenoTest) {
+        if (options.includeEsModule) {
+          if (options.includeScriptModule) {
+            writer.blankLine();
+          }
+          writer.writeLine(`const esmPath = "./esm/" + filePath;`);
           writer.writeLine(
-            "await runTestDefinitions(testDefinitions.splice(0, testDefinitions.length), esmTestContext);",
+            `console.log("\\nRunning tests in " + chalk.underline(esmPath) + "...\\n");`,
           );
+          writer.writeLine(`process.chdir(__dirname + "/esm");`);
+          if (usesDenoTest) {
+            writer.write(`const esmTestContext = `).inlineBlock(() => {
+              writer.writeLine("origin: pathToFileURL(filePath).toString(),");
+              writer.writeLine("...testContext,");
+            }).write(";").newLine();
+          }
+          writer.writeLine(`await import(esmPath);`);
+          if (usesDenoTest) {
+            writer.writeLine(
+              "await runTestDefinitions(testDefinitions.splice(0, testDefinitions.length), esmTestContext);",
+            );
+          }
         }
       });
   });
