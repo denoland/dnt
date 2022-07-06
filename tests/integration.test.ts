@@ -836,7 +836,13 @@ Deno.test("should build and type check node types project", async () => {
     test: false,
     entryPoints: ["main.ts"],
     outDir: "./npm",
-    shims: {},
+    shims: {
+      // see issue 185
+      custom: [{
+        globalNames: ["TextEncoder", "TextDecoder"],
+        module: "util",
+      }]
+    },
     package: {
       name: "node_types",
       version: "0.0.0",
