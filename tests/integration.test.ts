@@ -841,7 +841,7 @@ Deno.test("should build and type check node types project", async () => {
       custom: [{
         globalNames: ["TextEncoder", "TextDecoder"],
         module: "util",
-      }]
+      }],
     },
     package: {
       name: "node_types",
