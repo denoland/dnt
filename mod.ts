@@ -57,10 +57,10 @@ export interface BuildOptions {
    */
   declaration?: boolean;
   /** Include a CommonJS or UMD module.
-   * @default Defaults to CommonJS.
+   * @default "cjs" (CommonJS)
    */
   scriptModule?: "cjs" | "umd" | false;
-  /** Whether to emit ES module.
+  /** Whether to emit an ES module.
    * @default true
    */
   esModule?: boolean;
