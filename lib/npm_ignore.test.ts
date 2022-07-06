@@ -56,6 +56,20 @@ Deno.test("should include src directory when the source files are not necessary"
     includeScriptModule: true,
     includeEsModule: true,
   });
+  runTest({
+    sourceMaps: undefined,
+    inlineSources: undefined,
+    expectHasSrcFolder: true,
+    includeScriptModule: false,
+    includeEsModule: true,
+  });
+  runTest({
+    sourceMaps: undefined,
+    inlineSources: undefined,
+    expectHasSrcFolder: true,
+    includeScriptModule: true,
+    includeEsModule: false,
+  });
 });
 
 function runTest(options: {
