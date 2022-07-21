@@ -1,8 +1,26 @@
 {
   "tasks": {
-    // todo: exclude going into node_modules folders once we add support for globbing
     "test": "deno test -A",
     "build": "deno run -A --no-check --unstable https://deno.land/x/wasmbuild@0.8.2/main.ts --out lib/pkg"
+  },
+  "test": {
+    "files": {
+      "exclude": [
+        "./tests/declaration_import_project/npm",
+        "./tests/import_map_project/npm",
+        "./tests/json_module_project/npm",
+        "./tests/module_mappings_project/npm",
+        "./tests/node_types_project/npm",
+        "./tests/package_mappings_project/npm",
+        "./tests/polyfill_array_find_last_project/npm",
+        "./tests/polyfill_project/npm",
+        "./tests/shim_project/npm",
+        "./tests/test_project/npm",
+        "./tests/tla_project/npm",
+        "./tests/undici_project/npm",
+        "./tests/web_socket_project/npm"
+      ]
+    }
   },
   "fmt": {
     "files": {

@@ -9,7 +9,7 @@ import { ShimValue } from "../lib/shims.ts";
 import { build, BuildOptions, ShimOptions } from "../mod.ts";
 
 const versions = {
-  denoShim: "~0.7.0",
+  denoShim: "~0.8.0",
   denoTestShim: "~0.3.3",
   cryptoShim: "~0.3.1",
   domExceptionShim: "^4.0.0",
@@ -17,7 +17,7 @@ const versions = {
   promptsShim: "~0.1.0",
   timersShim: "~0.1.0",
   weakRefSham: "~0.1.0",
-  undici: "^5.5.1",
+  undici: "^5.8.0",
   chalk: "4.1.2",
   nodeTypes: "16.11.37",
   tsLib: "2.3.1",
@@ -440,7 +440,7 @@ Deno.test("should build with package mappings", async () => {
     mappings: {
       "https://deno.land/x/code_block_writer@11.0.0/mod.ts": {
         name: "code-block-writer",
-        version: "^11.0.0",
+        version: "=11.0.0",
       },
     },
   }, (output) => {
@@ -461,7 +461,7 @@ Deno.test("should build with package mappings", async () => {
       },
       types: "./types/mod.d.ts",
       dependencies: {
-        "code-block-writer": "^11.0.0",
+        "code-block-writer": "=11.0.0",
       },
       devDependencies: {
         "@types/node": versions.nodeTypes,
@@ -500,7 +500,7 @@ Deno.test("should build with peer depependencies in mappings", async () => {
     mappings: {
       "https://deno.land/x/code_block_writer@11.0.0/mod.ts": {
         name: "code-block-writer",
-        version: "^11.0.0",
+        version: "=11.0.0",
         peerDependency: true,
       },
     },
@@ -522,7 +522,7 @@ Deno.test("should build with peer depependencies in mappings", async () => {
       },
       types: "./types/mod.d.ts",
       peerDependencies: {
-        "code-block-writer": "^11.0.0",
+        "code-block-writer": "=11.0.0",
       },
       devDependencies: {
         "@types/node": versions.nodeTypes,
@@ -925,7 +925,9 @@ async function runTest(
     try {
       Deno.removeSync(options.outDir, { recursive: true });
     } catch (err) {
-      console.error(`Error removing dir: ${err}`);
+      if (!(err instanceof Deno.errors.NotFound)) {
+        console.error(`Error removing dir: ${err}`);
+      }
     } finally {
       Deno.chdir(originalCwd);
     }
