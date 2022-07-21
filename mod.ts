@@ -132,6 +132,8 @@ export interface BuildOptions {
      */
     skipLibCheck?: boolean;
   };
+  /** Action to do after emitting and before running tests. */
+  postBuild?: () => void | Promise<void>;
 }
 
 /** Builds the specified Deno module to an npm package using the TypeScript compiler. */
@@ -357,6 +359,12 @@ export async function build(options: BuildOptions): Promise<void> {
 
   // ensure this is done before running tests
   await npmInstallPromise;
+
+  // run post build action
+  if (options.postBuild) {
+    log("Running post build action...");
+    await options.postBuild();
+  }
 
   if (options.test) {
     log("Running tests...");
