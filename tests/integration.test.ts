@@ -141,12 +141,6 @@ Deno.test("should build test project without esm", async () => {
       name: "add",
       version: "1.0.0",
       main: "./script/mod.js",
-      exports: {
-        ".": {
-          require: "./script/mod.js",
-          types: "./types/mod.d.ts",
-        },
-      },
       scripts: {
         test: "node test_runner.js",
       },

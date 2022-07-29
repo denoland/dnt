@@ -113,16 +113,21 @@ export function getPackageJson({
     ...packageJsonObj,
     ...deleteEmptyKeys({
       exports: {
+        ...(includeEsModule || exports.length > 1
+          ? {
+            ...(Object.fromEntries(exports.map((e) => [e.name, {
+              import: includeEsModule ? `./esm/${e.path}` : undefined,
+              require: includeScriptModule ? `./script/${e.path}` : undefined,
+              types: includeDeclarations
+                ? (e.name === "." ? packageJsonObj.types : undefined) ??
+                  `./types/${e.types}`
+                : undefined,
+              ...(packageJsonObj.exports?.[e.name] ?? {}),
+            }]))),
+          }
+          : {}),
+        // allow someone to override
         ...(packageJsonObj.exports ?? {}),
-        ...(Object.fromEntries(exports.map((e) => [e.name, {
-          import: includeEsModule ? `./esm/${e.path}` : undefined,
-          require: includeScriptModule ? `./script/${e.path}` : undefined,
-          types: includeDeclarations
-            ? (e.name === "." ? packageJsonObj.types : undefined) ??
-              `./types/${e.types}`
-            : undefined,
-          ...(packageJsonObj.exports?.[e.name] ?? {}),
-        }]))),
       },
       scripts,
       dependencies,

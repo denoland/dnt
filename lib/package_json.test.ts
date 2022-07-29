@@ -155,13 +155,6 @@ Deno.test("single entrypoint", () => {
         "@types/node": versions.nodeTypes,
       },
       scripts: undefined,
-      exports: {
-        ".": {
-          import: undefined,
-          require: "./script/mod.js",
-          types: "./types/mod.d.ts",
-        },
-      },
     },
   );
 
