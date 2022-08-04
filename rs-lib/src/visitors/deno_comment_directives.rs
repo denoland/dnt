@@ -67,22 +67,7 @@ fn get_extended_comment_range(
 ) -> std::ops::Range<usize> {
   let text_info = program.text_info();
   let start_pos = text_info.range().start;
-  let file_text = text_info.text_str();
   let range = comment.range();
-  let end_pos = get_next_non_whitespace_pos(
-    file_text,
-    range.end().as_byte_index(start_pos),
-  );
+  let end_pos = range.end().as_byte_index(start_pos);
   range.start().as_byte_index(start_pos)..end_pos
-}
-
-fn get_next_non_whitespace_pos(text: &str, start_pos: usize) -> usize {
-  let mut end_pos = start_pos;
-  for (i, c) in text[start_pos..].char_indices() {
-    if !c.is_whitespace() {
-      break;
-    }
-    end_pos = start_pos + i + c.len_utf8();
-  }
-  end_pos
 }
