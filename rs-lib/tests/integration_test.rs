@@ -93,6 +93,15 @@ async fn transform_shims() {
         "if ('test' in dntShim.Deno) {}\n",
       ),
     ),
+    (
+      // previously this would panic
+      "// @deno-types='test'\nDeno.readTextFile();",
+      concat!(
+        "\n",
+        r#"import * as dntShim from "./_dnt.shims.js";"#,
+        "\n\ndntShim.Deno.readTextFile();"
+      ),
+    ),
   ])
   .await;
 }
@@ -820,7 +829,7 @@ async fn transform_typescript_types_in_deno_types() {
   assert_files!(
     result.main.files,
     &[
-      ("mod.ts", "export * from './deps/localhost/mod.js';"),
+      ("mod.ts", "\nexport * from './deps/localhost/mod.js';"),
       ("deps/localhost/mod.js", "function test() { return 5; }"),
       (
         "deps/localhost/mod.d.ts",
@@ -844,7 +853,7 @@ async fn transform_typescript_type_references() {
     result.main.files,
     &[
       ("mod.ts", "export * from './deps/localhost/mod.js';"),
-      ("deps/localhost/mod.js", "function test() { return 5; }"),
+      ("deps/localhost/mod.js", "\nfunction test() { return 5; }"),
       (
         "deps/localhost/mod.d.ts",
         "declare function test(): number;"
@@ -870,13 +879,13 @@ async fn transform_deno_types_and_type_ref_for_same_file() {
     &[
       (
         "mod.ts",
-        "export * from './file.js';\nexport * as test2 from './file.js';\nexport * from './other.js';"
+        "\nexport * from './file.js';\n\nexport * as test2 from './file.js';\nexport * from './other.js';"
       ),
       (
         "other.ts",
-        "export * as other from './file.js';"
+        "\nexport * as other from './file.js';"
       ),
-      ("file.js", "function test() { return 5; }"),
+      ("file.js", "\nfunction test() { return 5; }"),
       ("file.d.ts", "declare function test(): number;"),
     ]
   );
@@ -920,10 +929,10 @@ async fn transform_deno_types_and_type_ref_for_different_local_file() {
     &[
       (
         "mod.ts",
-        "export * from './file.js';\nexport * from './other.js';"
+        "\nexport * from './file.js';\nexport * from './other.js';"
       ),
-      ("other.ts", "export * as other from './file.js';"),
-      ("file.js", "function test() { return 5; }"),
+      ("other.ts", "\nexport * as other from './file.js';"),
+      ("file.js", "\nfunction test() { return 5; }"),
       ("file.d.ts", "declare function test3(): number;"),
     ]
   );
@@ -976,13 +985,13 @@ async fn transform_deno_types_and_type_ref_for_different_remote_file() {
       ("mod.ts", "import './deps/localhost/mod.js';",),
       (
         "deps/localhost/mod.ts",
-        "export * from './file.js';\nexport * from './other.js';"
+        "\nexport * from './file.js';\nexport * from './other.js';"
       ),
       (
         "deps/localhost/other.ts",
-        "export * as other from './file.js';"
+        "\nexport * as other from './file.js';"
       ),
-      ("deps/localhost/file.js", "function test() { return 5; }"),
+      ("deps/localhost/file.js", "\nfunction test() { return 5; }"),
       (
         "deps/localhost/file.d.ts",
         "declare function test3(): number;"
@@ -1291,7 +1300,7 @@ async fn esm_module_with_deno_types() {
       // this is a bug... it should create a proxy here instead,
       // but will wait for someone to open this as it's probably
       // rare for this to occur in the wild
-      ("mod.ts", "import {test} from 'test/lib/mod.js';\n"),
+      ("mod.ts", "\nimport {test} from 'test/lib/mod.js';\n"),
       (
         "deps/localhost/mod.d.ts",
         "declare function test(): number;",
