@@ -852,7 +852,6 @@ Deno.test("should build and type check declaration import project", async () => 
     test: false,
     entryPoints: ["mod.ts"],
     outDir: "./npm",
-    shims: {},
     package: {
       name: "declaration_project",
       version: "0.0.0",

@@ -43,7 +43,7 @@ export interface BuildOptions {
   /** Directory to output to. */
   outDir: string;
   /** Shims to use. */
-  shims: ShimOptions;
+  shims?: ShimOptions;
   /** Type check the output.
    * @default true
    */
@@ -149,6 +149,7 @@ export async function build(options: BuildOptions): Promise<void> {
     typeCheck: options.typeCheck ?? true,
     test: options.test ?? true,
     declaration: options.declaration ?? true,
+    shims: options.shims ?? {},
   };
   const packageManager = options.packageManager ?? "npm";
   const scriptTarget = options.compilerOptions?.target ?? "ES2021";
@@ -410,7 +411,7 @@ export async function build(options: BuildOptions): Promise<void> {
       includeScriptModule: options.scriptModule !== false,
       includeDeclarations: options.declaration,
       includeTsLib: options.compilerOptions?.importHelpers,
-      shims: options.shims,
+      shims: options.shims!,
     });
     writeFile(
       path.join(options.outDir, "package.json"),
@@ -433,7 +434,7 @@ export async function build(options: BuildOptions): Promise<void> {
   }
 
   async function transformEntryPoints(): Promise<TransformOutput> {
-    const { shims, testShims } = shimOptionsToTransformShims(options.shims);
+    const { shims, testShims } = shimOptionsToTransformShims(options.shims!);
     return transform({
       entryPoints: entryPoints.map((e) => e.path),
       testEntryPoints: options.test
