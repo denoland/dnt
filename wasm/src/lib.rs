@@ -42,7 +42,7 @@ impl dnt::Loader for JsLoader {
       if !resp.is_object() {
         anyhow::bail!("fetch response wasn't an object");
       }
-      let load_response =  serde_wasm_bindgen::from_value(resp).unwrap();
+      let load_response = serde_wasm_bindgen::from_value(resp).unwrap();
       Ok(Some(load_response))
     })
   }
@@ -64,7 +64,8 @@ pub struct TransformOptions {
 pub async fn transform(options: JsValue) -> Result<JsValue, JsValue> {
   set_panic_hook();
 
-  let options: TransformOptions =  serde_wasm_bindgen::from_value(options).unwrap();
+  let options: TransformOptions =
+    serde_wasm_bindgen::from_value(options).unwrap();
   let result = dnt::transform(dnt::TransformOptions {
     entry_points: parse_module_specifiers(options.entry_points)?,
     test_entry_points: parse_module_specifiers(options.test_entry_points)?,
