@@ -164,10 +164,7 @@ impl Mappings {
 
   pub fn get_file_path(&self, specifier: &ModuleSpecifier) -> &PathBuf {
     self.inner.get(specifier).unwrap_or_else(|| {
-      panic!(
-        "dnt bug - Could not find file path for specifier: {}",
-        specifier
-      )
+      panic!("Could not find file path for specifier: {}", specifier)
     })
   }
 }

@@ -69,7 +69,7 @@ fn visit_children(node: Node, context: &mut Context) -> Result<()> {
         }
       }
       Node::NamedExport(named_export) => {
-        if let Some(src) = named_export.src.as_ref() {
+        if let Some(src) = &named_export.src {
           visit_module_specifier(src, context);
         }
         if let Some(asserts) = named_export.asserts {
@@ -78,6 +78,11 @@ fn visit_children(node: Node, context: &mut Context) -> Result<()> {
       }
       Node::TsImportType(ts_import_type) => {
         visit_module_specifier(ts_import_type.arg, context);
+      }
+      Node::TsModuleDecl(module_decl) => {
+        if let TsModuleName::Str(src) = &module_decl.id {
+          visit_module_specifier(src, context);
+        }
       }
       Node::CallExpr(call_expr) => {
         if matches!(call_expr.callee, Callee::Import(_)) {
