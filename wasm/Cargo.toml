@@ -14,7 +14,7 @@ default = ["console_error_panic_hook"]
 anyhow = "1.0.51"
 dnt = { path = "../rs-lib", default-features = false, features = ["serialization"], package="deno_node_transform" }
 js-sys = "0.3.60"
-wasm-bindgen = "0.2.83"
+wasm-bindgen = { version = "0.2.83", features = ["serde-serialize"] }
 wasm-bindgen-futures = "0.4.33"
 
 # The `console_error_panic_hook` crate provides better debugging of panics by

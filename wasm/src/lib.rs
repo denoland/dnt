@@ -64,8 +64,13 @@ pub struct TransformOptions {
 pub async fn transform(options: JsValue) -> Result<JsValue, JsValue> {
   set_panic_hook();
 
-  let options: TransformOptions =
-    serde_wasm_bindgen::from_value(options).unwrap();
+  #[allow(deprecated)]
+  let options: TransformOptions = options.into_serde().unwrap();
+  // todo(dsherret): try using this again sometime in the future... it errored
+  // with "invalid type: unit value, expected a boolean" and didn't say exactly
+  // where it errored.
+  // let options: TransformOptions = serde_wasm_bindgen::from_value(options)?;
+
   let result = dnt::transform(dnt::TransformOptions {
     entry_points: parse_module_specifiers(options.entry_points)?,
     test_entry_points: parse_module_specifiers(options.test_entry_points)?,
@@ -77,7 +82,7 @@ pub async fn transform(options: JsValue) -> Result<JsValue, JsValue> {
     import_map: options.import_map,
   })
   .await
-  .map_err(|err| format!("{:?}", err))?; // need to include the anyhow context
+  .map_err(|err| format!("{:#}", err))?; // need to include the anyhow context
 
   Ok(serde_wasm_bindgen::to_value(&result).unwrap())
 }

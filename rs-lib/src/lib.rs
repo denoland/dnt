@@ -139,6 +139,7 @@ pub struct GlobalName {
   /// Optional name of the export from the package.
   pub export_name: Option<String>,
   /// Whether this is a name that only exists as a type declaration.
+  #[serde(default)]
   pub type_only: bool,
 }
 
