@@ -68,9 +68,14 @@ Deno.test("single entrypoint", () => {
     },
     exports: {
       ".": {
-        import: "./esm/mod.js",
-        require: "./script/mod.js",
-        types: "./types/mod.d.ts",
+        import: {
+          default: "./esm/mod.js",
+          types: "./types/mod.d.ts",
+        },
+        require: {
+          default: "./script/mod.js",
+          types: "./types/mod.d.ts",
+        },
       },
     },
     scripts: {
@@ -99,9 +104,14 @@ Deno.test("single entrypoint", () => {
       scripts: undefined,
       exports: {
         ".": {
-          import: "./esm/mod.js",
-          require: "./script/mod.js",
-          types: "./types/mod.d.ts",
+          import: {
+            default: "./esm/mod.js",
+            types: "./types/mod.d.ts",
+          },
+          require: {
+            default: "./script/mod.js",
+            types: "./types/mod.d.ts",
+          },
         },
       },
     },
@@ -128,9 +138,11 @@ Deno.test("single entrypoint", () => {
       scripts: undefined,
       exports: {
         ".": {
-          import: "./esm/mod.js",
+          import: {
+            default: "./esm/mod.js",
+            types: "./types/mod.d.ts",
+          },
           require: undefined,
-          types: "./types/mod.d.ts",
         },
       },
     },
@@ -182,7 +194,6 @@ Deno.test("single entrypoint", () => {
         ".": {
           import: "./esm/mod.js",
           require: undefined,
-          types: undefined,
         },
       },
     },
@@ -215,7 +226,6 @@ Deno.test("single entrypoint", () => {
         ".": {
           import: "./esm/mod.js",
           require: undefined,
-          types: undefined,
         },
       },
     },
@@ -273,14 +283,24 @@ Deno.test("multiple entrypoints", () => {
     },
     exports: {
       ".": {
-        import: "./esm/mod.js",
-        require: "./script/mod.js",
-        types: "./types/mod.d.ts",
+        import: {
+          default: "./esm/mod.js",
+          types: "./types/mod.d.ts",
+        },
+        require: {
+          default: "./script/mod.js",
+          types: "./types/mod.d.ts",
+        },
       },
       "./my-other-entrypoint.js": {
-        import: "./esm/other.js",
-        require: "./script/other.js",
-        types: "./types/other.d.ts",
+        import: {
+          default: "./esm/other.js",
+          types: "./types/other.d.ts",
+        },
+        require: {
+          default: "./script/other.js",
+          types: "./types/other.d.ts",
+        },
       },
     },
     scripts: undefined,
@@ -342,9 +362,14 @@ Deno.test("binary entrypoints", () => {
     },
     exports: {
       ".": {
-        import: "./esm/mod.js",
-        require: "./script/mod.js",
-        types: "./types/mod.d.ts",
+        import: {
+          default: "./esm/mod.js",
+          types: "./types/mod.d.ts",
+        },
+        require: {
+          default: "./script/mod.js",
+          types: "./types/mod.d.ts",
+        },
       },
     },
     scripts: undefined,
@@ -419,9 +444,14 @@ Deno.test("peer dependencies", () => {
     },
     exports: {
       ".": {
-        import: "./esm/mod.js",
-        require: "./script/mod.js",
-        types: "./types/mod.d.ts",
+        import: {
+          default: "./esm/mod.js",
+          types: "./types/mod.d.ts",
+        },
+        require: {
+          default: "./script/mod.js",
+          types: "./types/mod.d.ts",
+        },
       },
     },
     scripts: {

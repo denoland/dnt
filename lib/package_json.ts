@@ -115,15 +115,30 @@ export function getPackageJson({
       exports: {
         ...(includeEsModule || exports.length > 1
           ? {
-            ...(Object.fromEntries(exports.map((e) => [e.name, {
-              import: includeEsModule ? `./esm/${e.path}` : undefined,
-              require: includeScriptModule ? `./script/${e.path}` : undefined,
-              types: includeDeclarations
-                ? (e.name === "." ? packageJsonObj.types : undefined) ??
-                  `./types/${e.types}`
-                : undefined,
-              ...(packageJsonObj.exports?.[e.name] ?? {}),
-            }]))),
+            ...(Object.fromEntries(exports.map((e) => {
+              return [e.name, {
+                import: includeEsModule
+                  ? getPathOrTypesObject(`./esm/${e.path}`)
+                  : undefined,
+                require: includeScriptModule
+                  ? getPathOrTypesObject(`./script/${e.path}`)
+                  : undefined,
+                ...(packageJsonObj.exports?.[e.name] ?? {}),
+              }];
+
+              function getPathOrTypesObject(path: string) {
+                if (includeDeclarations) {
+                  return {
+                    default: path,
+                    types:
+                      (e.name === "." ? packageJsonObj.types : undefined) ??
+                        `./types/${e.types}`,
+                  };
+                } else {
+                  return path;
+                }
+              }
+            }))),
           }
           : {}),
         // allow someone to override
