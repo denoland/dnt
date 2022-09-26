@@ -1950,6 +1950,30 @@ async fn remote_declaration_file_import() {
   ]);
 }
 
+#[tokio::test]
+async fn import_type() {
+  let result = TestBuilder::new()
+    .with_loader(|loader| {
+      loader
+        .add_local_file(
+          "/mod.ts",
+          r#"export type Test = import('./other.ts').Test"#,
+        )
+        .add_local_file("/other.ts", "export type Test = string;");
+    })
+    .transform()
+    .await
+    .unwrap();
+
+  assert_files!(
+    result.main.files,
+    &[
+      ("mod.ts", r#"export type Test = import('./other.js').Test"#),
+      ("other.ts", "export type Test = string;")
+    ]
+  );
+}
+
 fn get_shim_file_text(mut text: String) -> String {
   text.push('\n');
   text.push_str(
