@@ -21,13 +21,13 @@ export interface RunTestDefinitionsOptions {
 }
 
 export interface TestDefinition {
-  name: string | undefined;
+  name: string;
   fn: (context: TestContext) => Promise<void> | void;
   ignore?: boolean;
 }
 
 export interface TestContext {
-  name: string | undefined;
+  name: string;
   parent: TestContext | undefined;
   origin: string;
   err: any;
@@ -52,7 +52,7 @@ export async function runTestDefinitions(
       options.process.stdout.write(` ${options.chalk.gray("ignored")}\n`);
       continue;
     }
-    const context = getTestContext(undefined);
+    const context = getTestContext(definition, undefined);
     let pass = false;
     try {
       await definition.fn(context);
@@ -89,9 +89,12 @@ export async function runTestDefinitions(
     options.process.exit(1);
   }
 
-  function getTestContext(parent: TestContext | undefined): TestContext {
+  function getTestContext(
+    definition: TestDefinition,
+    parent: TestContext | undefined,
+  ): TestContext {
     return {
-      name: undefined,
+      name: definition.name,
       parent,
       origin: options.origin,
       /** @type {any} */
@@ -105,7 +108,7 @@ export async function runTestDefinitions(
       },
       getOutput() {
         let output = "";
-        if (this.name) {
+        if (this.parent) {
           output += "test " + this.name + " ...";
         }
         if (this.children.length > 0) {
@@ -115,16 +118,16 @@ export async function runTestDefinitions(
         } else if (!this.err) {
           output += " ";
         }
-        if (this.name && this.err) {
+        if (this.parent && this.err) {
           output += "\n";
         }
         if (this.err) {
           output += indentText((this.err.stack ?? this.err).toString(), 1);
-          if (this.name) {
+          if (this.parent) {
             output += "\n";
           }
         }
-        if (this.name) {
+        if (this.parent) {
           output += getStatusText(this.status);
         }
         return output;
@@ -132,9 +135,7 @@ export async function runTestDefinitions(
       async step(nameOrTestDefinition, fn) {
         const definition = getDefinition();
 
-        const context = getTestContext(this);
-        context.status = "pending";
-        context.name = definition.name;
+        const context = getTestContext(definition, this);
         context.status = "pending";
         this.children.push(context);
 

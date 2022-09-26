@@ -8,6 +8,10 @@ Deno.test("should add in test project", () => {
 });
 
 Deno.test("should get properties on test context", async (t) => {
+  if (t.name !== "should get properties on test context") {
+    console.error("Name", t.name);
+    throw new Error("Test definition name was unexpected.");
+  }
   const url = import.meta.url;
   if (t.origin !== url) {
     console.log(`Context origin: ${t.origin}`);
@@ -18,6 +22,10 @@ Deno.test("should get properties on test context", async (t) => {
     throw new Error("Parent should have been undefined.");
   }
   await t.step("inner", (tInner) => {
+    if (tInner.name !== "inner") {
+      console.error("Name", tInner.name);
+      throw new Error("Test step definition name was unexpected.");
+    }
     if (tInner.parent !== t) {
       throw new Error("The parent was not correct.");
     }
