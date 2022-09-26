@@ -9,9 +9,9 @@ export function outputDiagnostics(diagnostics: readonly ts.Diagnostic[]) {
     getCurrentDirectory: () => Deno.cwd(),
     getNewLine: () => "\n",
   };
-  const output = Deno.env.get("NO_COLOR") == null
-    ? ts.formatDiagnosticsWithColorAndContext(diagnostics, host)
-    : ts.formatDiagnostics(diagnostics, host);
+  const output = Deno.noColor
+    ? ts.formatDiagnostics(diagnostics, host)
+    : ts.formatDiagnosticsWithColorAndContext(diagnostics, host);
   console.error(output);
 }
 
