@@ -1951,7 +1951,7 @@ async fn remote_declaration_file_import() {
 }
 
 #[tokio::test]
-async fn import_type() {
+async fn import_type_change_specifier() {
   let result = TestBuilder::new()
     .with_loader(|loader| {
       loader
@@ -1969,6 +1969,33 @@ async fn import_type() {
     result.main.files,
     &[
       ("mod.ts", r#"export type Test = import('./other.js').Test"#),
+      ("other.ts", "export type Test = string;")
+    ]
+  );
+}
+
+#[tokio::test]
+async fn module_decl_string_literal_change_specifier() {
+  let result = TestBuilder::new()
+    .with_loader(|loader| {
+      loader
+        .add_local_file(
+          "/mod.ts",
+          r#"import Test from './other.ts'; declare module './other.ts' {}"#,
+        )
+        .add_local_file("/other.ts", "export type Test = string;");
+    })
+    .transform()
+    .await
+    .unwrap();
+
+  assert_files!(
+    result.main.files,
+    &[
+      (
+        "mod.ts",
+        r#"import Test from './other.js'; declare module './other.js' {}"#
+      ),
       ("other.ts", "export type Test = string;")
     ]
   );
