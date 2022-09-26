@@ -69,9 +69,14 @@ Deno.test("should build test project", async () => {
       module: "./esm/mod.js",
       exports: {
         ".": {
-          import: "./esm/mod.js",
-          require: "./script/mod.js",
-          types: "./types/mod.d.ts",
+          import: {
+            default: "./esm/mod.js",
+            types: "./types/mod.d.ts",
+          },
+          require: {
+            default: "./script/mod.js",
+            types: "./types/mod.d.ts",
+          },
         },
       },
       scripts: {
@@ -356,8 +361,10 @@ Deno.test("not error for TLA when not using CommonJS", async () => {
       module: "./esm/mod.js",
       exports: {
         ".": {
-          import: "./esm/mod.js",
-          types: "./types/mod.d.ts",
+          import: {
+            types: "./types/mod.d.ts",
+            default: "./esm/mod.js",
+          },
         },
       },
       scripts: {
@@ -445,9 +452,14 @@ Deno.test("should build with package mappings", async () => {
       module: "./esm/mod.js",
       exports: {
         ".": {
-          import: "./esm/mod.js",
-          require: "./script/mod.js",
-          types: "./types/mod.d.ts",
+          import: {
+            default: "./esm/mod.js",
+            types: "./types/mod.d.ts",
+          },
+          require: {
+            default: "./script/mod.js",
+            types: "./types/mod.d.ts",
+          },
         },
       },
       scripts: {
@@ -506,9 +518,14 @@ Deno.test("should build with peer depependencies in mappings", async () => {
       module: "./esm/mod.js",
       exports: {
         ".": {
-          import: "./esm/mod.js",
-          require: "./script/mod.js",
-          types: "./types/mod.d.ts",
+          import: {
+            default: "./esm/mod.js",
+            types: "./types/mod.d.ts",
+          },
+          require: {
+            default: "./script/mod.js",
+            types: "./types/mod.d.ts",
+          },
         },
       },
       scripts: {
