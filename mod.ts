@@ -131,6 +131,10 @@ export interface BuildOptions {
      * @default true
      */
     skipLibCheck?: boolean;
+    /**
+     * @default false
+     */
+    emitDecoratorMetadata?: boolean;
   };
   /** Action to do after emitting and before running tests. */
   postBuild?: () => void | Promise<void>;
@@ -225,6 +229,8 @@ export async function build(options: BuildOptions): Promise<void> {
       isolatedModules: true,
       useDefineForClassFields: true,
       experimentalDecorators: true,
+      emitDecoratorMetadata: options.compilerOptions?.emitDecoratorMetadata ??
+        false,
       jsx: ts.JsxEmit.React,
       jsxFactory: "React.createElement",
       jsxFragmentFactory: "React.Fragment",
