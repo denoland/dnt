@@ -8,28 +8,28 @@ use deno_ast::SourceRanged;
 
 pub fn get_top_level_decls(
   program: &Program,
-  unresolved_context: SyntaxContext,
+  top_level_context: SyntaxContext,
 ) -> HashSet<String> {
   let mut results = HashSet::new();
 
-  visit_children(program.into(), unresolved_context, &mut results);
+  visit_children(program.into(), top_level_context, &mut results);
 
   results
 }
 
 fn visit_children(
   node: Node,
-  unresolved_context: SyntaxContext,
+  top_level_context: SyntaxContext,
   results: &mut HashSet<String>,
 ) {
   if let Node::Ident(ident) = node {
-    if ident.ctxt() == unresolved_context && is_local_declaration_ident(node) {
+    if ident.ctxt() == top_level_context && is_local_declaration_ident(node) {
       results.insert(ident.sym().to_string());
     }
   }
 
   for child in node.children() {
-    visit_children(child, unresolved_context, results);
+    visit_children(child, top_level_context, results);
   }
 }
 

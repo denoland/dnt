@@ -11,7 +11,6 @@ use std::path::Path;
 use std::path::PathBuf;
 
 use analyze::get_top_level_decls;
-use anyhow::anyhow;
 use anyhow::Context;
 use anyhow::Result;
 
@@ -342,19 +341,13 @@ pub async fn transform(options: TransformOptions) -> Result<TransformOutput> {
 
     let file_text = match module.kind {
       ModuleKind::Esm => {
-        let parsed_source = module
-          .maybe_parsed_source
-          .as_ref()
-          .ok_or_else(|| anyhow!("Expected source for: {}", module.specifier))?
-          .clone();
-
+        let parsed_source = module_graph.get_parsed_source(specifier);
         let text_changes = parsed_source
           .with_view(|program| -> Result<Vec<TextChange>> {
-            let unresolved_context = parsed_source.unresolved_context();
             let ignore_line_indexes =
               get_ignore_line_indexes(parsed_source.specifier(), &program);
             let top_level_decls =
-              get_top_level_decls(&program, unresolved_context);
+              get_top_level_decls(&program, parsed_source.top_level_context());
             warnings.extend(ignore_line_indexes.warnings);
 
             fill_polyfills(&mut FillPolyfillsParams {
@@ -376,7 +369,7 @@ pub async fn transform(options: TransformOptions) -> Result<TransformOutput> {
               let result =
                 get_global_text_changes(&GetGlobalTextChangesParams {
                   program: &program,
-                  unresolved_context,
+                  unresolved_context: parsed_source.unresolved_context(),
                   shim_specifier: &shim_relative_specifier,
                   shim_global_names: &env_context.shim_global_names,
                   ignore_line_indexes: &ignore_line_indexes.line_indexes,

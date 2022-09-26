@@ -9,7 +9,7 @@ import { ShimValue } from "../lib/shims.ts";
 import { build, BuildOptions, ShimOptions } from "../mod.ts";
 
 const versions = {
-  denoShim: "~0.9.0",
+  denoShim: "~0.10.0",
   denoTestShim: "~0.3.3",
   cryptoShim: "~0.3.1",
   domExceptionShim: "^4.0.0",
