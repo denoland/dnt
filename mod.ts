@@ -226,6 +226,7 @@ export async function build(options: BuildOptions): Promise<void> {
       noUncheckedIndexedAccess: false,
       declaration: options.declaration,
       esModuleInterop: false,
+      isolatedModules: true,
       useDefineForClassFields: true,
       experimentalDecorators: true,
       emitDecoratorMetadata: options.compilerOptions?.emitDecoratorMetadata ??
