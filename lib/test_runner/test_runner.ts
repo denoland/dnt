@@ -89,7 +89,10 @@ export async function runTestDefinitions(
     options.process.exit(1);
   }
 
-  function getTestContext(definition: TestDefinition, parent: TestContext | undefined): TestContext {
+  function getTestContext(
+    definition: TestDefinition,
+    parent: TestContext | undefined,
+  ): TestContext {
     return {
       name: definition.name,
       parent,
