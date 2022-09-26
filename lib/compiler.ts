@@ -4,11 +4,15 @@ import { path, ts } from "./mod.deps.ts";
 import { ScriptTarget } from "./types.ts";
 
 export function outputDiagnostics(diagnostics: readonly ts.Diagnostic[]) {
-  console.error(ts.formatDiagnosticsWithColorAndContext(diagnostics, {
+  const host: ts.FormatDiagnosticsHost = {
     getCanonicalFileName: (fileName) => path.resolve(fileName),
     getCurrentDirectory: () => Deno.cwd(),
     getNewLine: () => "\n",
-  }));
+  };
+  const output = Deno.env.get("NO_COLOR") == null
+    ? ts.formatDiagnosticsWithColorAndContext(diagnostics, host)
+    : ts.formatDiagnostics(diagnostics, host);
+  console.error(output);
 }
 
 export function getCompilerScriptTarget(target: ScriptTarget) {
