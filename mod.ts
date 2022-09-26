@@ -132,10 +132,9 @@ export interface BuildOptions {
      */
     skipLibCheck?: boolean;
     /**
-     * Deno enabled `isolatedModules` by default. but you can config `isolatedModules` for your js output
+     * @default false
      */
-    isolatedModules?: boolean;
-    emitDecoratorMetadata?: boolean,
+    emitDecoratorMetadata?: boolean;
   };
   /** Action to do after emitting and before running tests. */
   postBuild?: () => void | Promise<void>;
@@ -227,10 +226,10 @@ export async function build(options: BuildOptions): Promise<void> {
       noUncheckedIndexedAccess: false,
       declaration: options.declaration,
       esModuleInterop: false,
-      isolatedModules: options.compilerOptions?.isolatedModules ?? true,
       useDefineForClassFields: true,
-      experimentalDecorators: options.compilerOptions?.experimentalDecorators ?? true,
-      emitDecoratorMetadata: options.compilerOptions?.emitDecoratorMetadata ?? true,
+      experimentalDecorators: true,
+      emitDecoratorMetadata: options.compilerOptions?.emitDecoratorMetadata ??
+        false,
       jsx: ts.JsxEmit.React,
       jsxFactory: "React.createElement",
       jsxFragmentFactory: "React.Fragment",
