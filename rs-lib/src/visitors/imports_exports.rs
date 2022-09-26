@@ -76,6 +76,9 @@ fn visit_children(node: Node, context: &mut Context) -> Result<()> {
           visit_asserts(asserts, context);
         }
       }
+      Node::TsImportType(ts_import_type) => {
+        visit_module_specifier(ts_import_type.arg, context);
+      }
       Node::CallExpr(call_expr) => {
         if matches!(call_expr.callee, Callee::Import(_)) {
           if let Some(Node::Str(src)) =
