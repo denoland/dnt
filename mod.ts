@@ -135,10 +135,6 @@ export interface BuildOptions {
      * Deno enabled `isolatedModules` by default. but you can config `isolatedModules` for your js output
      */
     isolatedModules?: boolean;
-    /**
-     * you can use tc39 `decorators` or typescript only `experimentalDecorators`
-     */
-    experimentalDecorators?: boolean,
     emitDecoratorMetadata?: boolean,
   };
   /** Action to do after emitting and before running tests. */
