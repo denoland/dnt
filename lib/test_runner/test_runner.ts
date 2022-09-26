@@ -21,13 +21,13 @@ export interface RunTestDefinitionsOptions {
 }
 
 export interface TestDefinition {
-  name: string | undefined;
+  name: string;
   fn: (context: TestContext) => Promise<void> | void;
   ignore?: boolean;
 }
 
 export interface TestContext {
-  name: string | undefined;
+  name: string;
   parent: TestContext | undefined;
   origin: string;
   err: any;
@@ -52,7 +52,7 @@ export async function runTestDefinitions(
       options.process.stdout.write(` ${options.chalk.gray("ignored")}\n`);
       continue;
     }
-    const context = getTestContext(undefined);
+    const context = getTestContext(definition, undefined);
     let pass = false;
     try {
       await definition.fn(context);
@@ -89,9 +89,9 @@ export async function runTestDefinitions(
     options.process.exit(1);
   }
 
-  function getTestContext(parent: TestContext | undefined): TestContext {
+  function getTestContext(definition: TestDefinition, parent: TestContext | undefined): TestContext {
     return {
-      name: undefined,
+      name: definition.name,
       parent,
       origin: options.origin,
       /** @type {any} */
@@ -132,9 +132,7 @@ export async function runTestDefinitions(
       async step(nameOrTestDefinition, fn) {
         const definition = getDefinition();
 
-        const context = getTestContext(this);
-        context.status = "pending";
-        context.name = definition.name;
+        const context = getTestContext(definition, this);
         context.status = "pending";
         this.children.push(context);
 
