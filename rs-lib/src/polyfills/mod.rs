@@ -69,7 +69,7 @@ impl PolyfillTester {
   pub fn matches(&self, text: &str) -> bool {
     use deno_ast::MediaType;
     use deno_ast::ModuleSpecifier;
-    use deno_graph::SourceParser;
+    use deno_graph::ModuleParser;
 
     use crate::analyze::get_top_level_decls;
     use crate::parser::ScopeAnalysisParser;

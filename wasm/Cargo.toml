@@ -13,9 +13,9 @@ default = ["console_error_panic_hook"]
 [dependencies]
 anyhow = "1.0.51"
 dnt = { path = "../rs-lib", default-features = false, features = ["serialization"], package="deno_node_transform" }
-js-sys = "0.3.55"
-wasm-bindgen = { version = "0.2.80", features = ["serde-serialize"] }
-wasm-bindgen-futures = "0.4.30"
+js-sys = "0.3.60"
+wasm-bindgen = { version = "0.2.83", features = ["serde-serialize"] }
+wasm-bindgen-futures = "0.4.33"
 
 # The `console_error_panic_hook` crate provides better debugging of panics by
 # logging them with `console.error`. This is great for development, but requires
@@ -24,6 +24,7 @@ wasm-bindgen-futures = "0.4.30"
 console_error_panic_hook = { version = "0.1.6", optional = true }
 
 serde = { version = "1.0", features = ["derive"] }
+serde-wasm-bindgen = "0.4.3"
 
 # `wee_alloc` is a tiny allocator for wasm that is only ~1K in code size
 # compared to the default allocator's ~10K. It is slower than the default
@@ -33,7 +34,7 @@ serde = { version = "1.0", features = ["derive"] }
 wee_alloc = { version = "0.4.5", optional = true }
 
 [dev-dependencies]
-wasm-bindgen-test = "0.3.30"
+wasm-bindgen-test = "0.3.33"
 
 [profile.release]
 # Tell `rustc` to optimize for small code size.

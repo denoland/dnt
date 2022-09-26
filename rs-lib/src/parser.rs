@@ -10,7 +10,7 @@ use deno_ast::ModuleSpecifier;
 use deno_ast::ParseParams;
 use deno_ast::ParsedSource;
 use deno_ast::SourceTextInfo;
-use deno_graph::SourceParser;
+use deno_graph::ModuleParser;
 
 #[derive(Default)]
 pub struct ScopeAnalysisParser;
@@ -21,7 +21,7 @@ impl ScopeAnalysisParser {
   }
 }
 
-impl SourceParser for ScopeAnalysisParser {
+impl ModuleParser for ScopeAnalysisParser {
   fn parse_module(
     &self,
     specifier: &ModuleSpecifier,

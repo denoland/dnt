@@ -16,7 +16,10 @@ use anyhow::bail;
 use anyhow::Context;
 use anyhow::Result;
 use deno_ast::ModuleSpecifier;
+use deno_ast::ParsedSource;
+use deno_graph::CapturingModuleAnalyzer;
 use deno_graph::Module;
+use deno_graph::ParsedSourceStore;
 
 pub struct ModuleGraphOptions<'a> {
   pub entry_points: Vec<ModuleSpecifier>,
@@ -29,6 +32,7 @@ pub struct ModuleGraphOptions<'a> {
 /// Wrapper around deno_graph::ModuleGraph.
 pub struct ModuleGraph {
   graph: deno_graph::ModuleGraph,
+  capturing_analyzer: CapturingModuleAnalyzer,
 }
 
 impl ModuleGraph {
@@ -55,6 +59,8 @@ impl ModuleGraph {
       options.specifier_mappings,
     );
     let source_parser = ScopeAnalysisParser::new();
+    let capturing_analyzer =
+      CapturingModuleAnalyzer::new(Some(Box::new(source_parser)), None);
     let graph = Self {
       graph: deno_graph::create_graph(
         options
@@ -68,10 +74,11 @@ impl ModuleGraph {
         &mut loader,
         resolver.as_ref().map(|r| r.as_resolver()),
         None,
-        Some(&source_parser),
+        Some(&capturing_analyzer),
         None,
       )
       .await,
+      capturing_analyzer,
     };
 
     let errors = graph.graph.errors().into_iter().collect::<Vec<_>>();
@@ -145,6 +152,19 @@ impl ModuleGraph {
     self.graph.get(specifier).unwrap_or_else(|| {
       panic!("dnt bug - Did not find specifier: {}", specifier);
     })
+  }
+
+  pub fn get_parsed_source(&self, specifier: &ModuleSpecifier) -> ParsedSource {
+    let specifier = self.graph.resolve(specifier);
+    self
+      .capturing_analyzer
+      .get_parsed_source(&specifier)
+      .unwrap_or_else(|| {
+        panic!(
+          "dnt bug - Did not find parsed source for specifier: {}",
+          specifier
+        );
+      })
   }
 
   pub fn resolve_dependency(

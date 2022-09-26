@@ -1685,6 +1685,24 @@ async fn polyfills_test_files() {
 }
 
 #[tokio::test]
+async fn polyfills_object_has_own_conflict() {
+  // should not do a polyfill because of Object
+  let result = TestBuilder::new()
+    .with_loader(|loader| {
+      loader
+        .add_local_file("/mod.ts", "export class Object {} Object.hasOwn();");
+    })
+    .transform()
+    .await
+    .unwrap();
+
+  assert_files!(
+    result.main.files,
+    &[("mod.ts", "export class Object {} Object.hasOwn();")]
+  );
+}
+
+#[tokio::test]
 async fn module_specifier_mapping_general() {
   let result = TestBuilder::new()
     .with_loader(|loader| {

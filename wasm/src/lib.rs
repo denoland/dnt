@@ -42,7 +42,7 @@ impl dnt::Loader for JsLoader {
       if !resp.is_object() {
         anyhow::bail!("fetch response wasn't an object");
       }
-      let load_response = resp.into_serde().unwrap();
+      let load_response = serde_wasm_bindgen::from_value(resp).unwrap();
       Ok(Some(load_response))
     })
   }
@@ -64,7 +64,13 @@ pub struct TransformOptions {
 pub async fn transform(options: JsValue) -> Result<JsValue, JsValue> {
   set_panic_hook();
 
+  #[allow(deprecated)]
   let options: TransformOptions = options.into_serde().unwrap();
+  // todo(dsherret): try using this again sometime in the future... it errored
+  // with "invalid type: unit value, expected a boolean" and didn't say exactly
+  // where it errored.
+  // let options: TransformOptions = serde_wasm_bindgen::from_value(options)?;
+
   let result = dnt::transform(dnt::TransformOptions {
     entry_points: parse_module_specifiers(options.entry_points)?,
     test_entry_points: parse_module_specifiers(options.test_entry_points)?,
@@ -76,9 +82,9 @@ pub async fn transform(options: JsValue) -> Result<JsValue, JsValue> {
     import_map: options.import_map,
   })
   .await
-  .map_err(|err| format!("{:?}", err))?; // need to include the anyhow context
+  .map_err(|err| format!("{:#}", err))?; // need to include the anyhow context
 
-  Ok(JsValue::from_serde(&result).unwrap())
+  Ok(serde_wasm_bindgen::to_value(&result).unwrap())
 }
 
 fn parse_module_specifiers(
