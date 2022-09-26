@@ -59,7 +59,8 @@ impl ModuleGraph {
       options.specifier_mappings,
     );
     let source_parser = ScopeAnalysisParser::new();
-    let capturing_analyzer = CapturingModuleAnalyzer::new(Some(Box::new(source_parser)), None);
+    let capturing_analyzer =
+      CapturingModuleAnalyzer::new(Some(Box::new(source_parser)), None);
     let graph = Self {
       graph: deno_graph::create_graph(
         options
@@ -155,9 +156,15 @@ impl ModuleGraph {
 
   pub fn get_parsed_source(&self, specifier: &ModuleSpecifier) -> ParsedSource {
     let specifier = self.graph.resolve(specifier);
-    self.capturing_analyzer.get_parsed_source(&specifier).unwrap_or_else(|| {
-      panic!("dnt bug - Did not find parsed source for specifier: {}", specifier);
-    })
+    self
+      .capturing_analyzer
+      .get_parsed_source(&specifier)
+      .unwrap_or_else(|| {
+        panic!(
+          "dnt bug - Did not find parsed source for specifier: {}",
+          specifier
+        );
+      })
   }
 
   pub fn resolve_dependency(
