@@ -108,7 +108,7 @@ export async function runTestDefinitions(
       },
       getOutput() {
         let output = "";
-        if (this.name) {
+        if (this.parent) {
           output += "test " + this.name + " ...";
         }
         if (this.children.length > 0) {
@@ -118,16 +118,16 @@ export async function runTestDefinitions(
         } else if (!this.err) {
           output += " ";
         }
-        if (this.name && this.err) {
+        if (this.parent && this.err) {
           output += "\n";
         }
         if (this.err) {
           output += indentText((this.err.stack ?? this.err).toString(), 1);
-          if (this.name) {
+          if (this.parent) {
             output += "\n";
           }
         }
-        if (this.name) {
+        if (this.parent) {
           output += getStatusText(this.status);
         }
         return output;
