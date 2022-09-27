@@ -133,11 +133,12 @@ export interface BuildOptions {
     skipLibCheck?: boolean;
     /**
      * Deno enabled `isolatedModules` by default. but you can config `isolatedModules` for your js output
+     * @default true
      */
     isolatedModules?: boolean;
     /**
-     * @default true
      * you can use tc39 [decorators](https://github.com/tc39/proposal-decorators) or typescript only `experimentalDecorators`
+     * @default true
      */
     experimentalDecorators?: boolean;
     /**
