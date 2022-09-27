@@ -1146,6 +1146,7 @@ async fn node_module_mapping() {
           "/mod.ts",
           concat!(
             "import * as path from 'https://deno.land/std@0.143.0/node/path.ts';\n",
+            "import { performance } from 'https://deno.land/std@0.156.0/node/perf_hooks.ts';\n",
             "import * as fs from 'https://deno.land/std/node/fs/promises.ts';",
           ),
         );
@@ -1160,6 +1161,7 @@ async fn node_module_mapping() {
       "mod.ts",
       concat!(
         "import * as path from 'path';\n",
+        "import { performance } from 'perf_hooks';\n",
         "import * as fs from 'fs/promises';",
       )
     ),]
