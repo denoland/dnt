@@ -422,14 +422,24 @@ This will create a package.json with these as exports:
   "types": "./types/mod.d.ts",
   "exports": {
     ".": {
-      "import": "./esm/mod.js",
-      "require": "./script/mod.js",
-      "types": "./types/mod.d.ts"
+      "import": {
+        "default": "./esm/mod.js",
+        "types": "./types/mod.d.ts"
+      },
+      "require": {
+        "default": "./script/mod.js",
+        "types": "./types/mod.d.ts"
+      }
     },
     "./internal": {
-      "import": "./esm/internal.js",
-      "require": "./script/internal.js",
-      "types": "./types/internal.d.ts"
+      "import": {
+        "default": "./esm/internal.js",
+        "types": "./types/internal.d.ts"
+      },
+      "require": {
+        "default": "./script/internal.js",
+        "types": "./types/internal.d.ts"
+      }
     }
   }
 }
