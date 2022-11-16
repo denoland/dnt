@@ -43,6 +43,7 @@ pub fn get_all_specifier_mappers() -> Vec<Box<dyn SpecifierMapper>> {
     Box::new(NodeSpecifierMapper::new("worker_threads")),
     Box::new(SkypackMapper),
     Box::new(EsmShMapper),
+    Box::new(NpmMapper),
   ]
 }
 
@@ -60,6 +61,9 @@ static ESMSH_MAPPING_RE: Lazy<Regex> = Lazy::new(|| {
 static ESMSH_IGNORE_MAPPING_RE: Lazy<Regex> = Lazy::new(|| {
   // internal urls
   Regex::new(r"^https://esm\.sh/v[0-9]+/.*/.*/").unwrap()
+});
+static NPM_MAPPING_RE: Lazy<Regex> = Lazy::new(|| {
+  Regex::new(r"^npm:(@?[^@?]+)@([0-9.\^~\-A-Za-z]+)(?:/([^#?]+))?$").unwrap()
 });
 
 struct SkypackMapper;
@@ -109,6 +113,31 @@ impl SpecifierMapper for EsmShMapper {
       // ignore, as it's internal
       return None;
     }
+
+    let sub_path = captures.get(3).map(|m| m.as_str().to_owned());
+
+    // don't use the package for declaration file imports
+    if let Some(sub_path) = &sub_path {
+      // todo(dsherret): this should probably work on media type
+      if sub_path.to_lowercase().ends_with(".d.ts") {
+        return None;
+      }
+    }
+
+    Some(PackageMappedSpecifier {
+      name: captures.get(1).unwrap().as_str().to_string(),
+      version: Some(captures.get(2).unwrap().as_str().to_string()),
+      sub_path,
+      peer_dependency: false,
+    })
+  }
+}
+
+struct NpmMapper;
+
+impl SpecifierMapper for NpmMapper {
+  fn map(&self, specifier: &ModuleSpecifier) -> Option<PackageMappedSpecifier> {
+    let captures = NPM_MAPPING_RE.captures(specifier.as_str())?;
 
     let sub_path = captures.get(3).map(|m| m.as_str().to_owned());
 
@@ -212,6 +241,15 @@ mod test {
         peer_dependency: false,
         sub_path: None,
       }),
+    );
+    assert_eq!(
+      mapper.map(&ModuleSpecifier::parse("npm:@project/name@2.1.3").unwrap()),
+      Some(PackageMappedSpecifier {
+        name: "@project/name".to_string(),
+        version: Some("2.1.3".to_string()),
+        sub_path: None,
+        peer_dependency: false
+      })
     );
     assert_eq!(
       mapper.map(
