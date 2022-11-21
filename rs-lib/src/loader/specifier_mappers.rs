@@ -63,7 +63,7 @@ static ESMSH_IGNORE_MAPPING_RE: Lazy<Regex> = Lazy::new(|| {
   Regex::new(r"^https://esm\.sh/v[0-9]+/.*/.*/").unwrap()
 });
 static NPM_MAPPING_RE: Lazy<Regex> = Lazy::new(|| {
-  Regex::new(r"^npm:(@?[^@?]+)(@[0-9.\^~\-A-Za-z]+)?(?:/([^#?]+))?$").unwrap()
+  Regex::new(r"^npm:/?(@?[^@?]+)(@[0-9.\^~\-A-Za-z]+)?(?:/([^#?]+))?$").unwrap()
 });
 
 struct SkypackMapper;
@@ -271,6 +271,15 @@ mod test {
     );
     assert_eq!(
       mapper.map(&ModuleSpecifier::parse("npm:@project/name@2.1.3").unwrap()),
+      Some(PackageMappedSpecifier {
+        name: "@project/name".to_string(),
+        version: Some("2.1.3".to_string()),
+        sub_path: None,
+        peer_dependency: false
+      })
+    );
+    assert_eq!(
+      mapper.map(&ModuleSpecifier::parse("npm:/@project/name@2.1.3").unwrap()),
       Some(PackageMappedSpecifier {
         name: "@project/name".to_string(),
         version: Some("2.1.3".to_string()),
