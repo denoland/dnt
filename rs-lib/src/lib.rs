@@ -58,7 +58,7 @@ mod visitors;
 
 #[cfg_attr(feature = "serialization", derive(serde::Serialize))]
 #[cfg_attr(feature = "serialization", serde(rename_all = "camelCase"))]
-#[derive(Debug, PartialEq)]
+#[derive(Debug, Eq, PartialEq)]
 pub struct OutputFile {
   pub file_path: PathBuf,
   pub file_text: String,
@@ -67,7 +67,7 @@ pub struct OutputFile {
 #[cfg_attr(feature = "serialization", derive(serde::Serialize))]
 #[cfg_attr(feature = "serialization", derive(serde::Deserialize))]
 #[cfg_attr(feature = "serialization", serde(rename_all = "camelCase"))]
-#[derive(Clone, Debug, PartialEq)]
+#[derive(Clone, Debug, Eq, PartialEq)]
 pub struct Dependency {
   pub name: String,
   pub version: String,
@@ -77,7 +77,7 @@ pub struct Dependency {
 
 #[cfg_attr(feature = "serialization", derive(serde::Serialize))]
 #[cfg_attr(feature = "serialization", serde(rename_all = "camelCase"))]
-#[derive(Debug, PartialEq)]
+#[derive(Debug, PartialEq, Eq)]
 pub struct TransformOutput {
   pub main: TransformOutputEnvironment,
   pub test: TransformOutputEnvironment,
@@ -86,7 +86,7 @@ pub struct TransformOutput {
 
 #[cfg_attr(feature = "serialization", derive(serde::Serialize))]
 #[cfg_attr(feature = "serialization", serde(rename_all = "camelCase"))]
-#[derive(Debug, PartialEq, Default)]
+#[derive(Debug, PartialEq, Eq, Default)]
 pub struct TransformOutputEnvironment {
   pub entry_points: Vec<PathBuf>,
   pub files: Vec<OutputFile>,
@@ -106,7 +106,7 @@ pub enum MappedSpecifier {
 
 #[cfg_attr(feature = "serialization", derive(serde::Deserialize))]
 #[cfg_attr(feature = "serialization", serde(rename_all = "camelCase"))]
-#[derive(Clone, Debug, PartialEq)]
+#[derive(Clone, Debug, PartialEq, Eq)]
 pub struct PackageMappedSpecifier {
   /// Name being mapped to.
   pub name: String,
@@ -454,12 +454,10 @@ pub async fn transform(options: TransformOptions) -> Result<TransformOutput> {
   // are found in the main environment. Only check for exact
   // matches in order to cause an npm install error if there
   // are two dependencies with the same name, but different versions.
-  test_env_context.environment.dependencies = test_env_context
+  test_env_context
     .environment
     .dependencies
-    .into_iter()
-    .filter(|d| !main_env_context.environment.dependencies.contains(d))
-    .collect();
+    .retain(|d| !main_env_context.environment.dependencies.contains(d));
 
   Ok(TransformOutput {
     main: main_env_context.environment,

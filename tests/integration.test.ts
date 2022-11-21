@@ -467,6 +467,7 @@ Deno.test("should build with package mappings", async () => {
       },
       types: "./types/mod.d.ts",
       dependencies: {
+        "using-statement": "^0.4",
         "code-block-writer": "=11.0.0",
       },
       devDependencies: {
@@ -534,6 +535,9 @@ Deno.test("should build with peer depependencies in mappings", async () => {
       types: "./types/mod.d.ts",
       peerDependencies: {
         "code-block-writer": "=11.0.0",
+      },
+      dependencies: {
+        "using-statement": "^0.4",
       },
       devDependencies: {
         "@types/node": versions.nodeTypes,

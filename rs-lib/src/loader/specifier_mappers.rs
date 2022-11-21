@@ -12,37 +12,38 @@ pub trait SpecifierMapper {
 
 pub fn get_all_specifier_mappers() -> Vec<Box<dyn SpecifierMapper>> {
   vec![
-    Box::new(NodeSpecifierMapper::new("assert")),
-    Box::new(NodeSpecifierMapper::new("assert/strict")),
-    Box::new(NodeSpecifierMapper::new("buffer")),
-    Box::new(NodeSpecifierMapper::new("console")),
-    Box::new(NodeSpecifierMapper::new("constants")),
-    Box::new(NodeSpecifierMapper::new("crypto")),
-    Box::new(NodeSpecifierMapper::new("child_process")),
-    Box::new(NodeSpecifierMapper::new("dns")),
-    Box::new(NodeSpecifierMapper::new("events")),
-    Box::new(NodeSpecifierMapper::new("fs")),
-    Box::new(NodeSpecifierMapper::new("fs/promises")),
-    Box::new(NodeSpecifierMapper::new("http")),
-    Box::new(NodeSpecifierMapper::new("module")),
-    Box::new(NodeSpecifierMapper::new("net")),
-    Box::new(NodeSpecifierMapper::new("os")),
-    Box::new(NodeSpecifierMapper::new("path")),
-    Box::new(NodeSpecifierMapper::new("perf_hooks")),
-    Box::new(NodeSpecifierMapper::new("process")),
-    Box::new(NodeSpecifierMapper::new("querystring")),
-    Box::new(NodeSpecifierMapper::new("readline")),
-    Box::new(NodeSpecifierMapper::new("stream")),
-    Box::new(NodeSpecifierMapper::new("string_decoder")),
-    Box::new(NodeSpecifierMapper::new("sys")),
-    Box::new(NodeSpecifierMapper::new("timers")),
-    Box::new(NodeSpecifierMapper::new("timers/promises")),
-    Box::new(NodeSpecifierMapper::new("tty")),
-    Box::new(NodeSpecifierMapper::new("url")),
-    Box::new(NodeSpecifierMapper::new("util")),
-    Box::new(NodeSpecifierMapper::new("worker_threads")),
+    Box::new(DenoStdNodeSpecifierMapper::new("assert")),
+    Box::new(DenoStdNodeSpecifierMapper::new("assert/strict")),
+    Box::new(DenoStdNodeSpecifierMapper::new("buffer")),
+    Box::new(DenoStdNodeSpecifierMapper::new("console")),
+    Box::new(DenoStdNodeSpecifierMapper::new("constants")),
+    Box::new(DenoStdNodeSpecifierMapper::new("crypto")),
+    Box::new(DenoStdNodeSpecifierMapper::new("child_process")),
+    Box::new(DenoStdNodeSpecifierMapper::new("dns")),
+    Box::new(DenoStdNodeSpecifierMapper::new("events")),
+    Box::new(DenoStdNodeSpecifierMapper::new("fs")),
+    Box::new(DenoStdNodeSpecifierMapper::new("fs/promises")),
+    Box::new(DenoStdNodeSpecifierMapper::new("http")),
+    Box::new(DenoStdNodeSpecifierMapper::new("module")),
+    Box::new(DenoStdNodeSpecifierMapper::new("net")),
+    Box::new(DenoStdNodeSpecifierMapper::new("os")),
+    Box::new(DenoStdNodeSpecifierMapper::new("path")),
+    Box::new(DenoStdNodeSpecifierMapper::new("perf_hooks")),
+    Box::new(DenoStdNodeSpecifierMapper::new("process")),
+    Box::new(DenoStdNodeSpecifierMapper::new("querystring")),
+    Box::new(DenoStdNodeSpecifierMapper::new("readline")),
+    Box::new(DenoStdNodeSpecifierMapper::new("stream")),
+    Box::new(DenoStdNodeSpecifierMapper::new("string_decoder")),
+    Box::new(DenoStdNodeSpecifierMapper::new("sys")),
+    Box::new(DenoStdNodeSpecifierMapper::new("timers")),
+    Box::new(DenoStdNodeSpecifierMapper::new("timers/promises")),
+    Box::new(DenoStdNodeSpecifierMapper::new("tty")),
+    Box::new(DenoStdNodeSpecifierMapper::new("url")),
+    Box::new(DenoStdNodeSpecifierMapper::new("util")),
+    Box::new(DenoStdNodeSpecifierMapper::new("worker_threads")),
     Box::new(SkypackMapper),
     Box::new(EsmShMapper),
+    Box::new(NpmMapper),
   ]
 }
 
@@ -60,6 +61,9 @@ static ESMSH_MAPPING_RE: Lazy<Regex> = Lazy::new(|| {
 static ESMSH_IGNORE_MAPPING_RE: Lazy<Regex> = Lazy::new(|| {
   // internal urls
   Regex::new(r"^https://esm\.sh/v[0-9]+/.*/.*/").unwrap()
+});
+static NPM_MAPPING_RE: Lazy<Regex> = Lazy::new(|| {
+  Regex::new(r"^npm:/?(@?[^@?]+)(@[0-9.\^~\-A-Za-z]+)?(?:/([^#?]+))?$").unwrap()
 });
 
 struct SkypackMapper;
@@ -129,12 +133,32 @@ impl SpecifierMapper for EsmShMapper {
   }
 }
 
-struct NodeSpecifierMapper {
+struct NpmMapper;
+
+impl SpecifierMapper for NpmMapper {
+  fn map(&self, specifier: &ModuleSpecifier) -> Option<PackageMappedSpecifier> {
+    let captures = NPM_MAPPING_RE.captures(specifier.as_str())?;
+
+    Some(PackageMappedSpecifier {
+      name: captures.get(1).unwrap().as_str().to_string(),
+      version: Some(
+        captures
+          .get(2)
+          .map(|m| m.as_str()[1..].to_string())
+          .unwrap_or_else(|| "*".to_string()),
+      ),
+      sub_path: captures.get(3).map(|m| m.as_str().to_string()),
+      peer_dependency: false,
+    })
+  }
+}
+
+struct DenoStdNodeSpecifierMapper {
   url_re: Regex,
   to_specifier: String,
 }
 
-impl NodeSpecifierMapper {
+impl DenoStdNodeSpecifierMapper {
   pub fn new(package: impl AsRef<str>) -> Self {
     Self {
       url_re: Regex::new(&format!(
@@ -147,7 +171,7 @@ impl NodeSpecifierMapper {
   }
 }
 
-impl SpecifierMapper for NodeSpecifierMapper {
+impl SpecifierMapper for DenoStdNodeSpecifierMapper {
   fn map(&self, specifier: &ModuleSpecifier) -> Option<PackageMappedSpecifier> {
     if self.url_re.is_match(specifier.as_str()) {
       Some(PackageMappedSpecifier {
@@ -221,6 +245,47 @@ mod test {
         .unwrap()
       ),
       None,
+    );
+  }
+
+  #[test]
+  fn test_npm_mapper() {
+    let mapper = NpmMapper;
+    assert_eq!(
+      mapper.map(&ModuleSpecifier::parse("npm:package").unwrap()),
+      Some(PackageMappedSpecifier {
+        name: "package".to_string(),
+        version: Some("*".to_string()),
+        sub_path: None,
+        peer_dependency: false
+      })
+    );
+    assert_eq!(
+      mapper.map(&ModuleSpecifier::parse("npm:package@^2.1").unwrap()),
+      Some(PackageMappedSpecifier {
+        name: "package".to_string(),
+        version: Some("^2.1".to_string()),
+        sub_path: None,
+        peer_dependency: false
+      })
+    );
+    assert_eq!(
+      mapper.map(&ModuleSpecifier::parse("npm:@project/name@2.1.3").unwrap()),
+      Some(PackageMappedSpecifier {
+        name: "@project/name".to_string(),
+        version: Some("2.1.3".to_string()),
+        sub_path: None,
+        peer_dependency: false
+      })
+    );
+    assert_eq!(
+      mapper.map(&ModuleSpecifier::parse("npm:/@project/name@2.1.3").unwrap()),
+      Some(PackageMappedSpecifier {
+        name: "@project/name".to_string(),
+        version: Some("2.1.3".to_string()),
+        sub_path: None,
+        peer_dependency: false
+      })
     );
   }
 }
