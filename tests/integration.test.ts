@@ -537,7 +537,7 @@ Deno.test("should build with peer depependencies in mappings", async () => {
         "code-block-writer": "=11.0.0",
       },
       dependencies: {
-        "using-statement": "^0.4"
+        "using-statement": "^0.4",
       },
       devDependencies: {
         "@types/node": versions.nodeTypes,
