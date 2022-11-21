@@ -141,7 +141,12 @@ impl SpecifierMapper for NpmMapper {
 
     Some(PackageMappedSpecifier {
       name: captures.get(1).unwrap().as_str().to_string(),
-      version: Some(captures.get(2).map(|m| m.as_str()[1..].to_string()).unwrap_or_else(|| "*".to_string())),
+      version: Some(
+        captures
+          .get(2)
+          .map(|m| m.as_str()[1..].to_string())
+          .unwrap_or_else(|| "*".to_string()),
+      ),
       sub_path: captures.get(3).map(|m| m.as_str().to_string()),
       peer_dependency: false,
     })
