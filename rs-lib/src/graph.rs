@@ -69,13 +69,15 @@ impl ModuleGraph {
           .chain(options.test_entry_points.iter())
           .map(|s| (s.to_owned(), deno_graph::ModuleKind::Esm))
           .collect(),
-        false,
-        None,
         &mut loader,
-        resolver.as_ref().map(|r| r.as_resolver()),
-        None,
-        Some(&capturing_analyzer),
-        None,
+        deno_graph::GraphOptions {
+          is_dynamic: false,
+          imports: None,
+          resolver: resolver.as_ref().map(|r| r.as_resolver()),
+          locker: None,
+          module_analyzer: Some(&capturing_analyzer),
+          reporter: None,
+        },
       )
       .await,
       capturing_analyzer,
