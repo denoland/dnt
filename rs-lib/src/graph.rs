@@ -77,7 +77,7 @@ impl ModuleGraph {
           locker: None,
           module_analyzer: Some(&capturing_analyzer),
           reporter: None,
-        }
+        },
       )
       .await,
       capturing_analyzer,
