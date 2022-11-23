@@ -9,18 +9,18 @@ import { ShimValue } from "../lib/shims.ts";
 import { build, BuildOptions, ShimOptions } from "../mod.ts";
 
 const versions = {
-  denoShim: "~0.10.0",
-  denoTestShim: "~0.3.3",
+  denoShim: "~0.11.0",
+  denoTestShim: "~0.4.0",
   cryptoShim: "~0.3.1",
   domExceptionShim: "^4.0.0",
   domExceptionShimTypes: "^4.0.0",
   promptsShim: "~0.1.0",
   timersShim: "~0.1.0",
   weakRefSham: "~0.1.0",
-  undici: "^5.8.0",
-  chalk: "4.1.2",
-  nodeTypes: "16.11.37",
-  tsLib: "2.3.1",
+  undici: "^5.12.0",
+  chalk: "^4.1.2",
+  nodeTypes: "^18.11.9",
+  tsLib: "^2.4.1",
 };
 
 Deno.test("should throw because both scriptModule and esModule are false", async () => {

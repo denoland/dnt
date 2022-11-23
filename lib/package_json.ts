@@ -40,7 +40,7 @@ export function getPackageJson({
     // typescript helpers library (https://www.npmjs.com/package/tslib)
     ...(includeTsLib
       ? {
-        tslib: "2.3.1",
+        tslib: "^2.4.1",
       }
       : {}),
     // add dependencies from transform
@@ -66,7 +66,7 @@ export function getPackageJson({
     ? ({
       ...(!Object.keys(dependencies).includes("chalk")
         ? {
-          "chalk": "4.1.2",
+          "chalk": "^4.1.2",
         }
         : {}),
       // add dependencies from transform
@@ -80,7 +80,7 @@ export function getPackageJson({
   const devDependencies = {
     ...(shouldIncludeTypesNode()
       ? {
-        "@types/node": "16.11.37",
+        "@types/node": "^18.11.9",
       }
       : {}),
     ...testDevDependencies,

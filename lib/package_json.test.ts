@@ -4,9 +4,9 @@ import { assertEquals } from "./test.deps.ts";
 import { getPackageJson, GetPackageJsonOptions } from "./package_json.ts";
 
 const versions = {
-  chalk: "4.1.2",
-  nodeTypes: "16.11.37",
-  tsLib: "2.3.1",
+  chalk: "^4.1.2",
+  nodeTypes: "^18.11.9",
+  tsLib: "^2.4.1",
 };
 
 Deno.test("single entrypoint", () => {
