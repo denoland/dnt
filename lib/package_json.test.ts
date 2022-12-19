@@ -232,6 +232,50 @@ Deno.test("single entrypoint", () => {
   );
 });
 
+Deno.test("exports have default last", () => {
+  const props: GetPackageJsonOptions = {
+    transformOutput: {
+      main: {
+        files: [],
+        dependencies: [],
+        entryPoints: ["mod.ts"],
+      },
+      test: {
+        entryPoints: [],
+        files: [],
+        dependencies: [],
+      },
+      warnings: [],
+    },
+    entryPoints: [
+      {
+        name: ".",
+        path: "./mod.ts",
+      },
+    ],
+    package: {
+      name: "package",
+      version: "0.1.0",
+    },
+    testEnabled: true,
+    includeEsModule: true,
+    includeScriptModule: true,
+    includeDeclarations: true,
+    includeTsLib: false,
+    shims: {
+      deno: "dev",
+    },
+  };
+
+  const result: any = getPackageJson(props);
+  assertEquals(Object.keys(result.exports), ["."]);
+  assertEquals(Object.keys(result.exports["."]), ["import", "require"]);
+
+  // "default" must always be last: https://github.com/denoland/dnt/issues/228
+  assertEquals(Object.keys(result.exports["."].import), ["types", "default"]);
+  assertEquals(Object.keys(result.exports["."].require), ["types", "default"]);
+});
+
 Deno.test("multiple entrypoints", () => {
   const props: GetPackageJsonOptions = {
     transformOutput: {
