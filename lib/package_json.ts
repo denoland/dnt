@@ -129,10 +129,10 @@ export function getPackageJson({
               function getPathOrTypesObject(path: string) {
                 if (includeDeclarations) {
                   return {
-                    default: path,
                     types:
                       (e.name === "." ? packageJsonObj.types : undefined) ??
                         `./types/${e.types}`,
+                    default: path,
                   };
                 } else {
                   return path;

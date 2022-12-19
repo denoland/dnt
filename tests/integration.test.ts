@@ -70,12 +70,12 @@ Deno.test("should build test project", async () => {
       exports: {
         ".": {
           import: {
-            default: "./esm/mod.js",
             types: "./types/mod.d.ts",
+            default: "./esm/mod.js",
           },
           require: {
-            default: "./script/mod.js",
             types: "./types/mod.d.ts",
+            default: "./script/mod.js",
           },
         },
       },
@@ -453,12 +453,12 @@ Deno.test("should build with package mappings", async () => {
       exports: {
         ".": {
           import: {
-            default: "./esm/mod.js",
             types: "./types/mod.d.ts",
+            default: "./esm/mod.js",
           },
           require: {
-            default: "./script/mod.js",
             types: "./types/mod.d.ts",
+            default: "./script/mod.js",
           },
         },
       },
@@ -520,12 +520,12 @@ Deno.test("should build with peer depependencies in mappings", async () => {
       exports: {
         ".": {
           import: {
-            default: "./esm/mod.js",
             types: "./types/mod.d.ts",
+            default: "./esm/mod.js",
           },
           require: {
-            default: "./script/mod.js",
             types: "./types/mod.d.ts",
+            default: "./script/mod.js",
           },
         },
       },
