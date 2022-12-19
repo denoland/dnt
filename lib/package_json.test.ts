@@ -271,7 +271,7 @@ Deno.test("exports have default last", () => {
   assertEquals(Object.keys(result.exports), ["."]);
   assertEquals(Object.keys(result.exports["."]), ["import", "require"]);
 
-  // "default" must always be last: https://github.com/denoland/dnt/issues/228
+  // "types" must always be first: https://github.com/denoland/dnt/issues/228
   assertEquals(Object.keys(result.exports["."].import), ["types", "default"]);
   assertEquals(Object.keys(result.exports["."].require), ["types", "default"]);
 });
