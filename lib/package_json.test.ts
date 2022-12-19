@@ -69,12 +69,12 @@ Deno.test("single entrypoint", () => {
     exports: {
       ".": {
         import: {
-          default: "./esm/mod.js",
           types: "./types/mod.d.ts",
+          default: "./esm/mod.js",
         },
         require: {
-          default: "./script/mod.js",
           types: "./types/mod.d.ts",
+          default: "./script/mod.js",
         },
       },
     },
@@ -105,12 +105,12 @@ Deno.test("single entrypoint", () => {
       exports: {
         ".": {
           import: {
-            default: "./esm/mod.js",
             types: "./types/mod.d.ts",
+            default: "./esm/mod.js",
           },
           require: {
-            default: "./script/mod.js",
             types: "./types/mod.d.ts",
+            default: "./script/mod.js",
           },
         },
       },
@@ -139,8 +139,8 @@ Deno.test("single entrypoint", () => {
       exports: {
         ".": {
           import: {
-            default: "./esm/mod.js",
             types: "./types/mod.d.ts",
+            default: "./esm/mod.js",
           },
           require: undefined,
         },
@@ -328,22 +328,22 @@ Deno.test("multiple entrypoints", () => {
     exports: {
       ".": {
         import: {
-          default: "./esm/mod.js",
           types: "./types/mod.d.ts",
+          default: "./esm/mod.js",
         },
         require: {
-          default: "./script/mod.js",
           types: "./types/mod.d.ts",
+          default: "./script/mod.js",
         },
       },
       "./my-other-entrypoint.js": {
         import: {
-          default: "./esm/other.js",
           types: "./types/other.d.ts",
+          default: "./esm/other.js",
         },
         require: {
-          default: "./script/other.js",
           types: "./types/other.d.ts",
+          default: "./script/other.js",
         },
       },
     },
@@ -407,12 +407,12 @@ Deno.test("binary entrypoints", () => {
     exports: {
       ".": {
         import: {
-          default: "./esm/mod.js",
           types: "./types/mod.d.ts",
+          default: "./esm/mod.js",
         },
         require: {
-          default: "./script/mod.js",
           types: "./types/mod.d.ts",
+          default: "./script/mod.js",
         },
       },
     },
@@ -489,12 +489,12 @@ Deno.test("peer dependencies", () => {
     exports: {
       ".": {
         import: {
-          default: "./esm/mod.js",
           types: "./types/mod.d.ts",
+          default: "./esm/mod.js",
         },
         require: {
-          default: "./script/mod.js",
           types: "./types/mod.d.ts",
+          default: "./script/mod.js",
         },
       },
     },
