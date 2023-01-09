@@ -779,7 +779,15 @@ async fn transform_parse_error() {
     .err()
     .unwrap();
 
-  assert_eq!(err_message.to_string(), "The module's source code could not be parsed: Expected ';', '}' or <eof> at http://localhost/declarations.d.ts:1:6");
+  assert_eq!(
+    err_message.to_string(),
+    concat!(
+      "The module's source code could not be parsed: Expected ';', '}' or <eof> at http://localhost/declarations.d.ts:1:6\n",
+      "\n",
+      "  test test test\n",
+      "       ~~~~",
+    ),
+  );
 }
 
 #[tokio::test]
