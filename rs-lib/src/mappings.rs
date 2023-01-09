@@ -64,7 +64,7 @@ impl Mappings {
         specifier.clone(),
         get_mapped_file_path(
           relative_file_path.into(),
-          &relative_file_path,
+          relative_file_path,
           &mut mapped_filepaths_no_ext,
         ),
       );

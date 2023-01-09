@@ -36,7 +36,7 @@ pub fn get_relative_specifier(
       "js"
     },
   );
-  let relative_path = get_relative_path(from, &to);
+  let relative_path = get_relative_path(from, to);
   let relative_path_str = relative_path
     .to_string_lossy()
     .to_string()
