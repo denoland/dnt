@@ -1,6 +1,7 @@
 // Copyright 2018-2022 the Deno authors. All rights reserved. MIT license.
 
 import * as deps from "./mod.deps.ts";
+import { path } from "./mod.deps.ts";
 
 /** Gets the files found in the provided root dir path based on the glob. */
 export async function glob(options: {
@@ -83,4 +84,11 @@ export async function runCommand(opts: {
       return cmd;
     }
   }
+}
+
+export function standardizePath(fileOrDirPath: string) {
+  if (fileOrDirPath.startsWith("file:")) {
+    return path.fromFileUrl(fileOrDirPath);
+  }
+  return path.resolve(fileOrDirPath);
 }

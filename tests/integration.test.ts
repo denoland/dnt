@@ -7,6 +7,7 @@ import {
 } from "https://deno.land/std@0.143.0/testing/asserts.ts";
 import { ShimValue } from "../lib/shims.ts";
 import { build, BuildOptions, ShimOptions } from "../mod.ts";
+import { path } from "../lib/mod.deps.ts";
 
 const versions = {
   denoShim: "~0.12.0",
@@ -682,8 +683,13 @@ export const dntGlobalThis = createMergeProxy(globalThis, dntGlobals);
 
 Deno.test("should build and test polyfill project", async () => {
   await runTest("polyfill_project", {
-    entryPoints: ["mod.ts"],
-    outDir: "./npm",
+    // also test out providing a file url for these
+    entryPoints: [
+      path.toFileUrl(path.resolve("./tests/polyfill_project/mod.ts"))
+        .toString(),
+    ],
+    outDir: path.toFileUrl(path.resolve("./tests/polyfill_project/npm/"))
+      .toString(),
     shims: {
       ...getAllShimOptions(false),
       deno: "dev",
@@ -908,11 +914,14 @@ async function runTest(
   checkOutput?: (output: Output) => Promise<void> | void,
 ) {
   const originalCwd = Deno.cwd();
+  const outDirPath = options.outDir.startsWith("file:")
+    ? path.fromFileUrl(options.outDir)
+    : options.outDir;
   Deno.chdir(`./tests/${project}`);
   try {
     await build(options);
     const getFileText = (filePath: string) => {
-      return Deno.readTextFileSync(options.outDir + "/" + filePath);
+      return Deno.readTextFileSync(outDirPath + "/" + filePath);
     };
     if (checkOutput) {
       const packageJson = JSON.parse(getFileText("package.json"));
@@ -938,7 +947,7 @@ async function runTest(
     }
   } finally {
     try {
-      Deno.removeSync(options.outDir, { recursive: true });
+      Deno.removeSync(outDirPath, { recursive: true });
     } catch (err) {
       if (!(err instanceof Deno.errors.NotFound)) {
         console.error(`Error removing dir: ${err}`);
