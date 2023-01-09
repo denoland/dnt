@@ -15,7 +15,7 @@ import { colors, createProjectSync, path, ts } from "./lib/mod.deps.ts";
 import { ShimOptions, shimOptionsToTransformShims } from "./lib/shims.ts";
 import { getNpmIgnoreText } from "./lib/npm_ignore.ts";
 import { PackageJsonObject, ScriptTarget } from "./lib/types.ts";
-import { glob, runNpmCommand } from "./lib/utils.ts";
+import { glob, runNpmCommand, standardizePath } from "./lib/utils.ts";
 import { SpecifierMappings, transform, TransformOutput } from "./transform.ts";
 import * as compilerTransforms from "./lib/compiler_transforms.ts";
 import { getPackageJson } from "./lib/package_json.ts";
@@ -148,6 +148,8 @@ export async function build(options: BuildOptions): Promise<void> {
   // set defaults
   options = {
     ...options,
+    outDir: standardizePath(options.outDir),
+    entryPoints: options.entryPoints,
     scriptModule: options.scriptModule ?? "cjs",
     esModule: options.esModule ?? true,
     typeCheck: options.typeCheck ?? true,
@@ -160,10 +162,13 @@ export async function build(options: BuildOptions): Promise<void> {
     if (typeof e === "string") {
       return {
         name: i === 0 ? "." : e.replace(/\.tsx?$/i, ".js"),
-        path: e,
+        path: standardizePath(e),
       };
     } else {
-      return e;
+      return {
+        ...e,
+        path: standardizePath(e.path),
+      };
     }
   });
 
