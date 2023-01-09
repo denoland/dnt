@@ -420,6 +420,7 @@ fn get_mapped_file_path(
     get_unique_path(without_ext(path), mapped_filepaths_no_ext);
   let extension = match media_type {
     MediaType::Json => "js",
+    MediaType::Mjs | MediaType::Mts => "js",
     _ => &media_type.as_ts_extension()[1..],
   };
   with_extension(
