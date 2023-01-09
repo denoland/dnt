@@ -510,8 +510,17 @@ async fn transform_relative_file() {
   let result = TestBuilder::new()
     .with_loader(|loader| {
       loader
-        .add_local_file("/mod.ts", "import * as other from './other.ts';")
-        .add_local_file("/other.ts", "5;");
+        .add_local_file(
+          "/mod.ts",
+          concat!(
+            "import * as other from './other.ts';\n",
+            "import * as mjs from './other.mjs';\n",
+            "import * as mts from './other.mts';"
+          ),
+        )
+        .add_local_file("/other.ts", "5;")
+        .add_local_file("/other.mjs", "export {}")
+        .add_local_file("/other.mts", "export class Mts {}");
     })
     .transform()
     .await
@@ -520,8 +529,17 @@ async fn transform_relative_file() {
   assert_files!(
     result.main.files,
     &[
-      ("mod.ts", "import * as other from './other.js';"),
-      ("other.ts", "5;")
+      (
+        "mod.ts",
+        concat!(
+          "import * as other from './other.js';\n",
+          "import * as mjs from './other_3.js';\n",
+          "import * as mts from './other_2.js';"
+        )
+      ),
+      ("other.ts", "5;"),
+      ("other_2.js", "export class Mts {}"),
+      ("other_3.js", "export {}"),
     ]
   );
 }
@@ -580,8 +598,12 @@ async fn transform_remote_files() {
         )
         .add_remote_file(
           "https://localhost3/mod.ts",
-          "import * as localhost3 from 'https://localhost3';",
+          concat!(
+            "import * as localhost3 from 'https://localhost3';\n",
+            "import * as mjs from 'https://localhost3/file.mjs';",
+          ),
         )
+        .add_remote_file("https://localhost3/file.mjs", "export {}")
         .add_remote_file_with_headers(
           "https://localhost3",
           "5;",
@@ -635,9 +657,13 @@ async fn transform_remote_files() {
         "deps/localhost2.js",
         "import * as localhost3Mod from './localhost3/mod.js';"
       ),
+      ("deps/localhost3/file.js", "export {}"),
       (
         "deps/localhost3/mod.ts",
-        "import * as localhost3 from '../localhost3.js';"
+        concat!(
+          "import * as localhost3 from '../localhost3.js';\n",
+          "import * as mjs from './file.js';",
+        )
       ),
       ("deps/localhost3.ts", "5;"),
     ]
