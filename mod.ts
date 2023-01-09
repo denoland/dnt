@@ -176,14 +176,14 @@ export async function build(options: BuildOptions): Promise<void> {
   }
 
   const createdDirectories = new Set<string>();
-  const writeFile = ((filePath: string, fileText: string) => {
+  const writeFile = (filePath: string, fileText: string) => {
     const dir = path.dirname(filePath);
     if (!createdDirectories.has(dir)) {
       Deno.mkdirSync(dir, { recursive: true });
       createdDirectories.add(dir);
     }
     Deno.writeTextFileSync(filePath, fileText);
-  });
+  };
 
   createPackageJson();
   createNpmIgnore();
