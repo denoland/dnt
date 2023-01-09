@@ -120,10 +120,10 @@
     "https://deno.land/x/which_runtime@0.2.0/mod.ts": "3e8f1ddb3a043818264a8035c0132aaf72d94977d45cd23ecfb03b2156f06126"
   },
   "npm": {
-    "specifiers": { "using-statement@^0.4": "using-statement@0.4.1" },
+    "specifiers": { "using-statement@^0.4": "using-statement@0.4.2" },
     "packages": {
-      "using-statement@0.4.1": {
-        "integrity": "sha512-N3BOJwSVaUPGp3ltHvcLndjjEbMLsUJNgHZG1qDfzDOkDr9bZgimH6TxKGefOSc26AAr5gvO/6lLqS8qOluutA==",
+      "using-statement@0.4.2": {
+        "integrity": "sha512-fBGez+wCZUy35EW9Ic/QFUaPNAVIxMp2xhwG1iOSSDmo0SC4GfHEcKNsFaccy4XK8NSSa+2KlqnZdy0DALBNOw==",
         "dependencies": {}
       }
     }

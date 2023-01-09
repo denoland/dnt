@@ -129,6 +129,7 @@ export function getPackageJson({
               function getPathOrTypesObject(path: string) {
                 if (includeDeclarations) {
                   return {
+                    // "types" must always be first and "default" last
                     types:
                       (e.name === "." ? packageJsonObj.types : undefined) ??
                         `./types/${e.types}`,
