@@ -331,7 +331,7 @@ pub async fn transform(options: TransformOptions) -> Result<TransformOutput> {
     .local
     .iter()
     .chain(specifiers.remote.iter())
-    .chain(specifiers.types.iter().map(|(_, d)| &d.selected.specifier))
+    .chain(specifiers.types.values().map(|d| &d.selected.specifier))
   {
     let module = module_graph.get(specifier);
     let env_context = if specifiers.test_modules.contains(specifier) {
@@ -503,7 +503,7 @@ fn check_add_polyfill_file_to_environment(
           &mut file.file_text,
           &format!(
             "import \"{}\";",
-            get_relative_specifier(&file.file_path, &polyfill_file_path)
+            get_relative_specifier(&file.file_path, polyfill_file_path)
           ),
         );
       }
