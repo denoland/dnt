@@ -95,8 +95,9 @@ impl Mappings {
       let to = &d.selected.specifier;
       let file_path = mappings.get(code_specifier).unwrap_or_else(|| {
         panic!(
-          "dnt bug - Could not find mapping for types code specifier {}",
-          code_specifier
+          "dnt bug - Could not find mapping for types code specifier {}. Adding: {}",
+          code_specifier,
+          to,
         );
       });
       let new_file_path = with_extension(file_path, "d.ts");
@@ -105,7 +106,7 @@ impl Mappings {
           "dnt bug - Already had path {} in map when adding declaration file for {}. Adding: {}",
           past_path.display(),
           code_specifier,
-          to
+          to,
         );
       }
     }

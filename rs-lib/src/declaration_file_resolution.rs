@@ -57,13 +57,15 @@ pub fn resolve_declaration_file_mappings(
       .collect::<Vec<_>>();
     ignored.sort();
 
-    mappings.insert(
-      code_specifier,
-      DeclarationFileResolution {
-        selected: selected_dep,
-        ignored,
-      },
-    );
+    if code_specifier != selected_dep.specifier {
+      mappings.insert(
+        code_specifier,
+        DeclarationFileResolution {
+          selected: selected_dep,
+          ignored,
+        },
+      );
+    }
   }
 
   Ok(mappings)
