@@ -1,4 +1,4 @@
-// Copyright 2018-2022 the Deno authors. All rights reserved. MIT license.
+// Copyright 2018-2023 the Deno authors. All rights reserved. MIT license.
 
 import { hasOwn } from "./mod.ts";
 import { assertEquals } from "https://deno.land/std@0.143.0/testing/asserts.ts";
