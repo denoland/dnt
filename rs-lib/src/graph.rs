@@ -74,7 +74,6 @@ impl ModuleGraph {
           is_dynamic: false,
           imports: None,
           resolver: resolver.as_ref().map(|r| r.as_resolver()),
-          locker: None,
           module_analyzer: Some(&capturing_analyzer),
           reporter: None,
         },
@@ -120,7 +119,7 @@ impl ModuleGraph {
       &options.entry_points,
       loader_specifiers,
       &graph,
-      &graph.all_modules(),
+      graph.all_modules(),
     )?;
 
     let not_found_package_specifiers = options
@@ -195,7 +194,7 @@ impl ModuleGraph {
       })
   }
 
-  pub fn all_modules(&self) -> Vec<&Module> {
+  pub fn all_modules(&self) -> impl Iterator<Item = &Module> {
     self.graph.modules()
   }
 }

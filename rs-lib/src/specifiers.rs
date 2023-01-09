@@ -37,17 +37,17 @@ pub struct EnvironmentSpecifiers {
   pub mapped: BTreeMap<ModuleSpecifier, PackageMappedSpecifier>,
 }
 
-pub fn get_specifiers(
+pub fn get_specifiers<'a>(
   entry_points: &[ModuleSpecifier],
   mut specifiers: LoaderSpecifiers,
   module_graph: &ModuleGraph,
-  modules: &[&Module],
+  modules: impl Iterator<Item = &'a Module>,
 ) -> Result<Specifiers> {
   let mut local_specifiers = Vec::new();
   let mut remote_specifiers = Vec::new();
 
   let mut modules: BTreeMap<&ModuleSpecifier, &Module> =
-    modules.iter().map(|m| (&m.specifier, *m)).collect();
+    modules.map(|m| (&m.specifier, m)).collect();
 
   let mut found_module_specifiers = Vec::new();
   let mut found_mapped_specifiers = BTreeMap::new();

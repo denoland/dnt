@@ -174,7 +174,7 @@ pub fn is_in_type(mut node: Node) -> bool {
       Node::TsAsExpr(expr) => {
         Some(expr.type_ann.range().contains(&node.range()))
       }
-      Node::TsSatisfactionExpr(expr) => {
+      Node::TsSatisfiesExpr(expr) => {
         Some(expr.type_ann.range().contains(&node.range()))
       }
 
