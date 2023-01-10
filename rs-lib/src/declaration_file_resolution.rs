@@ -170,6 +170,12 @@ fn fill_types_for_module(
     type_specifier: &ModuleSpecifier,
     type_dependencies: &mut BTreeMap<ModuleSpecifier, HashSet<TypesDependency>>,
   ) {
+    // if the code specifier is the same as the type specifier, then no
+    // mapping is necessary
+    if code_specifier == type_specifier {
+      return;
+    }
+
     type_dependencies
       .entry(code_specifier.clone())
       .or_insert_with(HashSet::new)

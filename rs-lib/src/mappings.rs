@@ -8,6 +8,7 @@ use std::path::Path;
 use std::path::PathBuf;
 use std::rc::Rc;
 
+use anyhow::bail;
 use anyhow::Result;
 use deno_ast::MediaType;
 use deno_ast::ModuleSpecifier;
@@ -95,8 +96,9 @@ impl Mappings {
       let to = &d.selected.specifier;
       let file_path = mappings.get(code_specifier).unwrap_or_else(|| {
         panic!(
-          "dnt bug - Could not find mapping for types code specifier {}",
-          code_specifier
+          "dnt bug - Could not find mapping for types code specifier {}. Adding: {}",
+          code_specifier,
+          to,
         );
       });
       let new_file_path = with_extension(file_path, "d.ts");
@@ -105,7 +107,7 @@ impl Mappings {
           "dnt bug - Already had path {} in map when adding declaration file for {}. Adding: {}",
           past_path.display(),
           code_specifier,
-          to
+          to,
         );
       }
     }
@@ -478,6 +480,9 @@ fn is_banned_segment_char(c: char) -> bool {
 }
 
 fn get_base_dir(specifiers: &[ModuleSpecifier]) -> Result<PathBuf> {
+  if specifiers.is_empty() {
+    bail!("Did not find any local files. Specifying only remote files is not currently supported.");
+  }
   // todo(dsherret): should maybe error on windows when the files
   // span different drives...
   let mut base_dir = url_to_file_path(&specifiers[0])?
