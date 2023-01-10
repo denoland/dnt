@@ -57,15 +57,13 @@ pub fn resolve_declaration_file_mappings(
       .collect::<Vec<_>>();
     ignored.sort();
 
-    if code_specifier != selected_dep.specifier {
-      mappings.insert(
-        code_specifier,
-        DeclarationFileResolution {
-          selected: selected_dep,
-          ignored,
-        },
-      );
-    }
+    mappings.insert(
+      code_specifier,
+      DeclarationFileResolution {
+        selected: selected_dep,
+        ignored,
+      },
+    );
   }
 
   Ok(mappings)
@@ -172,6 +170,12 @@ fn fill_types_for_module(
     type_specifier: &ModuleSpecifier,
     type_dependencies: &mut BTreeMap<ModuleSpecifier, HashSet<TypesDependency>>,
   ) {
+    // if the code specifier is the same as the type specifier, then no
+    // mapping is necessary
+    if code_specifier == type_specifier {
+      return;
+    }
+
     type_dependencies
       .entry(code_specifier.clone())
       .or_insert_with(HashSet::new)

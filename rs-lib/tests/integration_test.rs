@@ -671,6 +671,52 @@ async fn transform_remote_files() {
 }
 
 #[tokio::test]
+async fn transform_remote_declaration_files() {
+  let result = TestBuilder::new()
+    .with_loader(|loader| {
+      loader
+        .add_local_file(
+          "/mod.ts",
+          "import * as other from 'http://localhost/mod.js';",
+        )
+        .add_remote_file_with_headers(
+          "http://localhost/mod.js",
+          "export {}",
+          &[("x-typescript-types", "./declarations.d.ts")],
+        )
+        .add_remote_file(
+          "http://localhost/declarations.d.ts",
+          "import type * as myOther from './other.d.ts';",
+        )
+        .add_remote_file_with_headers(
+          "http://localhost/other.d.ts",
+          "export class Test {}",
+          // references itself
+          &[("x-typescript-types", "./other.d.ts")],
+        );
+    })
+    .transform()
+    .await
+    .unwrap();
+
+  assert_files!(
+    result.main.files,
+    &[
+      (
+        "mod.ts",
+        "import * as other from './deps/localhost/mod.js';",
+      ),
+      ("deps/localhost/mod.js", "export {}"),
+      (
+        "deps/localhost/mod.d.ts",
+        "import type * as myOther from './other';"
+      ),
+      ("deps/localhost/other.d.ts", "export class Test {}"),
+    ]
+  );
+}
+
+#[tokio::test]
 async fn transform_handle_local_deps_folder() {
   let result = TestBuilder::new()
     .with_loader(|loader| {

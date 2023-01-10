@@ -8,6 +8,7 @@ use std::path::Path;
 use std::path::PathBuf;
 use std::rc::Rc;
 
+use anyhow::bail;
 use anyhow::Result;
 use deno_ast::MediaType;
 use deno_ast::ModuleSpecifier;
@@ -479,6 +480,9 @@ fn is_banned_segment_char(c: char) -> bool {
 }
 
 fn get_base_dir(specifiers: &[ModuleSpecifier]) -> Result<PathBuf> {
+  if specifiers.is_empty() {
+    bail!("Did not find any local files. Specifying only remote files is not currently supported.");
+  }
   // todo(dsherret): should maybe error on windows when the files
   // span different drives...
   let mut base_dir = url_to_file_path(&specifiers[0])?
