@@ -92,3 +92,19 @@ export function standardizePath(fileOrDirPath: string) {
   }
   return path.resolve(fileOrDirPath);
 }
+
+
+export function valueToUrl(value: string) {
+  const lowerCaseValue = value.toLowerCase();
+  if (
+    lowerCaseValue.startsWith("http:") ||
+    lowerCaseValue.startsWith("https:") ||
+    lowerCaseValue.startsWith("npm:") ||
+    lowerCaseValue.startsWith("node:") ||
+    lowerCaseValue.startsWith("file:")
+  ) {
+    return value;
+  } else {
+    return path.toFileUrl(path.resolve(value)).toString();
+  }
+}
