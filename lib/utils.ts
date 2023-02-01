@@ -93,7 +93,6 @@ export function standardizePath(fileOrDirPath: string) {
   return path.resolve(fileOrDirPath);
 }
 
-
 export function valueToUrl(value: string) {
   const lowerCaseValue = value.toLowerCase();
   if (

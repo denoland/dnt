@@ -214,4 +214,3 @@ function isPathOrUrl(value: string) {
     value.startsWith("../") ||
     /\.[a-z]+$/i.test(value); // has extension
 }
-
