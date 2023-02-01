@@ -1,8 +1,8 @@
 // Copyright 2018-2023 the Deno authors. All rights reserved. MIT license.
 
-import { path } from "./lib/transform.deps.ts";
 import { instantiate } from "./lib/pkg/dnt_wasm.generated.js";
 import { ScriptTarget } from "./lib/types.ts";
+import { valueToUrl } from "./lib/utils.ts";
 
 /** Specifier to specifier mappings. */
 export interface SpecifierMappings {
@@ -213,16 +213,4 @@ function isPathOrUrl(value: string) {
     value.startsWith("./") ||
     value.startsWith("../") ||
     /\.[a-z]+$/i.test(value); // has extension
-}
-
-function valueToUrl(value: string) {
-  const lowerCaseValue = value.toLowerCase();
-  if (
-    lowerCaseValue.startsWith("http://") ||
-    lowerCaseValue.startsWith("https://")
-  ) {
-    return value;
-  } else {
-    return path.toFileUrl(path.resolve(value)).toString();
-  }
 }
