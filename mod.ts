@@ -138,6 +138,11 @@ export interface BuildOptions {
   };
   /** Action to do after emitting and before running tests. */
   postBuild?: () => void | Promise<void>;
+  /** 
+   * Disable all logs
+   * @default false
+   */
+  disableLogs: boolean
 }
 
 /** Builds the specified Deno module to an npm package using the TypeScript compiler. */
@@ -155,6 +160,7 @@ export async function build(options: BuildOptions): Promise<void> {
     typeCheck: options.typeCheck ?? true,
     test: options.test ?? true,
     declaration: options.declaration ?? true,
+    disableLogs: options.disableLogs ?? false
   };
   const packageManager = options.packageManager ?? "npm";
   const scriptTarget = options.compilerOptions?.target ?? "ES2021";
@@ -463,6 +469,7 @@ export async function build(options: BuildOptions): Promise<void> {
   }
 
   function log(message: string) {
+    if (options.disableLogs) return
     console.log(`[dnt] ${message}`);
   }
 
