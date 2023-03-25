@@ -53,9 +53,12 @@ export interface BuildOptions {
    */
   test?: boolean;
   /** Create declaration files.
+   *
+   * Set this to "inline" in order to emit declaration files beside
+   * the .js files in both the esm and cjs folders.
    * @default true
    */
-  declaration?: boolean;
+  declaration?: boolean | "inline";
   /** Include a CommonJS or UMD module.
    * @default "cjs"
    */
@@ -229,7 +232,7 @@ export async function build(options: BuildOptions): Promise<void> {
       noImplicitThis: true,
       noStrictGenericChecks: false,
       noUncheckedIndexedAccess: false,
-      declaration: options.declaration,
+      declaration: !!options.declaration,
       esModuleInterop: false,
       isolatedModules: true,
       useDefineForClassFields: true,
@@ -325,7 +328,7 @@ export async function build(options: BuildOptions): Promise<void> {
   }
 
   // emit only the .d.ts files
-  if (options.declaration) {
+  if (options.declaration === true) {
     log("Emitting declaration files...");
     emit({ onlyDtsFiles: true });
   }
@@ -334,7 +337,7 @@ export async function build(options: BuildOptions): Promise<void> {
     // emit the esm files
     log("Emitting ESM package...");
     project.compilerOptions.set({
-      declaration: false,
+      declaration: options.declaration === "inline",
       outDir: esmOutDir,
     });
     program = project.createProgram();
@@ -349,7 +352,7 @@ export async function build(options: BuildOptions): Promise<void> {
   if (options.scriptModule) {
     log("Emitting script package...");
     project.compilerOptions.set({
-      declaration: false,
+      declaration: options.declaration === "inline",
       esModuleInterop: true,
       outDir: scriptOutDir,
       module: options.scriptModule === "umd"
@@ -419,7 +422,7 @@ export async function build(options: BuildOptions): Promise<void> {
       testEnabled: options.test,
       includeEsModule: options.esModule !== false,
       includeScriptModule: options.scriptModule !== false,
-      includeDeclarations: options.declaration,
+      includeDeclarations: options.declaration === true,
       includeTsLib: options.compilerOptions?.importHelpers,
       shims: options.shims,
     });
