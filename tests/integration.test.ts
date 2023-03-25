@@ -250,6 +250,53 @@ Deno.test("should build umd module", async () => {
   });
 });
 
+Deno.test("should build test project with declarations inline", async () => {
+  await runTest("test_project", {
+    entryPoints: ["mod.ts"],
+    outDir: "./npm",
+    declaration: "inline",
+    shims: {
+      deno: "dev",
+    },
+    package: {
+      name: "add",
+      version: "1.0.0",
+    },
+    compilerOptions: {
+      importHelpers: true,
+    },
+  }, (output) => {
+    output.assertNotExists("script/mod.js.map");
+    output.assertNotExists("esm/mod.js.map");
+    output.assertNotExists("types/mod.d.ts");
+    output.assertExists("script/mod.d.ts");
+    output.assertExists("esm/mod.d.ts");
+    assertEquals(output.packageJson, {
+      name: "add",
+      version: "1.0.0",
+      main: "./script/mod.js",
+      module: "./esm/mod.js",
+      exports: {
+        ".": {
+          import: "./esm/mod.js",
+          require: "./script/mod.js",
+        },
+      },
+      scripts: {
+        test: "node test_runner.js",
+      },
+      dependencies: {
+        tslib: versions.tsLib,
+      },
+      devDependencies: {
+        "@types/node": versions.nodeTypes,
+        chalk: versions.chalk,
+        "@deno/shim-deno": versions.denoShim,
+      },
+    });
+  });
+});
+
 Deno.test("should build bin project", async () => {
   await runTest("test_project", {
     entryPoints: [{
