@@ -67,7 +67,7 @@ There are several steps done in a pipeline:
        // steps to run after building and before running the tests
        Deno.copyFileSync("LICENSE", "npm/LICENSE");
        Deno.copyFileSync("README.md", "npm/README.md");
-     }
+     },
    });
    ```
 
