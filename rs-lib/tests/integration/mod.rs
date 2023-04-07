@@ -59,7 +59,6 @@ pub async fn assert_transforms(files: Vec<(&str, &str)>) {
       for (file_name, file) in files.iter() {
         loader.add_local_file(&format!("/{}", file_name), file.0);
       }
-      loader.add_local_file("/example.js", "");
     })
     .add_default_shims();
 
@@ -76,10 +75,7 @@ pub async fn assert_transforms(files: Vec<(&str, &str)>) {
     .main
     .files
     .into_iter()
-    .filter(|f| {
-      !f.file_path.ends_with("_dnt.shims.ts")
-        && !f.file_path.ends_with("example.js")
-    })
+    .filter(|f| !f.file_path.ends_with("_dnt.shims.ts"))
     .collect::<Vec<_>>();
   assert_files!(actual_files, expected_files);
 }

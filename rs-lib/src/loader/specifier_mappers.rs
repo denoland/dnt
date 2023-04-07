@@ -44,6 +44,7 @@ pub fn get_all_specifier_mappers() -> Vec<Box<dyn SpecifierMapper>> {
     Box::new(SkypackMapper),
     Box::new(EsmShMapper),
     Box::new(NpmMapper),
+    Box::new(NodeSpecifierMapper),
   ]
 }
 
@@ -176,6 +177,24 @@ impl SpecifierMapper for DenoStdNodeSpecifierMapper {
     if self.url_re.is_match(specifier.as_str()) {
       Some(PackageMappedSpecifier {
         name: self.to_specifier.clone(),
+        version: None,
+        sub_path: None,
+        peer_dependency: false,
+      })
+    } else {
+      None
+    }
+  }
+}
+
+struct NodeSpecifierMapper;
+
+impl SpecifierMapper for NodeSpecifierMapper {
+  fn map(&self, specifier: &ModuleSpecifier) -> Option<PackageMappedSpecifier> {
+    if specifier.scheme() == "node" {
+      Some(PackageMappedSpecifier {
+        // map to without the "node:" prefix for Node < 18
+        name: specifier.path().strip_prefix('/').unwrap_or(specifier.path()).to_string(),
         version: None,
         sub_path: None,
         peer_dependency: false,
