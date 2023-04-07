@@ -1,7 +1,8 @@
 {
+  "lock": false,
   "tasks": {
     "test": "deno test -A",
-    "build": "deno run -A --no-check --unstable https://deno.land/x/wasmbuild@0.10.3/main.ts --out lib/pkg"
+    "build": "deno run -A --no-check --unstable https://deno.land/x/wasmbuild@0.10.4/main.ts --out lib/pkg"
   },
   "test": {
     "files": {

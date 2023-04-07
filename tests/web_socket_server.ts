@@ -1,4 +1,4 @@
-import { serve } from "https://deno.land/std@0.171.0/http/mod.ts";
+import { serve } from "https://deno.land/std@0.182.0/http/mod.ts";
 
 const port = 8089;
 serve(handleReq, { port });

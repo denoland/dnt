@@ -14,6 +14,7 @@ pub fn is_in_type(mut node: Node) -> bool {
       | Node::AssignPat(_)
       | Node::AssignPatProp(_)
       | Node::AssignProp(_)
+      | Node::AutoAccessor(_)
       | Node::AwaitExpr(_)
       | Node::BinExpr(_)
       | Node::BindingIdent(_)

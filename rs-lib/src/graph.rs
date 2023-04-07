@@ -19,6 +19,7 @@ use deno_ast::ModuleSpecifier;
 use deno_ast::ParsedSource;
 use deno_graph::CapturingModuleAnalyzer;
 use deno_graph::Module;
+use deno_graph::ModuleGraphError;
 use deno_graph::ParsedSourceStore;
 
 pub struct ModuleGraphOptions<'a> {
@@ -61,41 +62,47 @@ impl ModuleGraph {
     let source_parser = ScopeAnalysisParser::new();
     let capturing_analyzer =
       CapturingModuleAnalyzer::new(Some(Box::new(source_parser)), None);
-    let graph = Self {
-      graph: deno_graph::create_graph(
+    let mut graph = deno_graph::ModuleGraph::new(deno_graph::GraphKind::All);
+    graph
+      .build(
         options
           .entry_points
           .iter()
           .chain(options.test_entry_points.iter())
-          .map(|s| (s.to_owned(), deno_graph::ModuleKind::Esm))
+          .map(|s| s.to_owned())
           .collect(),
         &mut loader,
-        deno_graph::GraphOptions {
+        deno_graph::BuildOptions {
           is_dynamic: false,
-          imports: None,
+          imports: vec![],
           resolver: resolver.as_ref().map(|r| r.as_resolver()),
           module_analyzer: Some(&capturing_analyzer),
           reporter: None,
+          npm_resolver: None,
         },
       )
-      .await,
-      capturing_analyzer,
-    };
+      .await;
 
-    let errors = graph.graph.errors().into_iter().collect::<Vec<_>>();
-    if !errors.is_empty() {
-      let mut error_message = String::new();
-      for error in errors {
-        if !error_message.is_empty() {
-          error_message.push_str("\n\n");
-        }
-        error_message.push_str(&error.to_string());
+    let mut error_message = String::new();
+    for error in graph.errors() {
+      if !error_message.is_empty() {
+        error_message.push_str("\n\n");
+      }
+      error_message.push_str(&error.to_string_with_range());
+      if let ModuleGraphError::ModuleError(error) = error {
         if !error_message.contains(error.specifier().as_str()) {
           error_message.push_str(&format!(" ({})", error.specifier()));
         }
       }
+    }
+    if !error_message.is_empty() {
       bail!("{}", error_message);
     }
+
+    let graph = Self {
+      graph,
+      capturing_analyzer,
+    };
 
     let loader_specifiers = loader.into_specifiers();
 
@@ -176,7 +183,6 @@ impl ModuleGraph {
     self
       .graph
       .resolve_dependency(value, referrer, /* prefer_types */ false)
-      .cloned()
       .or_else(|| {
         let value_lower = value.to_lowercase();
         if value_lower.starts_with("https://")
@@ -241,10 +247,10 @@ impl deno_graph::source::Resolver for ImportMapResolver {
     &self,
     specifier: &str,
     referrer: &ModuleSpecifier,
-  ) -> deno_graph::source::ResolveResponse {
-    match self.0.resolve(specifier, referrer) {
-      Ok(specifier) => specifier.into(),
-      Err(err) => deno_graph::source::ResolveResponse::Err(err.into()),
-    }
+  ) -> Result<ModuleSpecifier, anyhow::Error> {
+    self
+      .0
+      .resolve(specifier, referrer)
+      .map_err(|err| err.into())
   }
 }

@@ -10,6 +10,7 @@ use deno_ast::apply_text_changes;
 use deno_ast::parse_module;
 use deno_ast::view::NodeTrait;
 use deno_ast::view::Program;
+use deno_ast::MediaType;
 use deno_ast::ModuleSpecifier;
 use deno_ast::ParseParams;
 use deno_ast::SourceRangedForSpanned;
@@ -176,7 +177,7 @@ pub fn prepend_statement_to_text(
     specifier: file_path.to_string_lossy().to_string(),
     capture_tokens: true,
     maybe_syntax: None,
-    media_type: file_path.into(),
+    media_type: MediaType::from_path(file_path),
     scope_analysis: false,
     text_info: text_info.clone(),
   });
