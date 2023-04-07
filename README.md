@@ -63,11 +63,12 @@ There are several steps done in a pipeline:
          url: "https://github.com/username/repo/issues",
        },
      },
+     postBuild() {
+       // steps to run after building and before running the tests
+       Deno.copyFileSync("LICENSE", "npm/LICENSE");
+       Deno.copyFileSync("README.md", "npm/README.md");
+     },
    });
-
-   // post build steps
-   Deno.copyFileSync("LICENSE", "npm/LICENSE");
-   Deno.copyFileSync("README.md", "npm/README.md");
    ```
 
 1. Ignore the output directory with your source control if you desire (ex. add
