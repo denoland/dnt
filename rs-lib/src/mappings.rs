@@ -12,6 +12,7 @@ use anyhow::bail;
 use anyhow::Result;
 use deno_ast::MediaType;
 use deno_ast::ModuleSpecifier;
+use deno_graph::Module;
 use once_cell::sync::Lazy;
 
 use crate::graph::ModuleGraph;
@@ -64,7 +65,7 @@ impl Mappings {
       mappings.insert(
         specifier.clone(),
         get_mapped_file_path(
-          relative_file_path.into(),
+          MediaType::from_path(relative_file_path),
           relative_file_path,
           &mut mapped_filepaths_no_ext,
         ),
@@ -81,7 +82,13 @@ impl Mappings {
     for (specifier, suggested_path) in
       remote_specifiers_to_paths(specifiers.remote.iter())
     {
-      let media_type = module_graph.get(&specifier).media_type;
+      let media_type = match module_graph.get(&specifier) {
+        Module::Esm(esm) => esm.media_type,
+        Module::Json(json) => json.media_type,
+        Module::Npm(_) | Module::Node(_) | Module::External(_) => {
+          MediaType::Unknown
+        }
+      };
       mappings.insert(
         specifier,
         get_mapped_file_path(
@@ -406,20 +413,20 @@ fn get_mapped_file_path(
   path: impl AsRef<Path>,
   mapped_filepaths_no_ext: &mut HashSet<String>,
 ) -> PathBuf {
-  fn without_ext(path: impl AsRef<Path>) -> PathBuf {
+  fn without_ext(path: &Path) -> PathBuf {
     // remove the extension if it's known
     // Ex. url could be `https://deno.land/test/1.2.5`
     // and we don't want to use `1.2`
-    let media_type: MediaType = path.as_ref().into();
+    let media_type = MediaType::from_path(path);
     if media_type == MediaType::Unknown {
-      path.as_ref().into()
+      path.into()
     } else {
-      with_extension(path.as_ref(), "")
+      with_extension(path, "")
     }
   }
 
   let filepath_no_ext =
-    get_unique_path(without_ext(path), mapped_filepaths_no_ext);
+    get_unique_path(without_ext(path.as_ref()), mapped_filepaths_no_ext);
   let extension = match media_type {
     MediaType::Json => "js",
     MediaType::Mjs | MediaType::Mts => "js",

@@ -18,7 +18,7 @@ use analyze::get_ignore_line_indexes;
 use anyhow::bail;
 use deno_ast::apply_text_changes;
 use deno_ast::TextChange;
-use deno_graph::ModuleKind;
+use deno_graph::Module;
 use graph::ModuleGraphOptions;
 use mappings::Mappings;
 use mappings::SYNTHETIC_SPECIFIERS;
@@ -340,8 +340,8 @@ pub async fn transform(options: TransformOptions) -> Result<TransformOutput> {
       &mut main_env_context
     };
 
-    let file_text = match module.kind {
-      ModuleKind::Esm => {
+    let file_text = match module {
+      Module::Esm(_) => {
         let parsed_source = module_graph.get_parsed_source(specifier);
         let text_changes = parsed_source
           .with_view(|program| -> Result<Vec<TextChange>> {
@@ -405,18 +405,12 @@ pub async fn transform(options: TransformOptions) -> Result<TransformOutput> {
 
         apply_text_changes(parsed_source.text_info().text_str(), text_changes)
       }
-      ModuleKind::Asserted => {
-        if let Some(source) = &module.maybe_source {
-          format!("export default {};", strip_bom(source).trim(),)
-        } else {
-          continue;
-        }
+      Module::Json(module) => {
+        format!("export default {};", strip_bom(&module.source).trim(),)
       }
-      _ => bail!(
-        "Not implemented module kind {:?} for {}",
-        module.kind,
-        module.specifier
-      ),
+      Module::Node(_) | Module::Npm(_) | Module::External(_) => {
+        bail!("Not implemented module kind for {}", module.specifier())
+      }
     };
 
     let file_path = mappings.get_file_path(specifier).to_owned();
