@@ -362,6 +362,25 @@ async fn transform_shim_node_custom_shims() {
 }
 
 #[tokio::test]
+async fn transform_node_specifiers() {
+  let result = TestBuilder::new()
+    .with_loader(|loader| {
+      loader.add_local_file(
+        "/mod.ts",
+        "import fs from 'node:fs'; console.log(fs);",
+      );
+    })
+    .transform()
+    .await
+    .unwrap();
+
+  assert_files!(
+    result.main.files,
+    &[("mod.ts", "import fs from 'fs'; console.log(fs);",)]
+  );
+}
+
+#[tokio::test]
 async fn no_transform_deno_ignored() {
   assert_identity_transforms(vec!["// dnt-shim-ignore\nDeno.readTextFile();"])
     .await;
