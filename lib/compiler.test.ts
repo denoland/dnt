@@ -23,6 +23,7 @@ Deno.test("script target should have expected outputs", () => {
     "ES2019": ts.ScriptTarget.ES2019,
     "ES2020": ts.ScriptTarget.ES2020,
     "ES2021": ts.ScriptTarget.ES2021,
+    "ES2022": ts.ScriptTarget.ES2022,
     "Latest": ts.ScriptTarget.Latest,
   };
 
@@ -47,6 +48,7 @@ Deno.test("compiler lib option should have expected outputs", () => {
     "ES2019": ["lib.es2019.d.ts"],
     "ES2020": ["lib.es2020.d.ts"],
     "ES2021": ["lib.es2021.d.ts"],
+    "ES2022": ["lib.es2022.d.ts"],
     "Latest": ["lib.esnext.d.ts"],
   };
 
