@@ -20,4 +20,5 @@ export type ScriptTarget =
   | "ES2019"
   | "ES2020"
   | "ES2021"
+  | "ES2022"
   | "Latest";

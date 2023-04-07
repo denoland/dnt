@@ -132,6 +132,8 @@ export function getCompilerLibOption(target: ScriptTarget): LibName[] {
       return ["es2020"];
     case "ES2021":
       return ["es2021"];
+    case "ES2022":
+      return ["es2022"];
     case "Latest":
       return ["esnext"];
     default: {
