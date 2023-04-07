@@ -35,6 +35,8 @@ export function getCompilerScriptTarget(target: ScriptTarget) {
       return ts.ScriptTarget.ES2020;
     case "ES2021":
       return ts.ScriptTarget.ES2021;
+    case "ES2022":
+      return ts.ScriptTarget.ES2022;
     case "Latest":
       return ts.ScriptTarget.Latest;
     default:
