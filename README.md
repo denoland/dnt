@@ -575,6 +575,22 @@ await build({
 });
 ```
 
+### Import Map / deno.json Support
+
+To use an import map or deno.json file with `"imports"` and/or `"scopes"`, add
+an `importMap` entry to your build object:
+
+```ts
+await build({
+  // ...etc...
+  importMap: "deno.json",
+});
+```
+
+Note there is no support for the deno.json `importMap` key. Either embed that in
+your deno.json or specify the import map in this property directly. Also note
+that the deno.json is not auto-discovered—you must explicitly specify it.
+
 ### GitHub Actions - Npm Publish on Tag
 
 1. Ensure your build script accepts a version as a CLI argument and sets that in
