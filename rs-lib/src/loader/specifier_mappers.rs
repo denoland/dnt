@@ -194,7 +194,11 @@ impl SpecifierMapper for NodeSpecifierMapper {
     if specifier.scheme() == "node" {
       Some(PackageMappedSpecifier {
         // map to without the "node:" prefix for Node < 18
-        name: specifier.path().strip_prefix('/').unwrap_or(specifier.path()).to_string(),
+        name: specifier
+          .path()
+          .strip_prefix('/')
+          .unwrap_or(specifier.path())
+          .to_string(),
         version: None,
         sub_path: None,
         peer_dependency: false,

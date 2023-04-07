@@ -374,12 +374,10 @@ async fn transform_node_specifiers() {
     .await
     .unwrap();
 
-  assert_files!(result.main.files, &[
-    (
-      "mod.ts",
-      "import fs from 'fs'; console.log(fs);",
-    )
-  ]);
+  assert_files!(
+    result.main.files,
+    &[("mod.ts", "import fs from 'fs'; console.log(fs);",)]
+  );
 }
 
 #[tokio::test]
