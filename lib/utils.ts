@@ -39,27 +39,23 @@ export async function runCommand(opts: {
   cmd: string[];
   cwd: string;
 }) {
-  const cmd = getCmd();
-  await Deno.permissions.request({ name: "run", command: cmd[0] });
+  const [cmd, ...args] = getCmd();
+  await Deno.permissions.request({ name: "run", command: cmd });
 
   try {
-    const process = Deno.run({
-      cmd,
+    const process = new Deno.Command(cmd, {
+      args,
       cwd: opts.cwd,
       stderr: "inherit",
       stdout: "inherit",
       stdin: "inherit",
     });
 
-    try {
-      const status = await process.status();
-      if (!status.success) {
-        throw new Error(
-          `${opts.cmd.join(" ")} failed with exit code ${status.code}`,
-        );
-      }
-    } finally {
-      process.close();
+    const output = await process.output();
+    if (!output.success) {
+      throw new Error(
+        `${opts.cmd.join(" ")} failed with exit code ${output.code}`,
+      );
     }
   } catch (err) {
     // won't happen on Windows, but that's ok because cmd outputs
