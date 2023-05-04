@@ -22,6 +22,7 @@ Deno.test("should get data from web socket server", async (t) => {
   // wait for some output from the server
   const stdout = child.stdout.getReader({ mode: "byob" });
   await stdout.read(new Uint8Array(1));
+  stdout.releaseLock();
 
   for (let i = 0; i < 2; i++) {
     await t.step(`attempt ${i + 1}`, async (t) => {
@@ -37,4 +38,5 @@ Deno.test("should get data from web socket server", async (t) => {
   }
 
   child.kill("SIGTERM");
+  await child.output();
 });
