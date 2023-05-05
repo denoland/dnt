@@ -4,7 +4,7 @@ import { assertEquals } from "./test.deps.ts";
 import { getPackageJson, GetPackageJsonOptions } from "./package_json.ts";
 
 const versions = {
-  chalk: "^4.1.2",
+  picocolors: "^1.0.0",
   nodeTypes: "^18.11.9",
   tsLib: "^2.4.1",
 };
@@ -62,7 +62,7 @@ Deno.test("single entrypoint", () => {
     },
     devDependencies: {
       "@types/node": versions.nodeTypes,
-      "chalk": versions.chalk,
+      "picocolors": versions.picocolors,
       "test-dep": "0.1.0",
       "@deno/shim-deno": "~0.1.0",
     },
@@ -482,7 +482,7 @@ Deno.test("peer dependencies", () => {
     },
     devDependencies: {
       "@types/node": versions.nodeTypes,
-      "chalk": versions.chalk,
+      "picocolors": versions.picocolors,
       "test-dep": "0.1.0",
       "@deno/shim-deno": "~0.1.0",
     },
