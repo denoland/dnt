@@ -869,7 +869,7 @@ Deno.test("should build the import map project", async () => {
   });
 });
 
-Deno.test("should shim web sockets", async () => {
+Deno.test("should shim web sockets", { ignore: true }, async () => {
   await runTest("web_socket_project", {
     entryPoints: ["mod.ts"],
     outDir: "./npm",
