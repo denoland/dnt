@@ -27,10 +27,18 @@ export function getNpmIgnoreText(options: {
       const filePath = file.filePath.replace(/\.ts$/i, ".js");
       const dtsFilePath = file.filePath.replace(/\.ts$/i, ".d.ts");
       if (options.includeEsModule) {
-        yield `esm/${filePath}`;
+        const esmFilePath = `esm/${filePath}`;
+        yield esmFilePath;
+        if (options.sourceMap === true) {
+          yield `${esmFilePath}.map`;
+        }
       }
       if (options.includeScriptModule) {
-        yield `script/${filePath}`;
+        const scriptFilePath = `script/${filePath}`;
+        yield scriptFilePath;
+        if (options.sourceMap === true) {
+          yield `${scriptFilePath}.map`;
+        }
       }
       yield `types/${dtsFilePath}`;
     }

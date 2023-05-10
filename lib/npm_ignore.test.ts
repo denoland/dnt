@@ -94,10 +94,16 @@ function runTest(options: {
 
   function getExpectedText() {
     let startText = options.expectHasSrcFolder ? "src/\n" : "";
-    startText += options.includeEsModule !== false ? "esm/mod.test.js\n" : "";
-    startText += options.includeScriptModule !== false
-      ? "script/mod.test.js\n"
-      : "";
+    if (options.includeEsModule !== false) {
+      startText += "esm/mod.test.js\n";
+      startText += options.sourceMaps === true ? "esm/mod.test.js.map\n" : "";
+    }
+    if (options.includeScriptModule !== false) {
+      startText += "script/mod.test.js\n";
+      startText += options.sourceMaps === true
+        ? "script/mod.test.js.map\n"
+        : "";
+    }
     return startText +
       `types/mod.test.d.ts
 test_runner.js

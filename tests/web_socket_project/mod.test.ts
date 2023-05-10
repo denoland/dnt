@@ -6,9 +6,8 @@ import * as path from "https://deno.land/std@0.182.0/path/mod.ts";
 import { isDeno } from "https://deno.land/x/which_runtime@0.2.0/mod.ts";
 
 Deno.test("should get data from web socket server", async (t) => {
-  const server = Deno.run({
-    cmd: [
-      "deno",
+  const server = new Deno.Command("deno", {
+    args: [
       "run",
       "-A",
       isDeno
@@ -18,10 +17,12 @@ Deno.test("should get data from web socket server", async (t) => {
     ],
     stdout: "piped",
   });
+  const child = server.spawn();
 
   // wait for some output from the server
-  const byte = new Uint8Array(1);
-  await server.stdout.read(byte);
+  const stdout = child.stdout.getReader({ mode: "byob" });
+  await stdout.read(new Uint8Array(1));
+  stdout.releaseLock();
 
   for (let i = 0; i < 2; i++) {
     await t.step(`attempt ${i + 1}`, async (t) => {
@@ -36,7 +37,6 @@ Deno.test("should get data from web socket server", async (t) => {
     });
   }
 
-  server.stdout.close();
-  server.kill("SIGTERM");
-  server.close();
+  child.kill("SIGTERM");
+  await child.output();
 });

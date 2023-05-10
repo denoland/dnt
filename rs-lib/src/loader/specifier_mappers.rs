@@ -56,12 +56,10 @@ static SKYPACK_MAPPING_RE: Lazy<Regex> = Lazy::new(|| {
   .unwrap()
 });
 static ESMSH_MAPPING_RE: Lazy<Regex> = Lazy::new(|| {
-  Regex::new(r"^https://esm\.sh/(@?[^@?]+)@([0-9.\^~\-A-Za-z]+)(?:/([^#?]+))?$")
-    .unwrap()
-});
-static ESMSH_IGNORE_MAPPING_RE: Lazy<Regex> = Lazy::new(|| {
-  // internal urls
-  Regex::new(r"^https://esm\.sh/v[0-9]+/.*/.*/").unwrap()
+  Regex::new(
+    r"^https://esm\.sh/(v\d+/)?(@?[^@?]+)@([0-9.\^~\-A-Za-z]+)(?:/([^#?]+))?$",
+  )
+  .unwrap()
 });
 static NPM_MAPPING_RE: Lazy<Regex> = Lazy::new(|| {
   Regex::new(r"^npm:/?(@?[^@?]+)(@[0-9.\^~\-A-Za-z]+)?(?:/([^#?]+))?$").unwrap()
@@ -110,12 +108,7 @@ impl SpecifierMapper for EsmShMapper {
   fn map(&self, specifier: &ModuleSpecifier) -> Option<PackageMappedSpecifier> {
     let captures = ESMSH_MAPPING_RE.captures(specifier.as_str())?;
 
-    if ESMSH_IGNORE_MAPPING_RE.is_match(specifier.as_str()) {
-      // ignore, as it's internal
-      return None;
-    }
-
-    let sub_path = captures.get(3).map(|m| m.as_str().to_owned());
+    let sub_path = captures.get(4).map(|m| m.as_str().to_owned());
 
     // don't use the package for declaration file imports
     if let Some(sub_path) = &sub_path {
@@ -126,8 +119,8 @@ impl SpecifierMapper for EsmShMapper {
     }
 
     Some(PackageMappedSpecifier {
-      name: captures.get(1).unwrap().as_str().to_string(),
-      version: Some(captures.get(2).unwrap().as_str().to_string()),
+      name: captures.get(2).unwrap().as_str().to_string(),
+      version: Some(captures.get(3).unwrap().as_str().to_string()),
       sub_path,
       peer_dependency: false,
     })
@@ -267,7 +260,24 @@ mod test {
         )
         .unwrap()
       ),
-      None,
+      Some(PackageMappedSpecifier {
+        name: "@project/name".to_string(),
+        version: Some("5.6.2".to_string()),
+        sub_path: Some("es2022/name.js".to_string()),
+        peer_dependency: false
+      }),
+    );
+    assert_eq!(
+      mapper.map(
+        &ModuleSpecifier::parse("https://esm.sh/v114/nostr-tools@1.8.4")
+          .unwrap()
+      ),
+      Some(PackageMappedSpecifier {
+        name: "nostr-tools".to_string(),
+        version: Some("1.8.4".to_string()),
+        peer_dependency: false,
+        sub_path: None,
+      }),
     );
   }
 
