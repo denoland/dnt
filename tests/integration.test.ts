@@ -19,7 +19,7 @@ const versions = {
   timersShim: "~0.1.0",
   weakRefSham: "~0.1.0",
   undici: "^5.21.0",
-  chalk: "^4.1.2",
+  picocolors: "^1.0.0",
   nodeTypes: "^18.11.9",
   tsLib: "^2.4.1",
 };
@@ -89,7 +89,7 @@ Deno.test("should build test project", async () => {
       },
       devDependencies: {
         "@types/node": versions.nodeTypes,
-        chalk: versions.chalk,
+        picocolors: versions.picocolors,
         "@deno/shim-deno": versions.denoShim,
         "@deno/sham-weakref": versions.weakRefSham,
       },
@@ -156,7 +156,7 @@ Deno.test("should build test project without esm", async () => {
       },
       devDependencies: {
         "@types/node": versions.nodeTypes,
-        chalk: versions.chalk,
+        picocolors: versions.picocolors,
         "@deno/shim-deno": versions.denoShim,
         "@deno/sham-weakref": versions.weakRefSham,
       },
@@ -290,7 +290,7 @@ Deno.test("should build test project with declarations inline", async () => {
       },
       devDependencies: {
         "@types/node": versions.nodeTypes,
-        chalk: versions.chalk,
+        picocolors: versions.picocolors,
         "@deno/shim-deno": versions.denoShim,
       },
     });
@@ -325,7 +325,7 @@ Deno.test("should build bin project", async () => {
       },
       devDependencies: {
         "@types/node": versions.nodeTypes,
-        chalk: versions.chalk,
+        picocolors: versions.picocolors,
         "@deno/shim-deno": versions.denoShim,
       },
     });
@@ -365,7 +365,7 @@ Deno.test("should run tests when using @deno/shim-deno-test shim", async () => {
     output.assertNotExists("esm/mod.js.map");
     assertEquals(output.packageJson.devDependencies, {
       "@types/node": versions.nodeTypes,
-      chalk: versions.chalk,
+      picocolors: versions.picocolors,
       "@deno/shim-deno-test": versions.denoTestShim,
       "@deno/sham-weakref": versions.weakRefSham,
     });
@@ -421,7 +421,7 @@ Deno.test("not error for TLA when not using CommonJS", async () => {
       types: "./types/mod.d.ts",
       devDependencies: {
         "@types/node": versions.nodeTypes,
-        chalk: versions.chalk,
+        picocolors: versions.picocolors,
         "@deno/shim-deno": versions.denoShim,
       },
     });
@@ -532,7 +532,7 @@ Deno.test("should build with package mappings", async () => {
       },
       devDependencies: {
         "@types/node": versions.nodeTypes,
-        chalk: versions.chalk,
+        picocolors: versions.picocolors,
         "@deno/shim-deno": versions.denoShim,
       },
     });
@@ -601,7 +601,7 @@ Deno.test("should build with peer depependencies in mappings", async () => {
       },
       devDependencies: {
         "@types/node": versions.nodeTypes,
-        chalk: versions.chalk,
+        picocolors: versions.picocolors,
         "@deno/shim-deno": versions.denoShim,
       },
     });
@@ -635,7 +635,7 @@ Deno.test("should build shim project with everything enabled", async () => {
     assertEquals(output.packageJson.devDependencies, {
       "@types/domexception": versions.domExceptionShimTypes,
       "@types/node": versions.nodeTypes,
-      "chalk": versions.chalk,
+      "picocolors": versions.picocolors,
     });
   });
 });

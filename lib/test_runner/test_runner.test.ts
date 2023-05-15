@@ -106,7 +106,7 @@ function getContext() {
       return output;
     },
     origin: "file:///file.ts",
-    chalk: {
+    pc: {
       red(text: string) {
         return `R${text}R`;
       },

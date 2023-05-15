@@ -1,6 +1,6 @@
 // Copyright 2018-2023 the Deno authors. All rights reserved. MIT license.
 
-export interface Chalk {
+export interface Picocolors {
   green(text: string): string;
   red(text: string): string;
   gray(text: string): string;
@@ -14,7 +14,7 @@ export interface NodeProcess {
 }
 
 export interface RunTestDefinitionsOptions {
-  chalk: Chalk;
+  pc: Picocolors;
   process: NodeProcess;
   /** The file the tests are running in. */
   origin: string;
@@ -49,7 +49,7 @@ export async function runTestDefinitions(
   for (const definition of testDefinitions) {
     options.process.stdout.write("test " + definition.name + " ...");
     if (definition.ignore) {
-      options.process.stdout.write(` ${options.chalk.gray("ignored")}\n`);
+      options.process.stdout.write(` ${options.pc.gray("ignored")}\n`);
       continue;
     }
     const context = getTestContext(definition, undefined);
@@ -183,12 +183,12 @@ export async function runTestDefinitions(
   function getStatusText(status: TestContext["status"]) {
     switch (status) {
       case "ok":
-        return options.chalk.green(status);
+        return options.pc.green(status);
       case "fail":
       case "pending":
-        return options.chalk.red(status);
+        return options.pc.red(status);
       case "ignored":
-        return options.chalk.gray(status);
+        return options.pc.gray(status);
       default: {
         const _assertNever: never = status;
         return status;
