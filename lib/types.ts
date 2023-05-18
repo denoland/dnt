@@ -29,7 +29,7 @@ export interface PackageJsonObject {
   main?: string;
   types?: string;
   scripts?: { [key: string]: string };
-  repository?: string | { type: string, url: string, directory?: string };
+  repository?: string | { type: string; url: string; directory?: string };
   dependencies?: { [packageName: string]: string };
   devDependencies?: { [packageName: string]: string };
   peerDependencies?: { [packageName: string]: string };
