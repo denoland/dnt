@@ -23,7 +23,7 @@ export interface PackageJsonObject {
   /**
    * Check https://spdx.org/licenses/ for valid licences
    */
-  license?: "MIT" | "ISC" | string | 'UNLICENSED' | 'SEE LICENSE IN <filename>';
+  license?: "MIT" | "ISC" | string | "UNLICENSED" | "SEE LICENSE IN <filename>";
   author?: PackageJsonPerson | string;
   contributors?: (PackageJsonPerson | string)[];
   main?: string;
