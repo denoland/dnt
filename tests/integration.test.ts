@@ -10,7 +10,7 @@ import { build, BuildOptions, ShimOptions } from "../mod.ts";
 import { path } from "../lib/mod.deps.ts";
 
 const versions = {
-  denoShim: "~0.14.0",
+  denoShim: "~0.15.0",
   denoTestShim: "~0.4.0",
   cryptoShim: "~0.3.1",
   domExceptionShim: "^4.0.0",
@@ -19,7 +19,7 @@ const versions = {
   timersShim: "~0.1.0",
   weakRefSham: "~0.1.0",
   undici: "^5.21.0",
-  chalk: "^4.1.2",
+  picocolors: "^1.0.0",
   nodeTypes: "^18.11.9",
   tsLib: "^2.4.1",
 };
@@ -70,19 +70,26 @@ Deno.test("should build test project", async () => {
       module: "./esm/mod.js",
       exports: {
         ".": {
-          import: "./esm/mod.js",
-          require: "./script/mod.js",
+          import: {
+            types: "./types/mod.d.ts",
+            default: "./esm/mod.js",
+          },
+          require: {
+            types: "./types/mod.d.ts",
+            default: "./script/mod.js",
+          },
         },
       },
       scripts: {
         test: "node test_runner.js",
       },
+      types: "./types/mod.d.ts",
       dependencies: {
         tslib: versions.tsLib,
       },
       devDependencies: {
         "@types/node": versions.nodeTypes,
-        chalk: versions.chalk,
+        picocolors: versions.picocolors,
         "@deno/shim-deno": versions.denoShim,
         "@deno/sham-weakref": versions.weakRefSham,
       },
@@ -120,7 +127,6 @@ Deno.test("should build test project without esm", async () => {
   await runTest("test_project", {
     entryPoints: ["mod.ts"],
     esModule: false,
-    declaration: "separate",
     outDir: "./npm",
     shims: {
       ...getAllShimOptions(false),
@@ -150,7 +156,7 @@ Deno.test("should build test project without esm", async () => {
       },
       devDependencies: {
         "@types/node": versions.nodeTypes,
-        chalk: versions.chalk,
+        picocolors: versions.picocolors,
         "@deno/shim-deno": versions.denoShim,
         "@deno/sham-weakref": versions.weakRefSham,
       },
@@ -244,54 +250,51 @@ Deno.test("should build umd module", async () => {
   });
 });
 
-Deno.test("should build test project with declarations inline by default", async () => {
-  const options = ["inline", undefined] as const;
-  for (const declaration of options) {
-    await runTest("test_project", {
-      entryPoints: ["mod.ts"],
-      outDir: "./npm",
-      declaration,
-      shims: {
-        deno: "dev",
+Deno.test("should build test project with declarations inline", async () => {
+  await runTest("test_project", {
+    entryPoints: ["mod.ts"],
+    outDir: "./npm",
+    declaration: "inline",
+    shims: {
+      deno: "dev",
+    },
+    package: {
+      name: "add",
+      version: "1.0.0",
+    },
+    compilerOptions: {
+      importHelpers: true,
+    },
+  }, (output) => {
+    output.assertNotExists("script/mod.js.map");
+    output.assertNotExists("esm/mod.js.map");
+    output.assertNotExists("types/mod.d.ts");
+    output.assertExists("script/mod.d.ts");
+    output.assertExists("esm/mod.d.ts");
+    assertEquals(output.packageJson, {
+      name: "add",
+      version: "1.0.0",
+      main: "./script/mod.js",
+      module: "./esm/mod.js",
+      exports: {
+        ".": {
+          import: "./esm/mod.js",
+          require: "./script/mod.js",
+        },
       },
-      package: {
-        name: "add",
-        version: "1.0.0",
+      scripts: {
+        test: "node test_runner.js",
       },
-      compilerOptions: {
-        importHelpers: true,
+      dependencies: {
+        tslib: versions.tsLib,
       },
-    }, (output) => {
-      output.assertNotExists("script/mod.js.map");
-      output.assertNotExists("esm/mod.js.map");
-      output.assertNotExists("types/mod.d.ts");
-      output.assertExists("script/mod.d.ts");
-      output.assertExists("esm/mod.d.ts");
-      assertEquals(output.packageJson, {
-        name: "add",
-        version: "1.0.0",
-        main: "./script/mod.js",
-        module: "./esm/mod.js",
-        exports: {
-          ".": {
-            import: "./esm/mod.js",
-            require: "./script/mod.js",
-          },
-        },
-        scripts: {
-          test: "node test_runner.js",
-        },
-        dependencies: {
-          tslib: versions.tsLib,
-        },
-        devDependencies: {
-          "@types/node": versions.nodeTypes,
-          chalk: versions.chalk,
-          "@deno/shim-deno": versions.denoShim,
-        },
-      });
+      devDependencies: {
+        "@types/node": versions.nodeTypes,
+        picocolors: versions.picocolors,
+        "@deno/shim-deno": versions.denoShim,
+      },
     });
-  }
+  });
 });
 
 Deno.test("should build bin project", async () => {
@@ -322,7 +325,7 @@ Deno.test("should build bin project", async () => {
       },
       devDependencies: {
         "@types/node": versions.nodeTypes,
-        chalk: versions.chalk,
+        picocolors: versions.picocolors,
         "@deno/shim-deno": versions.denoShim,
       },
     });
@@ -362,7 +365,7 @@ Deno.test("should run tests when using @deno/shim-deno-test shim", async () => {
     output.assertNotExists("esm/mod.js.map");
     assertEquals(output.packageJson.devDependencies, {
       "@types/node": versions.nodeTypes,
-      chalk: versions.chalk,
+      picocolors: versions.picocolors,
       "@deno/shim-deno-test": versions.denoTestShim,
       "@deno/sham-weakref": versions.weakRefSham,
     });
@@ -389,7 +392,6 @@ Deno.test("error for TLA when emitting CommonJS", async () => {
 Deno.test("not error for TLA when not using CommonJS", async () => {
   await runTest("tla_project", {
     entryPoints: ["mod.ts"],
-    declaration: "separate",
     shims: {
       ...getAllShimOptions(false),
       deno: "dev",
@@ -419,7 +421,7 @@ Deno.test("not error for TLA when not using CommonJS", async () => {
       types: "./types/mod.d.ts",
       devDependencies: {
         "@types/node": versions.nodeTypes,
-        chalk: versions.chalk,
+        picocolors: versions.picocolors,
         "@deno/shim-deno": versions.denoShim,
       },
     });
@@ -488,7 +490,6 @@ Deno.test("should build with package mappings", async () => {
   await runTest("package_mappings_project", {
     entryPoints: ["mod.ts"],
     outDir: "./npm",
-    declaration: "separate",
     shims: {
       ...getAllShimOptions(false),
       deno: "dev",
@@ -531,7 +532,7 @@ Deno.test("should build with package mappings", async () => {
       },
       devDependencies: {
         "@types/node": versions.nodeTypes,
-        chalk: versions.chalk,
+        picocolors: versions.picocolors,
         "@deno/shim-deno": versions.denoShim,
       },
     });
@@ -556,7 +557,6 @@ Deno.test("should build with peer depependencies in mappings", async () => {
   await runTest("package_mappings_project", {
     entryPoints: ["mod.ts"],
     outDir: "./npm",
-    declaration: "separate",
     shims: {
       deno: "dev",
     },
@@ -601,7 +601,7 @@ Deno.test("should build with peer depependencies in mappings", async () => {
       },
       devDependencies: {
         "@types/node": versions.nodeTypes,
-        chalk: versions.chalk,
+        picocolors: versions.picocolors,
         "@deno/shim-deno": versions.denoShim,
       },
     });
@@ -635,7 +635,7 @@ Deno.test("should build shim project with everything enabled", async () => {
     assertEquals(output.packageJson.devDependencies, {
       "@types/domexception": versions.domExceptionShimTypes,
       "@types/node": versions.nodeTypes,
-      "chalk": versions.chalk,
+      "picocolors": versions.picocolors,
     });
   });
 });
