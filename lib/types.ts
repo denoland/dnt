@@ -10,6 +10,7 @@ interface PackageJsonBugs {
   url?: string;
   email?: string;
 }
+
 /**
  * Based on version 9.6.6
  */
