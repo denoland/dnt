@@ -390,6 +390,7 @@ Deno.test("error for TLA when emitting CommonJS", async () => {
 Deno.test("not error for TLA when not using CommonJS", async () => {
   await runTest("tla_project", {
     entryPoints: ["mod.ts"],
+    declaration: "separate",
     shims: {
       ...getAllShimOptions(false),
       deno: "dev",
