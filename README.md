@@ -123,11 +123,11 @@ await build({
 });
 ```
 
-### Type checking both ESM and CJS output
+### Type checking both ESM and script output
 
-By default, only the ESM output will be type checked for performance reasons. If
-performance is not an issue for you, then it's recommended to type check both
-the ESM and CJS output by setting `typeCheck` to `"both"`:
+By default, only the ESM output will be type checked for performance reasons.
+That said, it's recommended to type check both the ESM and the script (CJS/UMD)
+output by setting `typeCheck` to `"both"`:
 
 ```ts
 await build({
