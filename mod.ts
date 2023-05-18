@@ -54,11 +54,15 @@ export interface BuildOptions {
   test?: boolean;
   /** Create declaration files.
    *
-   * Set this to "inline" in order to emit declaration files beside
-   * the .js files in both the esm and cjs folders.
-   * @default true
+   * * `"inline"` - Emit declaration files beside the .js files in both
+   *   the esm and cjs folders. This is the recommended option when publishing
+   *   a dual ESM and CJS package to npm.
+   * * `"separate"` - Emits declaration files to the `types` folder where both
+   *   the ESM and CJS code share the same type declarations.
+   * * `false` - Do not emit declaration files.
+   * @default "inline"
    */
-  declaration?: boolean | "inline";
+  declaration?: "inline" | "separate" | false;
   /** Include a CommonJS or UMD module.
    * @default "cjs"
    */
@@ -157,7 +161,7 @@ export async function build(options: BuildOptions): Promise<void> {
     esModule: options.esModule ?? true,
     typeCheck: options.typeCheck ?? true,
     test: options.test ?? true,
-    declaration: options.declaration ?? true,
+    declaration: (options.declaration as boolean) === true ? "inline" : options.declaration ?? "inline",
   };
   const packageManager = options.packageManager ?? "npm";
   const scriptTarget = options.compilerOptions?.target ?? "ES2021";
@@ -328,7 +332,7 @@ export async function build(options: BuildOptions): Promise<void> {
   }
 
   // emit only the .d.ts files
-  if (options.declaration === true) {
+  if (options.declaration === "separate") {
     log("Emitting declaration files...");
     emit({ onlyDtsFiles: true });
   }
@@ -422,7 +426,7 @@ export async function build(options: BuildOptions): Promise<void> {
       testEnabled: options.test,
       includeEsModule: options.esModule !== false,
       includeScriptModule: options.scriptModule !== false,
-      includeDeclarations: options.declaration === true,
+      includeDeclarations: options.declaration === "separate",
       includeTsLib: options.compilerOptions?.importHelpers,
       shims: options.shims,
     });
