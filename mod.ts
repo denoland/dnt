@@ -552,9 +552,9 @@ export async function build(options: BuildOptions): Promise<void> {
   }
 
   function getTestPattern() {
-    // * named `test.{ts, tsx, js, mjs, jsx}`,
-    // * or ending with `.test.{ts, tsx, js, mjs, jsx}`,
-    // * or ending with `_test.{ts, tsx, js, mjs, jsx}`
+    // * named `test.{ts, mts, tsx, js, mjs, jsx}`,
+    // * or ending with `.test.{ts, mts, tsx, js, mjs, jsx}`,
+    // * or ending with `_test.{ts, mts, tsx, js, mjs, jsx}`
     return options.testPattern ??
       "**/{test.{ts,mts,tsx,js,mjs,jsx},*.test.{ts,mts,tsx,js,mjs,jsx},*_test.{ts,mts,tsx,js,mjs,jsx}}";
   }
