@@ -161,7 +161,9 @@ export async function build(options: BuildOptions): Promise<void> {
     esModule: options.esModule ?? true,
     typeCheck: options.typeCheck ?? true,
     test: options.test ?? true,
-    declaration: (options.declaration as boolean) === true ? "inline" : options.declaration ?? "inline",
+    declaration: (options.declaration as boolean) === true
+      ? "inline"
+      : options.declaration ?? "inline",
   };
   const packageManager = options.packageManager ?? "npm";
   const scriptTarget = options.compilerOptions?.target ?? "ES2021";
