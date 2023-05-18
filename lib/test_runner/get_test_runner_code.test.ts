@@ -155,7 +155,6 @@ Deno.test("gets code when esm is not used", () => {
     includeEsModule: false,
     includeScriptModule: true,
   });
-  console.log(code);
   assertEquals(
     code,
     `const pc = require("picocolors");

@@ -10,7 +10,7 @@ import { build, BuildOptions, ShimOptions } from "../mod.ts";
 import { path } from "../lib/mod.deps.ts";
 
 const versions = {
-  denoShim: "~0.15.0",
+  denoShim: "~0.16.1",
   denoTestShim: "~0.4.0",
   cryptoShim: "~0.3.1",
   domExceptionShim: "^4.0.0",
@@ -48,6 +48,7 @@ Deno.test("should build test project", async () => {
   await runTest("test_project", {
     entryPoints: ["mod.ts"],
     outDir: "./npm",
+    typeCheck: "both",
     shims: {
       ...getAllShimOptions(false),
       deno: "dev",
@@ -234,6 +235,7 @@ Deno.test("should build umd module", async () => {
       deno: "dev",
     },
     scriptModule: "umd",
+    typeCheck: "both",
     package: {
       name: "add",
       version: "1.0.0",
@@ -877,7 +879,7 @@ Deno.test("should build the import map project", async () => {
       name: "add",
       version: "1.0.0",
     },
-    typeCheck: true,
+    typeCheck: "single",
   }, (_output) => {
   });
 });
