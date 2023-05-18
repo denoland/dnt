@@ -106,6 +106,12 @@ struct EsmShMapper;
 
 impl SpecifierMapper for EsmShMapper {
   fn map(&self, specifier: &ModuleSpecifier) -> Option<PackageMappedSpecifier> {
+    // Ignore esm.sh imports that are from a github repo. Perhaps in the
+    // future this could use a git specifier.
+    if specifier.path().starts_with("/gh/") {
+      return None;
+    }
+
     let captures = ESMSH_MAPPING_RE.captures(specifier.as_str())?;
 
     let sub_path = captures.get(4).map(|m| m.as_str().to_owned());
@@ -278,6 +284,11 @@ mod test {
         peer_dependency: false,
         sub_path: None,
       }),
+    );
+    assert_eq!(
+      mapper
+        .map(&ModuleSpecifier::parse("https://esm.sh/gh/owner/repo").unwrap()),
+      None,
     );
   }
 
