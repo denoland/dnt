@@ -5,22 +5,27 @@ import {
   getCompilerScriptTarget,
   getCompilerSourceMapOptions,
   getTopLevelAwaitLocation,
-  LibName,
+  type LibName,
   libNamesToCompilerOption,
   outputDiagnostics,
-  SourceMapOptions,
+  type SourceMapOptions,
   transformCodeToTarget,
 } from "./lib/compiler.ts";
 import { colors, createProjectSync, path, ts } from "./lib/mod.deps.ts";
-import { ShimOptions, shimOptionsToTransformShims } from "./lib/shims.ts";
+import { type ShimOptions, shimOptionsToTransformShims } from "./lib/shims.ts";
 import { getNpmIgnoreText } from "./lib/npm_ignore.ts";
-import { PackageJsonObject, ScriptTarget } from "./lib/types.ts";
+import type { PackageJsonObject, ScriptTarget } from "./lib/types.ts";
 import { glob, runNpmCommand, standardizePath } from "./lib/utils.ts";
-import { SpecifierMappings, transform, TransformOutput } from "./transform.ts";
+import {
+  type SpecifierMappings,
+  transform,
+  type TransformOutput,
+} from "./transform.ts";
 import * as compilerTransforms from "./lib/compiler_transforms.ts";
 import { getPackageJson } from "./lib/package_json.ts";
 import { getTestRunnerCode } from "./lib/test_runner/get_test_runner_code.ts";
 
+export type { PackageJsonObject } from "./lib/types.ts";
 export type { LibName, SourceMapOptions } from "./lib/compiler.ts";
 export type { ShimOptions } from "./lib/shims.ts";
 export { emptyDir } from "./lib/mod.deps.ts";
