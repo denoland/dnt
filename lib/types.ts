@@ -14,7 +14,7 @@ interface PackageJsonBugs {
 /**
  * Based on version 9.6.6
  */
-export interface PackageJsonObject {
+export interface PackageJson {
   name: string;
   version: string;
   description?: string;

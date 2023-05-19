@@ -14,7 +14,7 @@ import {
 import { colors, createProjectSync, path, ts } from "./lib/mod.deps.ts";
 import { type ShimOptions, shimOptionsToTransformShims } from "./lib/shims.ts";
 import { getNpmIgnoreText } from "./lib/npm_ignore.ts";
-import type { PackageJsonObject, ScriptTarget } from "./lib/types.ts";
+import type { PackageJson, ScriptTarget } from "./lib/types.ts";
 import { glob, runNpmCommand, standardizePath } from "./lib/utils.ts";
 import {
   type SpecifierMappings,
@@ -25,7 +25,7 @@ import * as compilerTransforms from "./lib/compiler_transforms.ts";
 import { getPackageJson } from "./lib/package_json.ts";
 import { getTestRunnerCode } from "./lib/test_runner/get_test_runner_code.ts";
 
-export type { PackageJsonObject } from "./lib/types.ts";
+export type { PackageJson } from "./lib/types.ts";
 export type { LibName, SourceMapOptions } from "./lib/compiler.ts";
 export type { ShimOptions } from "./lib/shims.ts";
 export { emptyDir } from "./lib/mod.deps.ts";
@@ -107,7 +107,7 @@ export interface BuildOptions {
    */
   mappings?: SpecifierMappings;
   /** Package.json output. You may override dependencies and dev dependencies in here. */
-  package: PackageJsonObject;
+  package: PackageJson;
   /** Path or url to import map. */
   importMap?: string;
   /** Package manager used to install dependencies and run npm scripts.
