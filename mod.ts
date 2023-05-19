@@ -16,7 +16,11 @@ import { type ShimOptions, shimOptionsToTransformShims } from "./lib/shims.ts";
 import { getNpmIgnoreText } from "./lib/npm_ignore.ts";
 import type { PackageJsonObject, ScriptTarget } from "./lib/types.ts";
 import { glob, runNpmCommand, standardizePath } from "./lib/utils.ts";
-import { type SpecifierMappings, transform, type TransformOutput } from "./transform.ts";
+import {
+  type SpecifierMappings,
+  transform,
+  type TransformOutput,
+} from "./transform.ts";
 import * as compilerTransforms from "./lib/compiler_transforms.ts";
 import { getPackageJson } from "./lib/package_json.ts";
 import { getTestRunnerCode } from "./lib/test_runner/get_test_runner_code.ts";
