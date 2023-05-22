@@ -50,9 +50,14 @@ export interface BuildOptions {
   /** Shims to use. */
   shims: ShimOptions;
   /** Type check the output.
-   * @default true
+   * * `"both"` - Type checks both the ESM and script modules separately. This
+   *   is the recommended option when publishing a dual ESM and script package,
+   *   but it runs slower so it's not the default.
+   * * `"single"` - Type checks the ESM module only or the script module if not emitting ESM.
+   * * `false` - Do not type check the output.
+   * @default "single"
    */
-  typeCheck?: boolean;
+  typeCheck?: "both" | "single" | false;
   /** Collect and run test files.
    * @default true
    */
@@ -60,10 +65,10 @@ export interface BuildOptions {
   /** Create declaration files.
    *
    * * `"inline"` - Emit declaration files beside the .js files in both
-   *   the esm and cjs folders. This is the recommended option when publishing
-   *   a dual ESM and CJS package to npm.
+   *   the esm and script folders. This is the recommended option when publishing
+   *   a dual ESM and script package to npm.
    * * `"separate"` - Emits declaration files to the `types` folder where both
-   *   the ESM and CJS code share the same type declarations.
+   *   the ESM and script code share the same type declarations.
    * * `false` - Do not emit declaration files.
    * @default "inline"
    */
@@ -164,7 +169,7 @@ export async function build(options: BuildOptions): Promise<void> {
     entryPoints: options.entryPoints,
     scriptModule: options.scriptModule ?? "cjs",
     esModule: options.esModule ?? true,
-    typeCheck: options.typeCheck ?? true,
+    typeCheck: options.typeCheck ?? "single",
     test: options.test ?? true,
     declaration: (options.declaration as boolean) === true
       ? "inline"
@@ -255,7 +260,7 @@ export async function build(options: BuildOptions): Promise<void> {
       jsxFragmentFactory: "React.Fragment",
       importsNotUsedAsValues: ts.ImportsNotUsedAsValues.Remove,
       module: ts.ModuleKind.ESNext,
-      moduleResolution: ts.ModuleResolutionKind.NodeJs,
+      moduleResolution: ts.ModuleResolutionKind.Node16,
       target: compilerScriptTarget,
       lib: libNamesToCompilerOption(
         options.compilerOptions?.lib ?? getCompilerLibOption(scriptTarget),
@@ -316,27 +321,7 @@ export async function build(options: BuildOptions): Promise<void> {
     }
   }
 
-  // When creating the program and type checking, we need to ensure that
-  // the cwd is the directory that contains the node_modules directory
-  // so that TypeScript will read it and resolve any @types/ packages.
-  // This is done in `getAutomaticTypeDirectiveNames` of TypeScript's code.
-  const originalDir = Deno.cwd();
-  let program: ts.Program;
-  Deno.chdir(options.outDir);
-  try {
-    program = project.createProgram();
-
-    if (options.typeCheck) {
-      log("Type checking...");
-      const diagnostics = ts.getPreEmitDiagnostics(program);
-      if (diagnostics.length > 0) {
-        outputDiagnostics(diagnostics);
-        throw new Error(`Had ${diagnostics.length} diagnostics.`);
-      }
-    }
-  } finally {
-    Deno.chdir(originalDir);
-  }
+  let program = getProgramAndMaybeTypeCheck("ESM");
 
   // emit only the .d.ts files
   if (options.declaration === "separate") {
@@ -370,7 +355,7 @@ export async function build(options: BuildOptions): Promise<void> {
         ? ts.ModuleKind.UMD
         : ts.ModuleKind.CommonJS,
     });
-    program = project.createProgram();
+    program = getProgramAndMaybeTypeCheck("script");
     emit({
       transformers: {
         before: [compilerTransforms.transformImportMeta],
@@ -422,6 +407,67 @@ export async function build(options: BuildOptions): Promise<void> {
     if (emitResult.diagnostics.length > 0) {
       outputDiagnostics(emitResult.diagnostics);
       throw new Error(`Had ${emitResult.diagnostics.length} emit diagnostics.`);
+    }
+  }
+
+  function getProgramAndMaybeTypeCheck(current: "ESM" | "script") {
+    // When creating the program and type checking, we need to ensure that
+    // the cwd is the directory that contains the node_modules directory
+    // so that TypeScript will read it and resolve any @types/ packages.
+    // This is done in `getAutomaticTypeDirectiveNames` of TypeScript's code.
+    const originalDir = Deno.cwd();
+    let program: ts.Program;
+    Deno.chdir(options.outDir);
+    try {
+      program = project.createProgram();
+
+      if (shouldTypeCheck()) {
+        log(`Type checking ${current}...`);
+        const diagnostics = filterDiagnostics(
+          ts.getPreEmitDiagnostics(program),
+        );
+        if (diagnostics.length > 0) {
+          outputDiagnostics(diagnostics);
+          throw new Error(`Had ${diagnostics.length} diagnostics.`);
+        }
+      }
+
+      return program;
+    } finally {
+      Deno.chdir(originalDir);
+    }
+
+    function filterDiagnostics(diagnostics: ReadonlyArray<ts.Diagnostic>) {
+      // we transform import.meta's when outputting a script, so ignore these diagnostics
+      return diagnostics.filter((d) =>
+        // 1343: The_import_meta_meta_property_is_only_allowed_when_the_module_option_is_es2020_es2022_esnext_system_node16_or_nodenext
+        d.code !== 1343 &&
+        // 1470: The_import_meta_meta_property_is_not_allowed_in_files_which_will_build_into_CommonJS_output
+        d.code !== 1470
+      );
+    }
+
+    function shouldTypeCheck() {
+      const typeCheck = options.typeCheck!;
+      switch (typeCheck) {
+        case "both":
+          return true;
+        case false:
+          return false;
+        case "single":
+          if (options.esModule) {
+            return current === "ESM";
+          }
+          if (options.scriptModule) {
+            return current === "script";
+          }
+          return false;
+        default: {
+          const _assertNever: never = typeCheck;
+          warn(`Unknown type check option: ${typeCheck}`);
+          return false;
+        }
+      }
     }
   }
 
@@ -511,10 +557,10 @@ export async function build(options: BuildOptions): Promise<void> {
   }
 
   function getTestPattern() {
-    // * named `test.{ts, tsx, js, mjs, jsx}`,
-    // * or ending with `.test.{ts, tsx, js, mjs, jsx}`,
-    // * or ending with `_test.{ts, tsx, js, mjs, jsx}`
+    // * named `test.{ts, mts, tsx, js, mjs, jsx}`,
+    // * or ending with `.test.{ts, mts, tsx, js, mjs, jsx}`,
+    // * or ending with `_test.{ts, mts, tsx, js, mjs, jsx}`
     return options.testPattern ??
-      "**/{test.{ts,tsx,js,mjs,jsx},*.test.{ts,tsx,js,mjs,jsx},*_test.{ts,tsx,js,mjs,jsx}}";
+      "**/{test.{ts,mts,tsx,js,mjs,jsx},*.test.{ts,mts,tsx,js,mjs,jsx},*_test.{ts,mts,tsx,js,mjs,jsx}}";
   }
 }
