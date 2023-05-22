@@ -621,7 +621,7 @@ that the deno.json is not auto-discovered—you must explicitly specify it.
      if: startsWith(github.ref, 'refs/tags/')
      id: get_tag_version
      run: echo ::set-output name=TAG_VERSION::${GITHUB_REF/refs\/tags\//}
-   - uses: actions/setup-node@v2
+   - uses: actions/setup-node@v3
      with:
        node-version: '16.x'
        registry-url: 'https://registry.npmjs.org'
