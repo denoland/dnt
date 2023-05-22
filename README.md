@@ -623,7 +623,7 @@ that the deno.json is not auto-discovered—you must explicitly specify it.
      run: echo ::set-output name=TAG_VERSION::${GITHUB_REF/refs\/tags\//}
    - uses: actions/setup-node@v3
      with:
-       node-version: '16.x'
+       node-version: '18.x'
        registry-url: 'https://registry.npmjs.org'
    - name: npm build
      run: deno run -A ./scripts/build_npm.ts ${{steps.get_tag_version.outputs.TAG_VERSION}}
