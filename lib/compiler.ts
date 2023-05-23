@@ -45,99 +45,100 @@ export function getCompilerScriptTarget(target: ScriptTarget) {
 }
 
 // Created from https://github.com/microsoft/TypeScript/blob/0ad5f82d6243db80d42bc0abb7a191dd380e980e/src/compiler/commandLineParser.ts
+// then aligned with tsconfig.json's casing
 export type LibName =
-  | "es5"
-  | "es6"
-  | "es2015"
-  | "es7"
-  | "es2016"
-  | "es2017"
-  | "es2018"
-  | "es2019"
-  | "es2020"
-  | "es2021"
-  | "es2022"
-  | "esnext"
-  | "dom"
-  | "dom.iterable"
-  | "webworker"
-  | "webworker.importscripts"
-  | "webworker.iterable"
-  | "scripthost"
-  | "es2015.core"
-  | "es2015.collection"
-  | "es2015.generator"
-  | "es2015.iterable"
-  | "es2015.promise"
-  | "es2015.proxy"
-  | "es2015.reflect"
-  | "es2015.symbol"
-  | "es2015.symbol.wellknown"
-  | "es2016.array.include"
-  | "es2017.object"
-  | "es2017.sharedmemory"
-  | "es2017.string"
-  | "es2017.intl"
-  | "es2017.typedarrays"
-  | "es2018.asyncgenerator"
-  | "es2018.asynciterable"
-  | "es2018.intl"
-  | "es2018.promise"
-  | "es2018.regexp"
-  | "es2019.array"
-  | "es2019.object"
-  | "es2019.string"
-  | "es2019.symbol"
-  | "es2020.bigint"
-  | "es2020.date"
-  | "es2020.promise"
-  | "es2020.sharedmemory"
-  | "es2020.string"
-  | "es2020.symbol.wellknown"
-  | "es2020.intl"
-  | "es2020.number"
-  | "es2021.promise"
-  | "es2021.string"
-  | "es2021.weakref"
-  | "es2021.intl"
-  | "es2022.array"
-  | "es2022.error"
-  | "es2022.intl"
-  | "es2022.object"
-  | "es2022.string"
-  | "esnext.array"
-  | "esnext.symbol"
-  | "esnext.asynciterable"
-  | "esnext.intl"
-  | "esnext.bigint"
-  | "esnext.string"
-  | "esnext.promise"
-  | "esnext.weakref";
+  | "ES5"
+  | "ES6"
+  | "ES2015"
+  | "ES7"
+  | "ES2016"
+  | "ES2017"
+  | "ES2018"
+  | "ES2019"
+  | "ES2020"
+  | "ES2021"
+  | "ES2022"
+  | "ESNext"
+  | "DOM"
+  | "DOM.Iterable"
+  | "WebWorker"
+  | "WebWorker.ImportScripts"
+  | "WebWorker.Iterable"
+  | "ScriptHost"
+  | "ES2015.Core"
+  | "ES2015.Collection"
+  | "ES2015.Generator"
+  | "ES2015.Iterable"
+  | "ES2015.Promise"
+  | "ES2015.Proxy"
+  | "ES2015.Reflect"
+  | "ES2015.Symbol"
+  | "ES2015.Symbol.WellKnown"
+  | "ES2016.Array.Include"
+  | "ES2017.Object"
+  | "ES2017.SharedMemory"
+  | "ES2017.String"
+  | "ES2017.Intl"
+  | "ES2017.TypedArrays"
+  | "ES2018.AsyncGenerator"
+  | "ES2018.AsyncIterable"
+  | "ES2018.Intl"
+  | "ES2018.Promise"
+  | "ES2018.RegExp"
+  | "ES2019.Array"
+  | "ES2019.Object"
+  | "ES2019.String"
+  | "ES2019.Symbol"
+  | "ES2020.BigInt"
+  | "ES2020.Date"
+  | "ES2020.Promise"
+  | "ES2020.SharedMemory"
+  | "ES2020.String"
+  | "ES2020.Symbol.WellKnown"
+  | "ES2020.Intl"
+  | "ES2020.Number"
+  | "ES2021.Promise"
+  | "ES2021.String"
+  | "ES2021.WeakRef"
+  | "ES2021.Intl"
+  | "ES2022.Array"
+  | "ES2022.Error"
+  | "ES2022.Intl"
+  | "ES2022.Object"
+  | "ES2022.String"
+  | "ESNext.Array"
+  | "ESNext.Symbol"
+  | "ESNext.AsyncIterable"
+  | "ESNext.Intl"
+  | "ESNext.BigInt"
+  | "ESNext.String"
+  | "ESNext.Promise"
+  | "ESNext.WeakRef";
 
 export function getCompilerLibOption(target: ScriptTarget): LibName[] {
   switch (target) {
     case "ES3":
       return [];
     case "ES5":
-      return ["es5"];
+      return ["ES5"];
     case "ES2015":
-      return ["es2015"];
+      return ["ES2015"];
     case "ES2016":
-      return ["es2016"];
+      return ["ES2016"];
     case "ES2017":
-      return ["es2017"];
+      return ["ES2017"];
     case "ES2018":
-      return ["es2018"];
+      return ["ES2018"];
     case "ES2019":
-      return ["es2019"];
+      return ["ES2019"];
     case "ES2020":
-      return ["es2020"];
+      return ["ES2020"];
     case "ES2021":
-      return ["es2021"];
+      return ["ES2021"];
     case "ES2022":
-      return ["es2022"];
+      return ["ES2022"];
     case "Latest":
-      return ["esnext"];
+      return ["ESNext"];
     default: {
       const _assertNever: never = target;
       throw new Error(`Unknown target compiler option: ${target}`);
@@ -149,7 +150,7 @@ export function libNamesToCompilerOption(names: LibName[]) {
   const libFileNames: string[] = [];
   const libMap = (ts as any).libMap as Map<string, string>;
   for (const name of names) {
-    const fileName = libMap.get(name);
+    const fileName = libMap.get(name.toLowerCase());
     if (fileName == null) {
       throw new Error(`Could not find filename for lib: ${name}`);
     } else {
