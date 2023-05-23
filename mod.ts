@@ -130,11 +130,11 @@ export interface BuildOptions {
     strictFunctionTypes?: boolean;
     strictNullChecks?: boolean;
     strictPropertyInitialization?: boolean;
-    noImplicitAny?: boolean,
-    noImplicitReturns?: boolean,
-    noImplicitThis?: boolean,
-    noStrictGenericChecks?: boolean,
-    noUncheckedIndexedAccess?: boolean,
+    noImplicitAny?: boolean;
+    noImplicitReturns?: boolean;
+    noImplicitThis?: boolean;
+    noStrictGenericChecks?: boolean;
+    noUncheckedIndexedAccess?: boolean;
     target?: ScriptTarget;
     /**
      * Use source maps from the canonical typescript to ESM/CommonJS emit.
@@ -250,14 +250,17 @@ export async function build(options: BuildOptions): Promise<void> {
       strictBindCallApply: options.compilerOptions?.strictBindCallApply ?? true,
       strictFunctionTypes: options.compilerOptions?.strictFunctionTypes ?? true,
       strictNullChecks: options.compilerOptions?.strictNullChecks ?? true,
-      strictPropertyInitialization: options.compilerOptions?.strictPropertyInitialization ?? true,
+      strictPropertyInitialization:
+        options.compilerOptions?.strictPropertyInitialization ?? true,
       suppressExcessPropertyErrors: false,
       suppressImplicitAnyIndexErrors: false,
       noImplicitAny: options.compilerOptions?.noImplicitAny ?? true,
       noImplicitReturns: options.compilerOptions?.noImplicitReturns ?? false,
       noImplicitThis: options.compilerOptions?.noImplicitThis ?? true,
-      noStrictGenericChecks: options.compilerOptions?.noStrictGenericChecks ?? false,
-      noUncheckedIndexedAccess: options.compilerOptions?.noUncheckedIndexedAccess ?? false,
+      noStrictGenericChecks: options.compilerOptions?.noStrictGenericChecks ??
+        false,
+      noUncheckedIndexedAccess:
+        options.compilerOptions?.noUncheckedIndexedAccess ?? false,
       declaration: !!options.declaration,
       esModuleInterop: false,
       isolatedModules: true,
@@ -280,7 +283,8 @@ export async function build(options: BuildOptions): Promise<void> {
       ...getCompilerSourceMapOptions(options.compilerOptions?.sourceMap),
       inlineSources: options.compilerOptions?.inlineSources,
       skipLibCheck: options.compilerOptions?.skipLibCheck ?? true,
-      useUnknownInCatchVariables: options.compilerOptions?.useUnknownInCatchVariables ?? false,
+      useUnknownInCatchVariables:
+        options.compilerOptions?.useUnknownInCatchVariables ?? false,
     },
   });
 
