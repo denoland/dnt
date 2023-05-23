@@ -686,7 +686,7 @@ lib compiler option when building:
 await build({
   // ...etc...
   compilerOptions: {
-    lib: ["es2021", "dom"],
+    lib: ["ES2021", "DOM"],
   },
 });
 ```
