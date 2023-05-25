@@ -24,7 +24,7 @@ export function getTestRunnerCode(options: {
   writer.writeLine("const filePaths = [");
   writer.indent(() => {
     for (const entryPoint of options.testEntryPoints) {
-      writer.quote("./src/" + entryPoint.replace(/\.ts$/, ".js")).write(",").newLine();
+      writer.quote("src/" + entryPoint.replace(/\.ts$/, ".js")).write(",").newLine();
     }
   });
   writer.writeLine("];").newLine();
