@@ -6,7 +6,7 @@ import {
   assertStringIncludes,
 } from "https://deno.land/std@0.182.0/testing/asserts.ts";
 import { ShimValue } from "../lib/shims.ts";
-import { build, BuildOptions, ShimOptions } from "../mod.ts";
+import { build, BuildOptions, PackageJson, ShimOptions } from "../mod.ts";
 import { path } from "../lib/mod.deps.ts";
 
 const versions = {
@@ -214,6 +214,7 @@ Deno.test("should build with all options off", async () => {
 
     output.assertNotExists("script/mod.js");
     output.assertNotExists("types/mod.js");
+    output.assertNotExists("test_runner.js");
 
     // This doesn't include the test files because they're not analyzed for in this scenario.
     assertEquals(
@@ -950,7 +951,7 @@ Deno.test("should build and type check declaration import project", async () => 
 });
 
 export interface Output {
-  packageJson: any;
+  packageJson: PackageJson;
   npmIgnore: string;
   getFileText(filePath: string): string;
   assertExists(filePath: string): void;
