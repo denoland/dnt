@@ -232,6 +232,79 @@ pnpm-lock.yaml
   });
 });
 
+Deno.test("should build with test must be present", async () => {
+  await runTest(
+    "test_project",
+    {
+      entryPoints: ["mod.ts"],
+      outDir: "./npm",
+      shims: {
+        ...getAllShimOptions(false),
+        deno: {
+          test: true,
+        },
+      },
+      typeCheck: false,
+      scriptModule: false,
+      declaration: false,
+      test: "no-run",
+      package: {
+        name: "add",
+        version: "1.0.0",
+      },
+    },
+    (output) => {
+      assertEquals(output.packageJson, {
+        name: "add",
+        scripts: {
+          test: "node test_runner.js",
+        },
+        version: "1.0.0",
+        module: "./esm/mod.js",
+        exports: {
+          ".": {
+            import: "./esm/mod.js",
+          },
+        },
+        devDependencies: {
+          "@deno/shim-deno-test": versions.denoTestShim,
+          "@types/node": versions.nodeTypes,
+          picocolors: versions.picocolors,
+        },
+      });
+      const stdout = output.outputLogs.join(",");
+      const expected =
+        "I:Transforming...,I:Running npm install...,I:Building project...,I:Emitting ESM package...,I:Creating tests...,I:Complete!";
+      assertEquals(stdout, expected);
+      output.assertNotExists("script/mod.js");
+      output.assertNotExists("types/mod.js");
+      output.assertExists("test_runner.js");
+      assertEquals(
+        output.npmIgnore,
+        [
+          "src/",
+          "esm/mod.test.js",
+          "types/mod.test.d.ts",
+          "esm/deps/deno.land/std@0.182.0/fmt/colors.js",
+          "types/deps/deno.land/std@0.182.0/fmt/colors.d.ts",
+          "esm/deps/deno.land/std@0.182.0/testing/_diff.js",
+          "types/deps/deno.land/std@0.182.0/testing/_diff.d.ts",
+          "esm/deps/deno.land/std@0.182.0/testing/_format.js",
+          "types/deps/deno.land/std@0.182.0/testing/_format.d.ts",
+          "esm/deps/deno.land/std@0.182.0/testing/asserts.js",
+          "types/deps/deno.land/std@0.182.0/testing/asserts.d.ts",
+          "esm/_dnt.test_shims.js",
+          "types/_dnt.test_shims.d.ts",
+          "test_runner.js",
+          "yarn.lock",
+          "pnpm-lock.yaml",
+          "",
+        ].join("\n"),
+      );
+    },
+  );
+});
+
 Deno.test("should build umd module", async () => {
   await runTest("test_project", {
     entryPoints: ["mod.ts"],
@@ -247,6 +320,10 @@ Deno.test("should build umd module", async () => {
     },
   }, (output) => {
     const fileText = output.getFileText("script/mod.js");
+    const stdout = output.outputLogs.join(",");
+    const expected =
+      "I:Transforming...,I:Running npm install...,I:Building project...,I:Type checking ESM...,I:Emitting ESM package...,I:Emitting script package...,I:Type checking script...,I:Running tests...,I:Complete!";
+    assertEquals(stdout, expected);
     assertStringIncludes(fileText, "(function (factory) {");
   });
 });
