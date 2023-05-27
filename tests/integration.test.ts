@@ -1063,7 +1063,7 @@ async function runTest(
     ? path.fromFileUrl(options.outDir)
     : options.outDir;
   Deno.chdir(`./tests/${project}`);
-  let outputLogs: string[] = [];
+  const outputLogs: string[] = [];
   options.loggerInfo = (msg: string) => {
     outputLogs.push("I:" + msg);
   };
