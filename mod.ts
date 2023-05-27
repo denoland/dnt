@@ -191,10 +191,10 @@ export async function build(options: BuildOptions): Promise<void> {
       : options.declaration ?? "inline",
   };
 
-  let loggerInfo = options.loggerInfo || ((message: string) => {
+  const loggerInfo = options.loggerInfo || ((message: string) => {
     console.log(`[dnt] ${message}`);
   });
-  let loggerWarn = options.loggerWarn || ((message: string) => {
+  const loggerWarn = options.loggerWarn || ((message: string) => {
     console.warn(colors.yellow(`[dnt] ${message}`));
   });
 
