@@ -59,9 +59,10 @@ export interface BuildOptions {
    */
   typeCheck?: "both" | "single" | false;
   /** Collect and run test files.
+   * if test is set to "no-run", the test task will be renerated but will not be execute.
    * @default true
    */
-  test?: boolean;
+  test?: "no-run" | boolean;
   /** Create declaration files.
    *
    * * `"inline"` - Emit declaration files beside the .js files in both
@@ -394,6 +395,7 @@ export async function build(options: BuildOptions): Promise<void> {
   if (options.test) {
     log("Running tests...");
     createTestLauncherScript();
+    if (options.test != "no-run")
     await runNpmCommand({
       bin: packageManager,
       args: ["run", "test"],

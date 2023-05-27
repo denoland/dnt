@@ -12,7 +12,7 @@ export interface GetPackageJsonOptions {
   includeScriptModule: boolean | undefined;
   includeDeclarations: boolean | undefined;
   includeTsLib: boolean | undefined;
-  testEnabled: boolean | undefined;
+  testEnabled: boolean | "no-run" | undefined;
   shims: ShimOptions;
 }
 
