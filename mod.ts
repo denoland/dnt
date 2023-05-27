@@ -166,7 +166,10 @@ export interface BuildOptions {
   };
   /** Action to do after emitting and before running tests. */
   postBuild?: () => void | Promise<void>;
+  loggerInfo?: (message: string) => void;
+  loggerWarn?: (message: string) => void;
 }
+
 
 /** Builds the specified Deno module to an npm package using the TypeScript compiler. */
 export async function build(options: BuildOptions): Promise<void> {
@@ -186,6 +189,10 @@ export async function build(options: BuildOptions): Promise<void> {
       ? "inline"
       : options.declaration ?? "inline",
   };
+
+  let loggerInfo = options.loggerInfo || ((message: string) => { console.log(`[dnt] ${message}`);});
+  let loggerWarn = options.loggerWarn || ((message: string) => { console.warn(colors.yellow(`[dnt] ${message}`)); });
+  
   const packageManager = options.packageManager ?? "npm";
   const scriptTarget = options.compilerOptions?.target ?? "ES2021";
   const entryPoints: EntryPoint[] = options.entryPoints.map((e, i) => {
@@ -393,14 +400,18 @@ export async function build(options: BuildOptions): Promise<void> {
   }
 
   if (options.test) {
-    log("Running tests...");
-    createTestLauncherScript();
-    if (options.test != "no-run")
-    await runNpmCommand({
-      bin: packageManager,
-      args: ["run", "test"],
-      cwd: options.outDir,
-    });
+    if (options.test === "no-run") {
+      log("Creating tests...");
+      createTestLauncherScript();
+    } else {
+      log("Running tests...");
+      createTestLauncherScript();
+      await runNpmCommand({
+        bin: packageManager,
+        args: ["run", "test"],
+        cwd: options.outDir,
+      });
+    }
   }
 
   log("Complete!");
@@ -540,11 +551,11 @@ export async function build(options: BuildOptions): Promise<void> {
   }
 
   function log(message: string) {
-    console.log(`[dnt] ${message}`);
+    loggerInfo(message);
   }
 
   function warn(message: string) {
-    console.warn(colors.yellow(`[dnt] ${message}`));
+    loggerWarn(message);
   }
 
   function createTestLauncherScript() {

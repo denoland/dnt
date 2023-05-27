@@ -212,6 +212,10 @@ Deno.test("should build with all options off", async () => {
       },
     });
 
+    const stdout = output.outputLogs.join(",");
+    const expected =
+      "I:Transforming...,I:Running npm install...,I:Building project...,I:Emitting ESM package...,I:Complete!";
+    assertEquals(stdout, expected);
     output.assertNotExists("script/mod.js");
     output.assertNotExists("types/mod.js");
     output.assertNotExists("test_runner.js");
@@ -953,6 +957,7 @@ Deno.test("should build and type check declaration import project", async () => 
 export interface Output {
   packageJson: PackageJson;
   npmIgnore: string;
+  outputLogs: string[];
   getFileText(filePath: string): string;
   assertExists(filePath: string): void;
   assertNotExists(filePath: string): void;
@@ -981,6 +986,13 @@ async function runTest(
     ? path.fromFileUrl(options.outDir)
     : options.outDir;
   Deno.chdir(`./tests/${project}`);
+  let outputLogs: string[] = [];
+  options.loggerInfo = (msg: string) => {
+    outputLogs.push("I:" + msg);
+  };
+  options.loggerWarn = (msg: string) => {
+    outputLogs.push("W:" + msg);
+  };
   try {
     await build(options);
     const getFileText = (filePath: string) => {
@@ -992,6 +1004,7 @@ async function runTest(
       await checkOutput({
         packageJson,
         npmIgnore,
+        outputLogs,
         getFileText,
         assertExists(filePath) {
           Deno.statSync("npm/" + filePath);
