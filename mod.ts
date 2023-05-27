@@ -166,10 +166,11 @@ export interface BuildOptions {
   };
   /** Action to do after emitting and before running tests. */
   postBuild?: () => void | Promise<void>;
+  /** Override the log Info function, by default it's console.log */
   loggerInfo?: (message: string) => void;
+  /** Override the log Warn function, by default it's console.log */
   loggerWarn?: (message: string) => void;
 }
-
 
 /** Builds the specified Deno module to an npm package using the TypeScript compiler. */
 export async function build(options: BuildOptions): Promise<void> {
@@ -190,9 +191,13 @@ export async function build(options: BuildOptions): Promise<void> {
       : options.declaration ?? "inline",
   };
 
-  let loggerInfo = options.loggerInfo || ((message: string) => { console.log(`[dnt] ${message}`);});
-  let loggerWarn = options.loggerWarn || ((message: string) => { console.warn(colors.yellow(`[dnt] ${message}`)); });
-  
+  let loggerInfo = options.loggerInfo || ((message: string) => {
+    console.log(`[dnt] ${message}`);
+  });
+  let loggerWarn = options.loggerWarn || ((message: string) => {
+    console.warn(colors.yellow(`[dnt] ${message}`));
+  });
+
   const packageManager = options.packageManager ?? "npm";
   const scriptTarget = options.compilerOptions?.target ?? "ES2021";
   const entryPoints: EntryPoint[] = options.entryPoints.map((e, i) => {
