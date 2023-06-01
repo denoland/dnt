@@ -123,7 +123,7 @@ await build({
 });
 ```
 
-### Type checking both ESM and script output
+### Type Checking Both ESM and Script Output
 
 By default, only the ESM output will be type checked for performance reasons.
 That said, it's recommended to type check both the ESM and the script (CJS/UMD)
@@ -135,6 +135,29 @@ await build({
   typeCheck: "both",
 });
 ```
+
+### Ignoring Specific Type Checking Errors
+
+Sometimes you may be getting a TypeScript error that is not helpful and you want
+to ignore it. This is possible by using the `filterDiagnostic` option:
+
+```ts
+await build({
+  // ...etc...
+  filterDiagnostic(diagnostic) {
+    if (
+      diagnostic.file?.fileName.endsWith("fmt/colors.ts")
+    ) {
+      return false; // ignore all diagnostics in this file
+    }
+    // etc... more checks here
+    return true;
+  },
+});
+```
+
+This is especially useful for ignoring type checking errors in remote
+dependencies.
 
 ### Top Level Await
 
