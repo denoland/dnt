@@ -444,7 +444,7 @@ export async function build(options: BuildOptions): Promise<void> {
         log(`Type checking ${current}...`);
         const diagnostics = filterDiagnostics(
           ts.getPreEmitDiagnostics(program),
-        ).filter(d => options.filterDiagnostic?.(d) ?? true);
+        ).filter((d) => options.filterDiagnostic?.(d) ?? true);
         if (diagnostics.length > 0) {
           outputDiagnostics(diagnostics);
           throw new Error(`Had ${diagnostics.length} diagnostics.`);

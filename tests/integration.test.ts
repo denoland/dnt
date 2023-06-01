@@ -936,6 +936,32 @@ Deno.test("should build and type check node types project", async () => {
   });
 });
 
+Deno.test("should have the ability to ignore type checking errors", async () => {
+  const foundDiagnostics: unknown[] = [];
+  await runTest("node_types_project", {
+    scriptModule: false,
+    test: false,
+    entryPoints: ["main.ts"],
+    outDir: "./npm",
+    shims: {
+      // see issue 185
+      custom: [{
+        globalNames: ["TextEncoder", "TextDecoder"],
+        module: "util",
+      }],
+    },
+    package: {
+      name: "node_types",
+      version: "0.0.0",
+    },
+    filterDiagnostic(diagnostic) {
+      foundDiagnostics.push(diagnostic);
+      return false;
+    },
+  });
+  assertEquals(foundDiagnostics.length, 5);
+});
+
 Deno.test("should build and type check declaration import project", async () => {
   await runTest("declaration_import_project", {
     test: false,
