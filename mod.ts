@@ -120,7 +120,7 @@ export interface BuildOptions {
    * @default "npm"
    */
   packageManager?: "npm" | "yarn" | "pnpm" | string;
-  /** Optional compiler options. */
+  /** Optional TypeScript compiler options. */
   compilerOptions?: {
     /** Uses tslib to import helper functions once per project instead of including them per-file if necessary.
      * @default false
@@ -163,6 +163,10 @@ export interface BuildOptions {
     emitDecoratorMetadata?: boolean;
     useUnknownInCatchVariables?: boolean;
   };
+  /** Filter out diagnostics that you want to ignore during type checking and emitting.
+   * @returns `true` to surface the diagnostic or `false` to ignore it.
+   */
+  filterDiagnostic?: (diagnostic: ts.Diagnostic) => boolean;
   /** Action to do after emitting and before running tests. */
   postBuild?: () => void | Promise<void>;
 }
@@ -440,7 +444,7 @@ export async function build(options: BuildOptions): Promise<void> {
         log(`Type checking ${current}...`);
         const diagnostics = filterDiagnostics(
           ts.getPreEmitDiagnostics(program),
-        );
+        ).filter(d => options.filterDiagnostic?.(d) ?? true);
         if (diagnostics.length > 0) {
           outputDiagnostics(diagnostics);
           throw new Error(`Had ${diagnostics.length} diagnostics.`);
@@ -458,7 +462,8 @@ export async function build(options: BuildOptions): Promise<void> {
         // 1343: The_import_meta_meta_property_is_only_allowed_when_the_module_option_is_es2020_es2022_esnext_system_node16_or_nodenext
         d.code !== 1343 &&
         // 1470: The_import_meta_meta_property_is_not_allowed_in_files_which_will_build_into_CommonJS_output
-        d.code !== 1470
+        d.code !== 1470 &&
+        (options.filterDiagnostic?.(d) ?? true)
       );
     }
 
