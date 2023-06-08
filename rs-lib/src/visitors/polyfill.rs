@@ -8,21 +8,21 @@ use deno_ast::view::*;
 use crate::polyfills::Polyfill;
 use crate::polyfills::PolyfillVisitContext;
 
-pub struct FillPolyfillsParams<'a> {
-  pub program: &'a Program<'a>,
+pub struct FillPolyfillsParams<'a, 'b> {
+  pub program: Program<'b>,
   pub unresolved_context: SyntaxContext,
   pub top_level_decls: &'a HashSet<String>,
   pub searching_polyfills: &'a mut Vec<Box<dyn Polyfill>>,
   pub found_polyfills: &'a mut Vec<Box<dyn Polyfill>>,
 }
 
-struct Context<'a> {
-  visit_context: PolyfillVisitContext<'a>,
+struct Context<'a, 'b> {
+  visit_context: PolyfillVisitContext<'a, 'b>,
   searching_polyfills: &'a mut Vec<Box<dyn Polyfill>>,
   found_polyfills: &'a mut Vec<Box<dyn Polyfill>>,
 }
 
-pub fn fill_polyfills(params: &mut FillPolyfillsParams<'_>) {
+pub fn fill_polyfills(params: &mut FillPolyfillsParams) {
   let mut context = Context {
     visit_context: PolyfillVisitContext {
       program: params.program,

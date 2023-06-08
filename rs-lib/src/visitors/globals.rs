@@ -13,8 +13,8 @@ use deno_ast::TextChange;
 use crate::analyze::is_in_type;
 use crate::utils::text_change_for_prepend_statement_to_text;
 
-pub struct GetGlobalTextChangesParams<'a> {
-  pub program: &'a Program<'a>,
+pub struct GetGlobalTextChangesParams<'a, 'b> {
+  pub program: Program<'b>,
   pub unresolved_context: SyntaxContext,
   pub shim_specifier: &'a str,
   pub shim_global_names: &'a HashSet<&'a str>,
@@ -27,8 +27,8 @@ pub struct GetGlobalTextChangesResult {
   pub imported_shim: bool,
 }
 
-struct Context<'a> {
-  program: &'a Program<'a>,
+struct Context<'a, 'b> {
+  program: Program<'b>,
   unresolved_context: SyntaxContext,
   top_level_decls: &'a HashSet<String>,
   shim_global_names: &'a HashSet<&'a str>,
@@ -38,7 +38,7 @@ struct Context<'a> {
 }
 
 pub fn get_global_text_changes(
-  params: &GetGlobalTextChangesParams<'_>,
+  params: &GetGlobalTextChangesParams,
 ) -> GetGlobalTextChangesResult {
   let mut context = Context {
     program: params.program,
@@ -262,14 +262,14 @@ fn is_declaration_ident(node: Node) -> bool {
   }
 }
 
-fn get_all_ident_names(program: &Program) -> HashSet<String> {
+fn get_all_ident_names(program: Program) -> HashSet<String> {
   let mut result = HashSet::new();
-  visit_children(&program.into(), &mut result);
+  visit_children(program.into(), &mut result);
   return result;
 
-  fn visit_children(node: &Node, result: &mut HashSet<String>) {
+  fn visit_children(node: Node, result: &mut HashSet<String>) {
     for child in node.children() {
-      visit_children(&child, result);
+      visit_children(child, result);
     }
 
     if let Node::Ident(ident) = node {

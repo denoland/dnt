@@ -1,3 +1,7 @@
 [toolchain]
-channel = "1.68.2"
+channel = "1.70.0"
 components = ["clippy", "rustfmt"]
+
+[profile.release]
+# Tell `rustc` to optimize for small code size.
+opt-level = "s"

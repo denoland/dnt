@@ -11,7 +11,7 @@ pub struct IgnoredLineIndexes {
 
 pub fn get_ignore_line_indexes(
   specifier: &str,
-  program: &Program,
+  program: Program,
 ) -> IgnoredLineIndexes {
   let mut warnings = Vec::new();
   let mut line_indexes = HashSet::new();

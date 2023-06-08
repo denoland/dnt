@@ -7,7 +7,7 @@ use deno_ast::view::*;
 use deno_ast::SourceRanged;
 
 pub fn get_top_level_decls(
-  program: &Program,
+  program: Program,
   top_level_context: SyntaxContext,
 ) -> HashSet<String> {
   let mut results = HashSet::new();

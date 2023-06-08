@@ -228,8 +228,16 @@ impl ImportMapResolver {
       .load(import_map_url.clone())
       .await?
       .ok_or_else(|| anyhow!("Could not find {}", import_map_url))?;
-    let result =
-      import_map::parse_from_json(import_map_url, &response.content)?;
+    let value = jsonc_parser::parse_to_serde_value(
+      &response.content,
+      &jsonc_parser::ParseOptions {
+        allow_comments: true,
+        allow_loose_object_property_names: true,
+        allow_trailing_commas: true,
+      },
+    )?
+    .unwrap_or_else(|| serde_json::Value::Object(Default::default()));
+    let result = import_map::parse_from_value(import_map_url, value)?;
     // if !result.diagnostics.is_empty() {
     //   todo: surface diagnostics maybe? It seems like this should not be hard error according to import map spec
     //   bail!("Import map diagnostics:\n{}", result.diagnostics.into_iter().map(|d| format!("  - {}", d)).collect::<Vec<_>>().join("\n"));

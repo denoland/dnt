@@ -1395,6 +1395,7 @@ async fn transform_import_map() {
         .add_local_file(
           "/import_map.json",
           r#"{
+  // test comments
   "imports": {
     "localhost/": "/subdir/"
   }

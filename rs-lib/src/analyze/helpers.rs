@@ -113,6 +113,7 @@ pub fn is_in_type(mut node: Node) -> bool {
       | Node::Tpl(_)
       | Node::TplElement(_)
       | Node::TryStmt(_)
+      | Node::UsingDecl(_)
       | Node::TsEnumDecl(_)
       | Node::TsEnumMember(_)
       | Node::TsExportAssignment(_)

@@ -347,15 +347,15 @@ pub async fn transform(options: TransformOptions) -> Result<TransformOutput> {
         let text_changes = parsed_source
           .with_view(|program| -> Result<Vec<TextChange>> {
             let ignore_line_indexes =
-              get_ignore_line_indexes(parsed_source.specifier(), &program);
+              get_ignore_line_indexes(parsed_source.specifier(), program);
             let top_level_decls =
-              get_top_level_decls(&program, parsed_source.top_level_context());
+              get_top_level_decls(program, parsed_source.top_level_context());
             warnings.extend(ignore_line_indexes.warnings);
 
             fill_polyfills(&mut FillPolyfillsParams {
               found_polyfills: &mut env_context.found_polyfills,
               searching_polyfills: &mut env_context.searching_polyfills,
-              program: &program,
+              program,
               unresolved_context: parsed_source.unresolved_context(),
               top_level_decls: &top_level_decls,
             });
@@ -370,7 +370,7 @@ pub async fn transform(options: TransformOptions) -> Result<TransformOutput> {
               );
               let result =
                 get_global_text_changes(&GetGlobalTextChangesParams {
-                  program: &program,
+                  program,
                   unresolved_context: parsed_source.unresolved_context(),
                   shim_specifier: &shim_relative_specifier,
                   shim_global_names: &env_context.shim_global_names,
@@ -384,13 +384,13 @@ pub async fn transform(options: TransformOptions) -> Result<TransformOutput> {
             }
 
             text_changes
-              .extend(get_deno_comment_directive_text_changes(&program));
+              .extend(get_deno_comment_directive_text_changes(program));
             text_changes.extend(get_import_exports_text_changes(
               &GetImportExportsTextChangesParams {
                 specifier,
                 module_graph: &module_graph,
                 mappings: &mappings,
-                program: &program,
+                program,
                 package_specifier_mappings: &all_package_specifier_mappings,
               },
             )?);
