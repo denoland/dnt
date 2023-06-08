@@ -21,12 +21,12 @@ pub struct GetImportExportsTextChangesParams<'a> {
   pub specifier: &'a ModuleSpecifier,
   pub module_graph: &'a ModuleGraph,
   pub mappings: &'a Mappings,
-  pub program: &'a Program<'a>,
+  pub program: Program<'a>,
   pub package_specifier_mappings: &'a HashMap<ModuleSpecifier, String>,
 }
 
 struct Context<'a> {
-  program: &'a Program<'a>,
+  program: Program<'a>,
   specifier: &'a ModuleSpecifier,
   module_graph: &'a ModuleGraph,
   mappings: &'a Mappings,

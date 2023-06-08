@@ -15,12 +15,12 @@ mod string_replace_all;
 
 pub trait Polyfill {
   fn use_for_target(&self, target: ScriptTarget) -> bool;
-  fn visit_node(&self, node: Node, context: &PolyfillVisitContext<'_>) -> bool;
+  fn visit_node(&self, node: Node, context: &PolyfillVisitContext<'_, '_>) -> bool;
   fn get_file_text(&self) -> &'static str;
 }
 
-pub struct PolyfillVisitContext<'a> {
-  pub program: &'a Program<'a>,
+pub struct PolyfillVisitContext<'a, 'b> {
+  pub program: Program<'b>,
   pub unresolved_context: SyntaxContext,
   pub top_level_decls: &'a HashSet<String>,
 }
@@ -88,9 +88,9 @@ impl PolyfillTester {
       let mut searching_polyfills = vec![(self.create_polyfill)()];
       let mut found_polyfills = Vec::new();
       let unresolved_context = parsed_source.unresolved_context();
-      let top_level_decls = get_top_level_decls(&program, unresolved_context);
+      let top_level_decls = get_top_level_decls(program, unresolved_context);
       fill_polyfills(&mut FillPolyfillsParams {
-        program: &program,
+        program,
         unresolved_context,
         top_level_decls: &top_level_decls,
         searching_polyfills: &mut searching_polyfills,

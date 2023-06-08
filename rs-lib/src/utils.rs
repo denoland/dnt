@@ -184,7 +184,7 @@ pub fn prepend_statement_to_text(
   match parsed_module {
     Ok(parsed_module) => parsed_module.with_view(|program| {
       let text_change =
-        text_change_for_prepend_statement_to_text(&program, statement_text);
+        text_change_for_prepend_statement_to_text(program, statement_text);
       *file_text = apply_text_changes(text_info.text_str(), vec![text_change]);
     }),
     Err(_) => {
@@ -195,7 +195,7 @@ pub fn prepend_statement_to_text(
 }
 
 pub fn text_change_for_prepend_statement_to_text(
-  program: &Program,
+  program: Program,
   statement_text: &str,
 ) -> TextChange {
   let insert_pos = top_file_insert_pos(program);
@@ -209,7 +209,7 @@ pub fn text_change_for_prepend_statement_to_text(
   }
 }
 
-fn top_file_insert_pos(program: &Program) -> usize {
+fn top_file_insert_pos(program: Program) -> usize {
   let mut pos = 0;
   for comment in program.leading_comments() {
     // insert before any @ts-ignore or @ts-expect

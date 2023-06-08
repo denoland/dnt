@@ -25,7 +25,7 @@ static TYPES_REFERENCE_RE: Lazy<Regex> =
   Lazy::new(|| Regex::new(r#"(?i)\stypes\s*=\s*["']([^"']*)["']"#).unwrap());
 
 pub fn get_deno_comment_directive_text_changes(
-  program: &Program,
+  program: Program,
 ) -> Vec<TextChange> {
   let mut text_changes = Vec::new();
 
@@ -62,7 +62,7 @@ pub fn get_deno_comment_directive_text_changes(
 }
 
 fn get_extended_comment_range(
-  program: &Program,
+  program: Program,
   comment: &Comment,
 ) -> std::ops::Range<usize> {
   let text_info = program.text_info();
