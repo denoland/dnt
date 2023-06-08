@@ -15,7 +15,11 @@ mod string_replace_all;
 
 pub trait Polyfill {
   fn use_for_target(&self, target: ScriptTarget) -> bool;
-  fn visit_node(&self, node: Node, context: &PolyfillVisitContext<'_, '_>) -> bool;
+  fn visit_node(
+    &self,
+    node: Node,
+    context: &PolyfillVisitContext<'_, '_>,
+  ) -> bool;
   fn get_file_text(&self) -> &'static str;
 }
 
