@@ -1390,14 +1390,15 @@ async fn transform_import_map() {
       loader
         .add_local_file(
           "/mod.ts",
-          "import * as remote from 'localhost/mod.ts';",
+          "import * as remote from 'localhost/mod.ts';\nimport * as remote2 from 'preact';",
         )
         .add_local_file(
           "/import_map.json",
           r#"{
   // test comments
   "imports": {
-    "localhost/": "/subdir/"
+    "localhost/": "/subdir/",
+    "preact": "https://esm.sh/preact@^10.5.0?dev"
   }
 }"#,
         )
@@ -1415,7 +1416,7 @@ async fn transform_import_map() {
   assert_files!(
     result.main.files,
     &[
-      ("mod.ts", "import * as remote from './subdir/mod.js';",),
+      ("mod.ts", "import * as remote from './subdir/mod.js';\nimport * as remote2 from 'preact';",),
       ("subdir/mod.ts", "import * as myOther from './other.js';",),
       ("subdir/other.ts", "export function test() {}",)
     ]
