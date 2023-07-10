@@ -115,6 +115,8 @@ export interface BuildOptions {
   package: PackageJson;
   /** Path or url to import map. */
   importMap?: string;
+  /** Custom wasm file url */
+  wasmUrl?: string;
   /** Package manager used to install dependencies and run npm scripts.
    * This also can be an absolute path to the executable file of package manager.
    * @default "npm"
@@ -539,6 +541,7 @@ export async function build(options: BuildOptions): Promise<void> {
       mappings: options.mappings,
       target: scriptTarget,
       importMap: options.importMap,
+      wasmUrl: options.wasmUrl,
     });
   }
 
