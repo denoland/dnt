@@ -39,7 +39,7 @@ Deno.test("transform import.meta.main expressions", () => {
 Deno.test("transform import.meta.main expressions in esModule", () => {
   testImportReplacements(
     "if (import.meta.main) { console.log('main'); }",
-    `if (import.meta.url.endsWith(process.argv[1].replace(/\\\\/g, "/"))) {
+    `if ((import.meta.url === ("file:///" + process.argv[1].replace(/\\\\/g, "/")).replace(/\\/{3,}/, "///"))) {
     console.log("main");
 }\n`,
     false,

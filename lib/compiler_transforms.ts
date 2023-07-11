@@ -88,11 +88,11 @@ export const transformImportMeta: ts.TransformerFactory<ts.SourceFile> = (
 
   function getReplacementImportMetaMainEsm() {
     // Copy and pasted from ts-ast-viewer.com
-    // import.meta.url.endsWith(process.argv[1].replace(/\\/g,'/'));
+    // (import.meta.url === ('file:///'+process.argv[1].replace(/\\/g,'/')).replace(/\/{3,}/,'///'));
     // 1. `process.argv[1]` is fullpath;
     // 2. Win's path is `E:\path\to\main.mjs`, replace to `E:/path/to/main.mjs`
-    return factory.createCallExpression(
-      factory.createPropertyAccessExpression(
+    return factory.createParenthesizedExpression(
+      factory.createBinaryExpression(
         factory.createPropertyAccessExpression(
           factory.createMetaProperty(
             ts.SyntaxKind.ImportKeyword,
@@ -100,26 +100,41 @@ export const transformImportMeta: ts.TransformerFactory<ts.SourceFile> = (
           ),
           factory.createIdentifier("url"),
         ),
-        factory.createIdentifier("endsWith"),
-      ),
-      undefined,
-      [factory.createCallExpression(
-        factory.createPropertyAccessExpression(
-          factory.createElementAccessExpression(
-            factory.createPropertyAccessExpression(
-              factory.createIdentifier("process"),
-              factory.createIdentifier("argv"),
+        factory.createToken(ts.SyntaxKind.EqualsEqualsEqualsToken),
+        factory.createCallExpression(
+          factory.createPropertyAccessExpression(
+            factory.createParenthesizedExpression(
+              factory.createBinaryExpression(
+                factory.createStringLiteral("file:///"),
+                factory.createToken(ts.SyntaxKind.PlusToken),
+                factory.createCallExpression(
+                  factory.createPropertyAccessExpression(
+                    factory.createElementAccessExpression(
+                      factory.createPropertyAccessExpression(
+                        factory.createIdentifier("process"),
+                        factory.createIdentifier("argv"),
+                      ),
+                      factory.createNumericLiteral("1"),
+                    ),
+                    factory.createIdentifier("replace"),
+                  ),
+                  undefined,
+                  [
+                    factory.createRegularExpressionLiteral("/\\\\/g"),
+                    factory.createStringLiteral("/"),
+                  ],
+                ),
+              ),
             ),
-            factory.createNumericLiteral("1"),
+            factory.createIdentifier("replace"),
           ),
-          factory.createIdentifier("replace"),
+          undefined,
+          [
+            factory.createRegularExpressionLiteral("/\\/{3,}/"),
+            factory.createStringLiteral("///"),
+          ],
         ),
-        undefined,
-        [
-          factory.createRegularExpressionLiteral("/\\\\/g"),
-          factory.createStringLiteral("/"),
-        ],
-      )],
+      ),
     );
   }
 
