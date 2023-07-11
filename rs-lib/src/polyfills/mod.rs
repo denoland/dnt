@@ -12,6 +12,7 @@ mod array_find_last;
 mod error_cause;
 mod object_has_own;
 mod string_replace_all;
+mod import_meta;
 
 pub trait Polyfill {
   fn use_for_target(&self, target: ScriptTarget) -> bool;
@@ -42,6 +43,7 @@ fn all_polyfills() -> Vec<Box<dyn Polyfill>> {
     Box::new(error_cause::ErrorCausePolyfill),
     Box::new(string_replace_all::StringReplaceAllPolyfill),
     Box::new(array_find_last::ArrayFindLastPolyfill),
+    Box::new(import_meta::ImportMetaPolyfill),
   ]
 }
 
