@@ -16,13 +16,13 @@ jobs:
     steps:
     - uses: actions/checkout@v3
     - uses: dsherret/rust-toolchain-file@v1
-    - uses: Swatinem/rust-cache@v1
+    - uses: Swatinem/rust-cache@v2
     - uses: denoland/setup-deno@v1
       with:
         deno-version: ~1.x
     - uses: actions/setup-node@v2
       with:
-        node-version: '16'
+        node-version: '18'
         registry-url: 'https://registry.npmjs.org'
 
     - name: Format
