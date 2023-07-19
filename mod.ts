@@ -115,8 +115,6 @@ export interface BuildOptions {
   package: PackageJson;
   /** Path or url to import map. */
   importMap?: string;
-  /** Custom wasm file url */
-  wasmUrl?: string;
   /** Package manager used to install dependencies and run npm scripts.
    * This also can be an absolute path to the executable file of package manager.
    * @default "npm"
@@ -171,6 +169,8 @@ export interface BuildOptions {
   filterDiagnostic?: (diagnostic: ts.Diagnostic) => boolean;
   /** Action to do after emitting and before running tests. */
   postBuild?: () => void | Promise<void>;
+  /** Custom Wasm URL for the internal Wasm module used by dnt. */
+  internalWasmUrl?: string;
 }
 
 /** Builds the specified Deno module to an npm package using the TypeScript compiler. */
@@ -541,7 +541,7 @@ export async function build(options: BuildOptions): Promise<void> {
       mappings: options.mappings,
       target: scriptTarget,
       importMap: options.importMap,
-      wasmUrl: options.wasmUrl,
+      internalWasmUrl: options.internalWasmUrl,
     });
   }
 
