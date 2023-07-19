@@ -7,6 +7,7 @@ export function getNpmIgnoreText(options: {
   sourceMap?: SourceMapOptions;
   inlineSources?: boolean;
   testFiles: OutputFile[];
+  declaration: "separate" | "inline" | false;
   includeScriptModule: boolean | undefined;
   includeEsModule: boolean | undefined;
 }) {
@@ -32,6 +33,9 @@ export function getNpmIgnoreText(options: {
         if (options.sourceMap === true) {
           yield `${esmFilePath}.map`;
         }
+        if (options.declaration === "inline") {
+          yield `esm/${dtsFilePath}`;
+        }
       }
       if (options.includeScriptModule) {
         const scriptFilePath = `script/${filePath}`;
@@ -39,8 +43,13 @@ export function getNpmIgnoreText(options: {
         if (options.sourceMap === true) {
           yield `${scriptFilePath}.map`;
         }
+        if (options.declaration === "inline") {
+          yield `script/${dtsFilePath}`;
+        }
       }
-      yield `types/${dtsFilePath}`;
+      if (options.declaration === "separate") {
+        yield `types/${dtsFilePath}`;
+      }
     }
     yield "test_runner.js";
   }
