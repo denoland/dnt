@@ -1406,7 +1406,12 @@ async fn transform_import_map() {
           "/subdir/mod.ts",
           "import * as myOther from './other.ts';",
         )
-        .add_local_file("/subdir/other.ts", "export function test() {}");
+        .add_local_file("/subdir/other.ts", "export function test() {}")
+        .add_remote_file_with_headers(
+          "https://esm.sh/preact@^10.5.0?dev",
+          "export function test2() {}",
+          &[("content-type", "application/javascript")],
+        );
     })
     .set_import_map("file:///import_map.json")
     .transform()
@@ -1416,9 +1421,10 @@ async fn transform_import_map() {
   assert_files!(
     result.main.files,
     &[
-      ("mod.ts", "import * as remote from './subdir/mod.js';\nimport * as remote2 from 'preact';",),
+      ("mod.ts", "import * as remote from './subdir/mod.js';\nimport * as remote2 from './deps/esm.sh/preact@^10.5.0.js';",),
       ("subdir/mod.ts", "import * as myOther from './other.js';",),
-      ("subdir/other.ts", "export function test() {}",)
+      ("subdir/other.ts", "export function test() {}"),
+      ("deps/esm.sh/preact@^10.5.0.js", "export function test2() {}",),
     ]
   );
 }
