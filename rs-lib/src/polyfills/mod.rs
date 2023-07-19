@@ -10,9 +10,9 @@ use crate::ScriptTarget;
 
 mod array_find_last;
 mod error_cause;
+mod import_meta;
 mod object_has_own;
 mod string_replace_all;
-mod import_meta;
 
 pub trait Polyfill {
   fn use_for_target(&self, target: ScriptTarget) -> bool;
