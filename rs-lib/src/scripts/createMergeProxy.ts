@@ -1,4 +1,3 @@
-// deno-lint-ignore ban-types
 export function createMergeProxy<T extends object, U extends object>(
   baseObj: T,
   extObj: U,
