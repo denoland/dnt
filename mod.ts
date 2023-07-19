@@ -522,6 +522,7 @@ export async function build(options: BuildOptions): Promise<void> {
       testFiles: transformOutput.test.files,
       includeScriptModule: options.scriptModule !== false,
       includeEsModule: options.esModule !== false,
+      declaration: options.declaration!,
     });
     writeFile(
       path.join(options.outDir, ".npmignore"),

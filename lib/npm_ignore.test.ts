@@ -11,6 +11,7 @@ Deno.test("should include src directory when the source files are not necessary"
     expectHasSrcFolder: true,
     includeScriptModule: true,
     includeEsModule: true,
+    declaration: "inline",
   });
   runTest({
     sourceMaps: true,
@@ -18,6 +19,7 @@ Deno.test("should include src directory when the source files are not necessary"
     expectHasSrcFolder: false,
     includeScriptModule: true,
     includeEsModule: true,
+    declaration: "inline",
   });
   runTest({
     sourceMaps: "inline",
@@ -25,6 +27,7 @@ Deno.test("should include src directory when the source files are not necessary"
     expectHasSrcFolder: false,
     includeScriptModule: true,
     includeEsModule: true,
+    declaration: "inline",
   });
 
   runTest({
@@ -33,6 +36,7 @@ Deno.test("should include src directory when the source files are not necessary"
     expectHasSrcFolder: false,
     includeScriptModule: true,
     includeEsModule: true,
+    declaration: "inline",
   });
 
   runTest({
@@ -41,6 +45,7 @@ Deno.test("should include src directory when the source files are not necessary"
     expectHasSrcFolder: true,
     includeScriptModule: true,
     includeEsModule: true,
+    declaration: "inline",
   });
   runTest({
     sourceMaps: true,
@@ -48,6 +53,7 @@ Deno.test("should include src directory when the source files are not necessary"
     expectHasSrcFolder: true,
     includeScriptModule: true,
     includeEsModule: true,
+    declaration: "inline",
   });
   runTest({
     sourceMaps: "inline",
@@ -55,6 +61,7 @@ Deno.test("should include src directory when the source files are not necessary"
     expectHasSrcFolder: true,
     includeScriptModule: true,
     includeEsModule: true,
+    declaration: "inline",
   });
   runTest({
     sourceMaps: undefined,
@@ -62,6 +69,7 @@ Deno.test("should include src directory when the source files are not necessary"
     expectHasSrcFolder: true,
     includeScriptModule: false,
     includeEsModule: true,
+    declaration: "inline",
   });
   runTest({
     sourceMaps: undefined,
@@ -69,6 +77,23 @@ Deno.test("should include src directory when the source files are not necessary"
     expectHasSrcFolder: true,
     includeScriptModule: true,
     includeEsModule: false,
+    declaration: "inline",
+  });
+  runTest({
+    sourceMaps: undefined,
+    inlineSources: undefined,
+    expectHasSrcFolder: true,
+    includeScriptModule: true,
+    includeEsModule: true,
+    declaration: "separate",
+  });
+  runTest({
+    sourceMaps: undefined,
+    inlineSources: undefined,
+    expectHasSrcFolder: true,
+    includeScriptModule: true,
+    includeEsModule: true,
+    declaration: false,
   });
 });
 
@@ -76,6 +101,7 @@ function runTest(options: {
   sourceMaps: SourceMapOptions | undefined;
   inlineSources: boolean | undefined;
   expectHasSrcFolder: boolean;
+  declaration: "separate" | "inline" | false;
   includeScriptModule: boolean | undefined;
   includeEsModule: boolean | undefined;
 }) {
@@ -88,6 +114,7 @@ function runTest(options: {
     }],
     includeScriptModule: options.includeScriptModule,
     includeEsModule: options.includeEsModule,
+    declaration: options.declaration,
   });
 
   assertEquals(fileText, getExpectedText());
@@ -97,16 +124,25 @@ function runTest(options: {
     if (options.includeEsModule !== false) {
       startText += "esm/mod.test.js\n";
       startText += options.sourceMaps === true ? "esm/mod.test.js.map\n" : "";
+      if (options.declaration === "inline") {
+        startText += "esm/mod.test.d.ts\n";
+      }
     }
     if (options.includeScriptModule !== false) {
       startText += "script/mod.test.js\n";
       startText += options.sourceMaps === true
         ? "script/mod.test.js.map\n"
         : "";
+      if (options.declaration === "inline") {
+        startText += "script/mod.test.d.ts\n";
+      }
     }
+    if (options.declaration === "separate") {
+      startText += "types/mod.test.d.ts\n";
+    }
+
     return startText +
-      `types/mod.test.d.ts
-test_runner.js
+      `test_runner.js
 yarn.lock
 pnpm-lock.yaml
 `;
