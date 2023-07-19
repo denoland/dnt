@@ -14,43 +14,41 @@ export const transformImportMeta: ts.TransformerFactory<ts.SourceFile> = (
   return (sourceFile) => ts.visitEachChild(sourceFile, visitNode, context);
 
   function visitNode(node: ts.Node): ts.Node {
-    let resolveArgs: undefined | ts.NodeArray<ts.Expression>;
-    let originNode: undefined | ts.Node;
-    if (ts.isCallExpression(node) && node.arguments.length === 1) {
-      resolveArgs = node.arguments;
-      originNode = node;
-      node = node.expression;
-    }
-    // find `import.meta.url` or `import.meta.main` or `import.meta.resolve`
+    // find `import.meta.resolve`
     if (
-      ts.isPropertyAccessExpression(node) &&
-      ts.isMetaProperty(node.expression) &&
-      node.expression.keywordToken === ts.SyntaxKind.ImportKeyword &&
-      ts.isIdentifier(node.name)
+      ts.isCallExpression(node) &&
+      node.arguments.length === 1 &&
+      isImportMetaProp(node.expression) &&
+      node.expression.name.escapedText === "resolve"
     ) {
+      return ts.visitEachChild(
+        getReplacementImportMetaResolve(node.arguments),
+        visitNode,
+        context,
+      );
+    } else if (isImportMetaProp(node)) {
+      // find `import.meta.url` or `import.meta.main`
       if (node.name.escapedText === "url" && isScriptModule) {
         return getReplacementImportMetaUrl();
       } else if (node.name.escapedText === "main") {
         if (isScriptModule) {
-          return getReplacementImportMetaMain();
+          return getReplacementImportMetaMainScript();
         } else {
           return getReplacementImportMetaMainEsm();
         }
-      } else if (
-        node.name.escapedText === "resolve" && resolveArgs !== undefined
-      ) {
-        return ts.visitEachChild(
-          getReplacementImportMetaResolve(resolveArgs),
-          visitNode,
-          context,
-        );
       }
-    }
-    if (originNode !== undefined) {
-      node = originNode;
     }
 
     return ts.visitEachChild(node, visitNode, context);
+  }
+
+  function isImportMetaProp(
+    node: ts.Node,
+  ): node is ts.PropertyAccessExpression & { name: ts.Identifier } {
+    return ts.isPropertyAccessExpression(node) &&
+      ts.isMetaProperty(node.expression) &&
+      node.expression.keywordToken === ts.SyntaxKind.ImportKeyword &&
+      ts.isIdentifier(node.name);
   }
 
   function getReplacementImportMetaUrl() {
@@ -73,7 +71,7 @@ export const transformImportMeta: ts.TransformerFactory<ts.SourceFile> = (
     );
   }
 
-  function getReplacementImportMetaMain() {
+  function getReplacementImportMetaMainScript() {
     // Copy and pasted from ts-ast-viewer.com
     // (require.main === module)
     return factory.createParenthesizedExpression(factory.createBinaryExpression(

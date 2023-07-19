@@ -20,7 +20,7 @@ declare global {
      * ```
      */
     // @ts-ignore override
-    resolve: (specifier: string) => string;
+    resolve(specifier: string): string;
   }
 }
 
