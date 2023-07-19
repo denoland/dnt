@@ -1627,6 +1627,7 @@ async fn polyfills_all() {
             "}\n",
             "''.replaceAll('test', 'other');\n",
             "[].findLast(() => true);\n",
+            "import.meta.main;\n",
           ),
         )
         .add_local_file("/mod.test.ts", "import * as mod from './mod.ts';");
@@ -1650,6 +1651,7 @@ async fn polyfills_all() {
           "}\n",
           "''.replaceAll('test', 'other');\n",
           "[].findLast(() => true);\n",
+          "import.meta.main;\n",
         ),
       ),
       (
@@ -1659,6 +1661,7 @@ async fn polyfills_all() {
           include_str!("../src/polyfills/scripts/esnext.error-cause.ts"),
           include_str!("../src/polyfills/scripts/es2021.string-replaceAll.ts"),
           include_str!("../src/polyfills/scripts/esnext.array-findLast.ts"),
+          include_str!("../src/polyfills/scripts/deno.import-meta.ts"),
         )
       ),
     ]

@@ -358,7 +358,11 @@ export async function build(options: BuildOptions): Promise<void> {
       outDir: esmOutDir,
     });
     program = project.createProgram();
-    emit();
+    emit({
+      transformers: {
+        before: [compilerTransforms.transformImportMeta],
+      },
+    });
     writeFile(
       path.join(esmOutDir, "package.json"),
       `{\n  "type": "module"\n}\n`,
