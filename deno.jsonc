@@ -2,7 +2,7 @@
   "lock": false,
   "tasks": {
     "test": "deno test -A",
-    "build": "deno run -A --no-check --unstable https://deno.land/x/wasmbuild@0.14.1/main.ts --out lib/pkg"
+    "build": "deno run -A --no-check --unstable https://deno.land/x/wasmbuild@0.15.0/main.ts --out lib/pkg"
   },
   "lint": {
     "rules": {
