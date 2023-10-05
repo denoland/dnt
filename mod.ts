@@ -85,6 +85,10 @@ export interface BuildOptions {
    * @default false
    */
   skipSourceOutput?: boolean;
+  /** Skip installing dependencies
+   * @default false
+   */
+  skipInstallDeps?: boolean;
   /** Root directory to find test files in. Defaults to the cwd. */
   rootTestDir?: string;
   /** Glob pattern to use to find tests files. Defaults to `deno test`'s pattern. */
@@ -229,12 +233,14 @@ export async function build(options: BuildOptions): Promise<void> {
   createNpmIgnore();
 
   // install dependencies in order to prepare for checking TS diagnostics
-  log(`Running ${packageManager} install...`);
-  const npmInstallPromise = runNpmCommand({
-    bin: packageManager,
-    args: ["install"],
-    cwd: options.outDir,
-  });
+  if (!options.skipInstallDeps) log(`Running ${packageManager} install...`);
+  const npmInstallPromise = options.skipInstallDeps
+    ? Promise.resolve()
+    : runNpmCommand({
+      bin: packageManager,
+      args: ["install"],
+      cwd: options.outDir,
+    });
   if (options.typeCheck || options.declaration) {
     // Unfortunately this can't be run in parallel to building the project
     // in this case because TypeScript will resolve the npm packages when
