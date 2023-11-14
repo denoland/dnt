@@ -279,7 +279,7 @@ export async function build(options: BuildOptions): Promise<void> {
       jsxFragmentFactory: "React.Fragment",
       importsNotUsedAsValues: ts.ImportsNotUsedAsValues.Remove,
       module: ts.ModuleKind.ESNext,
-      moduleResolution: ts.ModuleResolutionKind.Node16,
+      moduleResolution: ts.ModuleResolutionKind.Bundler,
       target: compilerScriptTarget,
       lib: libNamesToCompilerOption(
         options.compilerOptions?.lib ?? getCompilerLibOption(scriptTarget),
@@ -379,6 +379,7 @@ export async function build(options: BuildOptions): Promise<void> {
       module: options.scriptModule === "umd"
         ? ts.ModuleKind.UMD
         : ts.ModuleKind.CommonJS,
+      moduleResolution: ts.ModuleResolutionKind.Node10,
     });
     program = getProgramAndMaybeTypeCheck("script");
     emit({
