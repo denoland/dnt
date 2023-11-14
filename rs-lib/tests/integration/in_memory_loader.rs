@@ -7,6 +7,7 @@ use std::pin::Pin;
 
 use anyhow::anyhow;
 use anyhow::Result;
+use deno_graph::source::CacheSetting;
 use futures::Future;
 
 use deno_node_transform::url_to_file_path;
@@ -89,6 +90,7 @@ impl Loader for InMemoryLoader {
   fn load(
     &self,
     specifier: ModuleSpecifier,
+    _cache_setting: CacheSetting,
   ) -> Pin<Box<dyn Future<Output = Result<Option<LoadResponse>>> + 'static>> {
     if specifier.scheme() == "file" {
       let file_path = url_to_file_path(&specifier).unwrap();
