@@ -87,6 +87,7 @@ Deno.test("should build test project - basic", async () => {
         "@deno/shim-deno": versions.denoShim,
         "@deno/sham-weakref": versions.weakRefSham,
       },
+      _generatedBy: "dnt@dev",
     });
     assertEquals(
       output.npmIgnore,
@@ -161,6 +162,7 @@ Deno.test("should build test project without esm", async () => {
         "@deno/shim-deno": versions.denoShim,
         "@deno/sham-weakref": versions.weakRefSham,
       },
+      _generatedBy: "dnt@dev",
     });
     assertEquals(
       output.npmIgnore,
@@ -216,6 +218,7 @@ Deno.test("should build with all options off", async () => {
       devDependencies: {
         "@types/node": versions.nodeTypes,
       },
+      _generatedBy: "dnt@dev",
     });
 
     output.assertNotExists("script/mod.js");
@@ -297,6 +300,7 @@ Deno.test("should build test project with declarations inline by default", async
           picocolors: versions.picocolors,
           "@deno/shim-deno": versions.denoShim,
         },
+        _generatedBy: "dnt@dev",
       });
     });
   }
@@ -333,6 +337,7 @@ Deno.test("should build bin project", async () => {
         picocolors: versions.picocolors,
         "@deno/shim-deno": versions.denoShim,
       },
+      _generatedBy: "dnt@dev",
     });
     const expectedText = "#!/usr/bin/env node\n";
     assertEquals(
@@ -431,6 +436,7 @@ Deno.test("not error for TLA when not using CommonJS", async () => {
         picocolors: versions.picocolors,
         "@deno/shim-deno": versions.denoShim,
       },
+      _generatedBy: "dnt@dev",
     });
   });
 });
@@ -549,6 +555,7 @@ Deno.test("should build with package mappings", async () => {
         picocolors: versions.picocolors,
         "@deno/shim-deno": versions.denoShim,
       },
+      _generatedBy: "dnt@dev",
     });
     assertEquals(
       output.npmIgnore,
@@ -619,6 +626,7 @@ Deno.test("should build with peer dependencies in mappings", async () => {
         picocolors: versions.picocolors,
         "@deno/shim-deno": versions.denoShim,
       },
+      _generatedBy: "dnt@dev",
     });
   });
 });

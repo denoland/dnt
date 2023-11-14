@@ -3,6 +3,7 @@
 import type { EntryPoint, ShimOptions } from "../mod.ts";
 import { TransformOutput } from "../transform.ts";
 import { PackageJson } from "./types.ts";
+import { getDntVersion } from "./utils.ts";
 
 export interface GetPackageJsonOptions {
   transformOutput: TransformOutput;
@@ -150,6 +151,7 @@ export function getPackageJson({
       peerDependencies,
       devDependencies,
     }),
+    _generatedBy: `dnt@${getDntVersion()}`,
   };
   return sortObject(final);
 
@@ -203,7 +205,12 @@ function sortObject(obj: Record<string, unknown>) {
     "exports",
     "scripts",
   ];
-  const lowPrecedence = ["dependencies", "peerDependencies", "devDependencies"];
+  const lowPrecedence = [
+    "dependencies",
+    "peerDependencies",
+    "devDependencies",
+    "_generatedBy",
+  ];
   const sortedObj: Record<string, unknown> = {};
   const finalEntries: Record<string, unknown> = {};
   for (const key of highPrecedence) {

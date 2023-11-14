@@ -81,6 +81,7 @@ Deno.test("single entrypoint", () => {
     scripts: {
       test: "node test_runner.js",
     },
+    _generatedBy: "dnt@dev",
   });
 
   assertEquals(
@@ -114,6 +115,7 @@ Deno.test("single entrypoint", () => {
           },
         },
       },
+      _generatedBy: "dnt@dev",
     },
   );
 
@@ -145,6 +147,7 @@ Deno.test("single entrypoint", () => {
           require: undefined,
         },
       },
+      _generatedBy: "dnt@dev",
     },
   );
 
@@ -167,6 +170,7 @@ Deno.test("single entrypoint", () => {
         "@types/node": versions.nodeTypes,
       },
       scripts: undefined,
+      _generatedBy: "dnt@dev",
     },
   );
 
@@ -196,6 +200,7 @@ Deno.test("single entrypoint", () => {
           require: undefined,
         },
       },
+      _generatedBy: "dnt@dev",
     },
   );
 
@@ -228,6 +233,7 @@ Deno.test("single entrypoint", () => {
           require: undefined,
         },
       },
+      _generatedBy: "dnt@dev",
     },
   );
 });
@@ -348,6 +354,7 @@ Deno.test("multiple entrypoints", () => {
       },
     },
     scripts: undefined,
+    _generatedBy: "dnt@dev",
   });
 });
 
@@ -417,6 +424,7 @@ Deno.test("binary entrypoints", () => {
       },
     },
     scripts: undefined,
+    _generatedBy: "dnt@dev",
   });
 });
 
@@ -505,6 +513,7 @@ Deno.test("peer dependencies", () => {
           "test-dep": "0.1.0",
           "@deno/shim-deno": "~0.1.0",
         },
+        _generatedBy: "dnt@dev",
       },
       null,
       2,
