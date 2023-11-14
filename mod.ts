@@ -85,10 +85,10 @@ export interface BuildOptions {
    * @default false
    */
   skipSourceOutput?: boolean;
-  /** Skip installing dependencies
+  /** Skip running `npm install`
    * @default false
    */
-  skipInstallDeps?: boolean;
+  skipNpmInstall?: boolean;
   /** Root directory to find test files in. Defaults to the cwd. */
   rootTestDir?: string;
   /** Glob pattern to use to find tests files. Defaults to `deno test`'s pattern. */
