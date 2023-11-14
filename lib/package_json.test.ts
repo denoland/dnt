@@ -468,38 +468,46 @@ Deno.test("peer dependencies", () => {
     },
   };
 
-  assertEquals(getPackageJson(props), {
-    name: "package",
-    version: "0.1.0",
-    main: "./script/mod.js",
-    module: "./esm/mod.js",
-    types: "./types/mod.d.ts",
-    dependencies: {
-      dep: "^1.0.0",
-    },
-    peerDependencies: {
-      peerDep: "^2.0.0",
-    },
-    devDependencies: {
-      "@types/node": versions.nodeTypes,
-      "picocolors": versions.picocolors,
-      "test-dep": "0.1.0",
-      "@deno/shim-deno": "~0.1.0",
-    },
-    exports: {
-      ".": {
-        import: {
-          types: "./types/mod.d.ts",
-          default: "./esm/mod.js",
+  // the stringify ensures that the order looks ok as well
+  assertEquals(
+    JSON.stringify(getPackageJson(props), null, 2),
+    JSON.stringify(
+      {
+        name: "package",
+        version: "0.1.0",
+        main: "./script/mod.js",
+        module: "./esm/mod.js",
+        types: "./types/mod.d.ts",
+        exports: {
+          ".": {
+            import: {
+              types: "./types/mod.d.ts",
+              default: "./esm/mod.js",
+            },
+            require: {
+              types: "./types/mod.d.ts",
+              default: "./script/mod.js",
+            },
+          },
         },
-        require: {
-          types: "./types/mod.d.ts",
-          default: "./script/mod.js",
+        scripts: {
+          test: "node test_runner.js",
+        },
+        dependencies: {
+          dep: "^1.0.0",
+        },
+        peerDependencies: {
+          peerDep: "^2.0.0",
+        },
+        devDependencies: {
+          "@types/node": versions.nodeTypes,
+          "picocolors": versions.picocolors,
+          "test-dep": "0.1.0",
+          "@deno/shim-deno": "~0.1.0",
         },
       },
-    },
-    scripts: {
-      test: "node test_runner.js",
-    },
-  });
+      null,
+      2,
+    ),
+  );
 });
