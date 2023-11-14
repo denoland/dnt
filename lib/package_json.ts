@@ -107,7 +107,7 @@ export function getPackageJson({
     }
     : {};
 
-  return {
+  const final: Record<string, unknown> = {
     ...mainExport,
     ...binaryExport,
     ...packageJsonObj,
@@ -151,6 +151,7 @@ export function getPackageJson({
       devDependencies,
     }),
   };
+  return sortObject(final);
 
   function shouldIncludeTypesNode() {
     if (Object.keys(dependencies).includes("@types/node")) {
@@ -182,4 +183,47 @@ export function getPackageJson({
     }
     return obj;
   }
+}
+
+function sortObject(obj: Record<string, unknown>) {
+  const highPrecedence = [
+    "name",
+    "version",
+    "description",
+    "keywords",
+    "author",
+    "homepage",
+    "repository",
+    "license",
+    "bugs",
+    "main",
+    "module",
+    "types",
+    "typings",
+    "exports",
+    "scripts",
+  ];
+  const lowPrecedence = ["dependencies", "peerDependencies", "devDependencies"];
+  const sortedObj: Record<string, unknown> = {};
+  const finalEntries: Record<string, unknown> = {};
+  for (const key of highPrecedence) {
+    if (key in obj) {
+      sortedObj[key] = obj[key];
+      delete obj[key];
+    }
+  }
+  for (const key of lowPrecedence) {
+    if (key in obj) {
+      finalEntries[key] = obj[key];
+      delete obj[key];
+    }
+  }
+  for (const key of Object.keys(obj)) {
+    sortedObj[key] = obj[key];
+  }
+  for (const [key, value] of Object.entries(finalEntries)) {
+    sortedObj[key] = value;
+  }
+
+  return sortedObj;
 }
