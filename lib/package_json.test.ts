@@ -5,8 +5,8 @@ import { getPackageJson, GetPackageJsonOptions } from "./package_json.ts";
 
 const versions = {
   picocolors: "^1.0.0",
-  nodeTypes: "^18.11.9",
-  tsLib: "^2.4.1",
+  nodeTypes: "^20.9.0",
+  tsLib: "^2.6.2",
 };
 
 Deno.test("single entrypoint", () => {
