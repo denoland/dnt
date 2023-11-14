@@ -3,10 +3,11 @@
 use std::collections::BTreeMap;
 use std::collections::HashMap;
 use std::pin::Pin;
-use std::sync::Arc;
+use std::rc::Rc;
 
 use anyhow::Result;
 use deno_ast::ModuleSpecifier;
+use deno_graph::source::CacheSetting;
 use futures::future;
 use futures::Future;
 
@@ -44,7 +45,7 @@ pub struct LoaderSpecifiers {
 }
 
 pub struct SourceLoader<'a> {
-  loader: Arc<Box<dyn Loader>>,
+  loader: Rc<dyn Loader>,
   specifiers: LoaderSpecifiers,
   specifier_mappers: Vec<Box<dyn SpecifierMapper>>,
   specifier_mappings: &'a HashMap<ModuleSpecifier, MappedSpecifier>,
@@ -52,12 +53,12 @@ pub struct SourceLoader<'a> {
 
 impl<'a> SourceLoader<'a> {
   pub fn new(
-    loader: Box<dyn Loader>,
+    loader: Rc<dyn Loader>,
     specifier_mappers: Vec<Box<dyn SpecifierMapper>>,
     specifier_mappings: &'a HashMap<ModuleSpecifier, MappedSpecifier>,
   ) -> Self {
     Self {
-      loader: Arc::new(loader),
+      loader,
       specifiers: Default::default(),
       specifier_mappers,
       specifier_mappings,
@@ -73,8 +74,9 @@ impl<'a> deno_graph::source::Loader for SourceLoader<'a> {
   fn load(
     &mut self,
     specifier: &ModuleSpecifier,
-    // todo: handle dynamic
     _is_dynamic: bool,
+    // todo: handle this for the new registry
+    _cache_setting: CacheSetting,
   ) -> deno_graph::source::LoadFuture {
     let specifier = match self.specifier_mappings.get(specifier) {
       Some(MappedSpecifier::Package(mapping)) => {
