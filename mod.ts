@@ -233,8 +233,8 @@ export async function build(options: BuildOptions): Promise<void> {
   createNpmIgnore();
 
   // install dependencies in order to prepare for checking TS diagnostics
-  if (!options.skipInstallDeps) log(`Running ${packageManager} install...`);
-  const npmInstallPromise = options.skipInstallDeps
+  if (!options.skipNpmInstall) log(`Running ${packageManager} install...`);
+  const npmInstallPromise = options.skipNpmInstall
     ? Promise.resolve()
     : runNpmCommand({
       bin: packageManager,
