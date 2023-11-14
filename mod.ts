@@ -81,14 +81,14 @@ export interface BuildOptions {
    * @default true
    */
   esModule?: boolean;
+  /** Skip running `npm install`.
+   * @default false
+   */
+  skipNpmInstall?: boolean;
   /** Skip outputting the canonical TypeScript in the output directory before emitting.
    * @default false
    */
   skipSourceOutput?: boolean;
-  /** Skip running `npm install`
-   * @default false
-   */
-  skipNpmInstall?: boolean;
   /** Root directory to find test files in. Defaults to the cwd. */
   rootTestDir?: string;
   /** Glob pattern to use to find tests files. Defaults to `deno test`'s pattern. */
@@ -233,14 +233,8 @@ export async function build(options: BuildOptions): Promise<void> {
   createNpmIgnore();
 
   // install dependencies in order to prepare for checking TS diagnostics
-  if (!options.skipNpmInstall) log(`Running ${packageManager} install...`);
-  const npmInstallPromise = options.skipNpmInstall
-    ? Promise.resolve()
-    : runNpmCommand({
-      bin: packageManager,
-      args: ["install"],
-      cwd: options.outDir,
-    });
+  const npmInstallPromise = runNpmInstall();
+
   if (options.typeCheck || options.declaration) {
     // Unfortunately this can't be run in parallel to building the project
     // in this case because TypeScript will resolve the npm packages when
@@ -534,6 +528,18 @@ export async function build(options: BuildOptions): Promise<void> {
       path.join(options.outDir, ".npmignore"),
       fileText,
     );
+  }
+
+  function runNpmInstall() {
+    if (options.skipNpmInstall) {
+      return Promise.resolve();
+    }
+    log(`Running ${packageManager} install...`);
+    return runNpmCommand({
+      bin: packageManager,
+      args: ["install"],
+      cwd: options.outDir,
+    });
   }
 
   async function transformEntryPoints(): Promise<TransformOutput> {
