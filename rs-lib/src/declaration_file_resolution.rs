@@ -185,7 +185,7 @@ fn fill_types_for_module(
 
     type_dependencies
       .entry(code_specifier.clone())
-      .or_insert_with(HashSet::new)
+      .or_default()
       .insert(TypesDependency {
         referrer: module.specifier.clone(),
         specifier: type_specifier.clone(),

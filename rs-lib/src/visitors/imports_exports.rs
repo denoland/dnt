@@ -58,22 +58,22 @@ fn visit_children(node: Node, context: &mut Context) -> Result<()> {
     match child {
       Node::ImportDecl(import_decl) => {
         visit_module_specifier(import_decl.src, context);
-        if let Some(asserts) = import_decl.asserts {
-          visit_asserts(asserts, context);
+        if let Some(asserts) = import_decl.with {
+          visit_import_attributes(asserts, context);
         }
       }
       Node::ExportAll(export_all) => {
         visit_module_specifier(export_all.src, context);
-        if let Some(asserts) = export_all.asserts {
-          visit_asserts(asserts, context);
+        if let Some(asserts) = export_all.with {
+          visit_import_attributes(asserts, context);
         }
       }
       Node::NamedExport(named_export) => {
         if let Some(src) = &named_export.src {
           visit_module_specifier(src, context);
         }
-        if let Some(asserts) = named_export.asserts {
-          visit_asserts(asserts, context);
+        if let Some(asserts) = named_export.with {
+          visit_import_attributes(asserts, context);
         }
       }
       Node::TsImportType(ts_import_type) => {
@@ -142,11 +142,10 @@ fn visit_module_specifier(str: &Str, context: &mut Context) {
   });
 }
 
-fn visit_asserts(asserts: &ObjectLit, context: &mut Context) {
-  let assert_token = asserts.previous_token_fast(context.program).unwrap();
-  assert_eq!(assert_token.text_fast(context.program), "assert");
-  let previous_token =
-    assert_token.previous_token_fast(context.program).unwrap();
+fn visit_import_attributes(asserts: &ObjectLit, context: &mut Context) {
+  let with_token = asserts.previous_token_fast(context.program).unwrap();
+  debug_assert!(matches!(with_token.text_fast(context.program), "with" | "assert"));
+  let previous_token = with_token.previous_token_fast(context.program).unwrap();
   context.text_changes.push(TextChange {
     range: create_range(previous_token.end(), asserts.end(), context),
     new_text: String::new(),

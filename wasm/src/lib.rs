@@ -4,6 +4,7 @@ mod utils;
 
 use std::collections::HashMap;
 use std::future::Future;
+use std::rc::Rc;
 
 use anyhow::Result;
 use dnt::MappedSpecifier;
@@ -76,7 +77,7 @@ pub async fn transform(options: JsValue) -> Result<JsValue, JsValue> {
     test_entry_points: parse_module_specifiers(options.test_entry_points)?,
     shims: options.shims,
     test_shims: options.test_shims,
-    loader: Some(Box::new(JsLoader {})),
+    loader: Some(Rc::new(JsLoader {})),
     specifier_mappings: options.mappings,
     target: options.target,
     import_map: options.import_map,

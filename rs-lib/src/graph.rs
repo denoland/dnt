@@ -1,7 +1,9 @@
 // Copyright 2018-2023 the Deno authors. All rights reserved. MIT license.
 
 use std::collections::BTreeMap;
+use std::fmt::Write;
 use std::collections::HashMap;
+use std::rc::Rc;
 
 use crate::loader::get_all_specifier_mappers;
 use crate::loader::Loader;
@@ -19,13 +21,14 @@ use deno_ast::ModuleSpecifier;
 use deno_ast::ParsedSource;
 use deno_graph::CapturingModuleAnalyzer;
 use deno_graph::Module;
-use deno_graph::ModuleGraphError;
 use deno_graph::ParsedSourceStore;
+use deno_graph::source::ResolutionMode;
+use deno_graph::source::ResolveError;
 
 pub struct ModuleGraphOptions<'a> {
   pub entry_points: Vec<ModuleSpecifier>,
   pub test_entry_points: Vec<ModuleSpecifier>,
-  pub loader: Option<Box<dyn Loader>>,
+  pub loader: Option<Rc<dyn Loader>>,
   pub specifier_mappings: &'a HashMap<ModuleSpecifier, MappedSpecifier>,
   pub import_map: Option<ModuleSpecifier>,
 }
@@ -42,7 +45,7 @@ impl ModuleGraph {
   ) -> Result<(Self, Specifiers)> {
     let loader = options.loader.unwrap_or_else(|| {
       #[cfg(feature = "tokio-loader")]
-      return Box::new(crate::loader::DefaultLoader::new());
+      return Rc::new(crate::loader::DefaultLoader::new());
       #[cfg(not(feature = "tokio-loader"))]
       panic!("You must provide a loader or use the 'tokio-loader' feature.")
     });
@@ -74,25 +77,28 @@ impl ModuleGraph {
         &mut loader,
         deno_graph::BuildOptions {
           is_dynamic: false,
-          imports: vec![],
+          imports: Default::default(),
           resolver: resolver.as_ref().map(|r| r.as_resolver()),
           module_analyzer: Some(&capturing_analyzer),
           reporter: None,
           npm_resolver: None,
+          workspace_members: Default::default(),
         },
       )
       .await;
 
     let mut error_message = String::new();
-    for error in graph.errors() {
+    for error in graph.module_errors() {
       if !error_message.is_empty() {
         error_message.push_str("\n\n");
       }
-      error_message.push_str(&error.to_string_with_range());
-      if let ModuleGraphError::ModuleError(error) = error {
-        if !error_message.contains(error.specifier().as_str()) {
-          error_message.push_str(&format!(" ({})", error.specifier()));
-        }
+      if let Some(range) = error.maybe_referrer() {
+        write!(error_message, "{:#}\n    at {}", error, range).unwrap();
+      } else {
+        write!(error_message, "{:#}", error).unwrap();
+      }
+      if !error_message.contains(error.specifier().as_str()) {
+        error_message.push_str(&format!(" ({})", error.specifier()));
       }
     }
     if !error_message.is_empty() {
@@ -255,10 +261,11 @@ impl deno_graph::source::Resolver for ImportMapResolver {
     &self,
     specifier: &str,
     referrer: &ModuleSpecifier,
-  ) -> Result<ModuleSpecifier, anyhow::Error> {
+    _mode: ResolutionMode,
+  ) -> Result<ModuleSpecifier, ResolveError> {
     self
       .0
       .resolve(specifier, referrer)
-      .map_err(|err| err.into())
+      .map_err(|err| ResolveError::Other(err.into()))
   }
 }

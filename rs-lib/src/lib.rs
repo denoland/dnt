@@ -9,6 +9,7 @@ use std::collections::HashMap;
 use std::collections::HashSet;
 use std::path::Path;
 use std::path::PathBuf;
+use std::rc::Rc;
 
 use analyze::get_top_level_decls;
 use anyhow::Context;
@@ -224,7 +225,7 @@ pub struct TransformOptions {
   pub test_entry_points: Vec<ModuleSpecifier>,
   pub shims: Vec<Shim>,
   pub test_shims: Vec<Shim>,
-  pub loader: Option<Box<dyn Loader>>,
+  pub loader: Option<Rc<dyn Loader>>,
   /// Maps specifiers to an npm package or module.
   pub specifier_mappings: HashMap<ModuleSpecifier, MappedSpecifier>,
   /// Version of ECMAScript that the final code will target.
