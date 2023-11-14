@@ -35,6 +35,7 @@ pub trait Loader {
   fn load(
     &self,
     url: ModuleSpecifier,
+    cache_setting: CacheSetting,
   ) -> Pin<Box<dyn Future<Output = Result<Option<LoadResponse>>> + 'static>>;
 }
 
@@ -75,8 +76,7 @@ impl<'a> deno_graph::source::Loader for SourceLoader<'a> {
     &mut self,
     specifier: &ModuleSpecifier,
     _is_dynamic: bool,
-    // todo: handle this for the new registry
-    _cache_setting: CacheSetting,
+    cache_setting: CacheSetting,
   ) -> deno_graph::source::LoadFuture {
     let specifier = match self.specifier_mappings.get(specifier) {
       Some(MappedSpecifier::Package(mapping)) => {
@@ -112,7 +112,7 @@ impl<'a> deno_graph::source::Loader for SourceLoader<'a> {
     let loader = self.loader.clone();
     let specifier = specifier.to_owned();
     Box::pin(async move {
-      let resp = loader.load(specifier.clone()).await;
+      let resp = loader.load(specifier.clone(), cache_setting).await;
       resp.map(|r| {
         r.map(|r| deno_graph::source::LoadResponse::Module {
           specifier: r.specifier,

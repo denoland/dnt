@@ -19,6 +19,7 @@ use anyhow::Context;
 use anyhow::Result;
 use deno_ast::ModuleSpecifier;
 use deno_ast::ParsedSource;
+use deno_graph::source::CacheSetting;
 use deno_graph::source::ResolutionMode;
 use deno_graph::source::ResolveError;
 use deno_graph::CapturingModuleAnalyzer;
@@ -231,7 +232,7 @@ impl ImportMapResolver {
     loader: &dyn Loader,
   ) -> Result<Self> {
     let response = loader
-      .load(import_map_url.clone())
+      .load(import_map_url.clone(), CacheSetting::Use)
       .await?
       .ok_or_else(|| anyhow!("Could not find {}", import_map_url))?;
     let value = jsonc_parser::parse_to_serde_value(

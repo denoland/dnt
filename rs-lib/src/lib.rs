@@ -39,6 +39,7 @@ use visitors::GetGlobalTextChangesParams;
 use visitors::GetImportExportsTextChangesParams;
 
 pub use deno_ast::ModuleSpecifier;
+pub use deno_graph::source::CacheSetting;
 pub use loader::LoadResponse;
 pub use loader::Loader;
 pub use utils::url_to_file_path;
