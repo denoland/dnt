@@ -1,8 +1,8 @@
 // Copyright 2018-2023 the Deno authors. All rights reserved. MIT license.
 
 use std::collections::BTreeMap;
-use std::fmt::Write;
 use std::collections::HashMap;
+use std::fmt::Write;
 use std::rc::Rc;
 
 use crate::loader::get_all_specifier_mappers;
@@ -19,11 +19,11 @@ use anyhow::Context;
 use anyhow::Result;
 use deno_ast::ModuleSpecifier;
 use deno_ast::ParsedSource;
+use deno_graph::source::ResolutionMode;
+use deno_graph::source::ResolveError;
 use deno_graph::CapturingModuleAnalyzer;
 use deno_graph::Module;
 use deno_graph::ParsedSourceStore;
-use deno_graph::source::ResolutionMode;
-use deno_graph::source::ResolveError;
 
 pub struct ModuleGraphOptions<'a> {
   pub entry_points: Vec<ModuleSpecifier>,

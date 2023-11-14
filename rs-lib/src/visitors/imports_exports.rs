@@ -144,7 +144,10 @@ fn visit_module_specifier(str: &Str, context: &mut Context) {
 
 fn visit_import_attributes(asserts: &ObjectLit, context: &mut Context) {
   let with_token = asserts.previous_token_fast(context.program).unwrap();
-  debug_assert!(matches!(with_token.text_fast(context.program), "with" | "assert"));
+  debug_assert!(matches!(
+    with_token.text_fast(context.program),
+    "with" | "assert"
+  ));
   let previous_token = with_token.previous_token_fast(context.program).unwrap();
   context.text_changes.push(TextChange {
     range: create_range(previous_token.end(), asserts.end(), context),
