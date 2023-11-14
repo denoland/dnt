@@ -44,7 +44,7 @@ export function getCompilerScriptTarget(target: ScriptTarget) {
   }
 }
 
-// Created from https://github.com/microsoft/TypeScript/blob/0ad5f82d6243db80d42bc0abb7a191dd380e980e/src/compiler/commandLineParser.ts
+// Created from https://github.com/microsoft/TypeScript/blob/v5.2.2/src/compiler/commandLineParser.ts
 // then aligned with tsconfig.json's casing
 export type LibName =
   | "ES5"
@@ -58,6 +58,7 @@ export type LibName =
   | "ES2020"
   | "ES2021"
   | "ES2022"
+  | "ES2023"
   | "ESNext"
   | "DOM"
   | "DOM.Iterable"
@@ -75,6 +76,7 @@ export type LibName =
   | "ES2015.Symbol"
   | "ES2015.Symbol.WellKnown"
   | "ES2016.Array.Include"
+  | "ES2017.Date"
   | "ES2017.Object"
   | "ES2017.SharedMemory"
   | "ES2017.String"
@@ -89,7 +91,8 @@ export type LibName =
   | "ES2019.Object"
   | "ES2019.String"
   | "ES2019.Symbol"
-  | "ES2020.BigInt"
+  | "ES2019.Intl"
+  | "ES2020.Bigint"
   | "ES2020.Date"
   | "ES2020.Promise"
   | "ES2020.SharedMemory"
@@ -105,15 +108,24 @@ export type LibName =
   | "ES2022.Error"
   | "ES2022.Intl"
   | "ES2022.Object"
+  | "ES2022.SharedMemory"
   | "ES2022.String"
+  | "ES2022.RegExp"
+  | "ES2023.Array"
+  | "ES2023.Collection"
   | "ESNext.Array"
+  | "ESNext.Collection"
   | "ESNext.Symbol"
   | "ESNext.AsyncIterable"
   | "ESNext.Intl"
+  | "ESNext.Disposable"
   | "ESNext.BigInt"
   | "ESNext.String"
   | "ESNext.Promise"
-  | "ESNext.WeakRef";
+  | "ESNext.WeakRef"
+  | "ESNext.Decorators"
+  | "Decorators"
+  | "Decorators.Legacy";
 
 export function getCompilerLibOption(target: ScriptTarget): LibName[] {
   switch (target) {

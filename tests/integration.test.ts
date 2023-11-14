@@ -4,7 +4,7 @@ import {
   assertEquals,
   assertRejects,
   assertStringIncludes,
-} from "https://deno.land/std@0.182.0/testing/asserts.ts";
+} from "https://deno.land/std@0.181.0/testing/asserts.ts";
 import { ShimValue } from "../lib/shims.ts";
 import { build, BuildOptions, ShimOptions } from "../mod.ts";
 import { path } from "../lib/mod.deps.ts";
@@ -44,7 +44,7 @@ Deno.test("should throw because both scriptModule and esModule are false", async
   );
 });
 
-Deno.test("should build test project", async () => {
+Deno.test("should build test project - basic", async () => {
   await runTest("test_project", {
     entryPoints: ["mod.ts"],
     outDir: "./npm",
@@ -95,22 +95,22 @@ esm/mod.test.js
 esm/mod.test.d.ts
 script/mod.test.js
 script/mod.test.d.ts
-esm/deps/deno.land/std@0.182.0/fmt/colors.js
-esm/deps/deno.land/std@0.182.0/fmt/colors.d.ts
-script/deps/deno.land/std@0.182.0/fmt/colors.js
-script/deps/deno.land/std@0.182.0/fmt/colors.d.ts
-esm/deps/deno.land/std@0.182.0/testing/_diff.js
-esm/deps/deno.land/std@0.182.0/testing/_diff.d.ts
-script/deps/deno.land/std@0.182.0/testing/_diff.js
-script/deps/deno.land/std@0.182.0/testing/_diff.d.ts
-esm/deps/deno.land/std@0.182.0/testing/_format.js
-esm/deps/deno.land/std@0.182.0/testing/_format.d.ts
-script/deps/deno.land/std@0.182.0/testing/_format.js
-script/deps/deno.land/std@0.182.0/testing/_format.d.ts
-esm/deps/deno.land/std@0.182.0/testing/asserts.js
-esm/deps/deno.land/std@0.182.0/testing/asserts.d.ts
-script/deps/deno.land/std@0.182.0/testing/asserts.js
-script/deps/deno.land/std@0.182.0/testing/asserts.d.ts
+esm/deps/deno.land/std@0.181.0/fmt/colors.js
+esm/deps/deno.land/std@0.181.0/fmt/colors.d.ts
+script/deps/deno.land/std@0.181.0/fmt/colors.js
+script/deps/deno.land/std@0.181.0/fmt/colors.d.ts
+esm/deps/deno.land/std@0.181.0/testing/_diff.js
+esm/deps/deno.land/std@0.181.0/testing/_diff.d.ts
+script/deps/deno.land/std@0.181.0/testing/_diff.js
+script/deps/deno.land/std@0.181.0/testing/_diff.d.ts
+esm/deps/deno.land/std@0.181.0/testing/_format.js
+esm/deps/deno.land/std@0.181.0/testing/_format.d.ts
+script/deps/deno.land/std@0.181.0/testing/_format.js
+script/deps/deno.land/std@0.181.0/testing/_format.d.ts
+esm/deps/deno.land/std@0.181.0/testing/asserts.js
+esm/deps/deno.land/std@0.181.0/testing/asserts.d.ts
+script/deps/deno.land/std@0.181.0/testing/asserts.js
+script/deps/deno.land/std@0.181.0/testing/asserts.d.ts
 esm/_dnt.test_shims.js
 esm/_dnt.test_shims.d.ts
 script/_dnt.test_shims.js
@@ -167,14 +167,14 @@ Deno.test("should build test project without esm", async () => {
       `src/
 script/mod.test.js
 types/mod.test.d.ts
-script/deps/deno.land/std@0.182.0/fmt/colors.js
-types/deps/deno.land/std@0.182.0/fmt/colors.d.ts
-script/deps/deno.land/std@0.182.0/testing/_diff.js
-types/deps/deno.land/std@0.182.0/testing/_diff.d.ts
-script/deps/deno.land/std@0.182.0/testing/_format.js
-types/deps/deno.land/std@0.182.0/testing/_format.d.ts
-script/deps/deno.land/std@0.182.0/testing/asserts.js
-types/deps/deno.land/std@0.182.0/testing/asserts.d.ts
+script/deps/deno.land/std@0.181.0/fmt/colors.js
+types/deps/deno.land/std@0.181.0/fmt/colors.d.ts
+script/deps/deno.land/std@0.181.0/testing/_diff.js
+types/deps/deno.land/std@0.181.0/testing/_diff.d.ts
+script/deps/deno.land/std@0.181.0/testing/_format.js
+types/deps/deno.land/std@0.181.0/testing/_format.d.ts
+script/deps/deno.land/std@0.181.0/testing/asserts.js
+types/deps/deno.land/std@0.181.0/testing/asserts.d.ts
 script/_dnt.test_shims.js
 types/_dnt.test_shims.d.ts
 test_runner.js
@@ -461,30 +461,30 @@ esm/mod.test.d.ts
 script/mod.test.js
 script/mod.test.js.map
 script/mod.test.d.ts
-esm/deps/deno.land/std@0.182.0/fmt/colors.js
-esm/deps/deno.land/std@0.182.0/fmt/colors.js.map
-esm/deps/deno.land/std@0.182.0/fmt/colors.d.ts
-script/deps/deno.land/std@0.182.0/fmt/colors.js
-script/deps/deno.land/std@0.182.0/fmt/colors.js.map
-script/deps/deno.land/std@0.182.0/fmt/colors.d.ts
-esm/deps/deno.land/std@0.182.0/testing/_diff.js
-esm/deps/deno.land/std@0.182.0/testing/_diff.js.map
-esm/deps/deno.land/std@0.182.0/testing/_diff.d.ts
-script/deps/deno.land/std@0.182.0/testing/_diff.js
-script/deps/deno.land/std@0.182.0/testing/_diff.js.map
-script/deps/deno.land/std@0.182.0/testing/_diff.d.ts
-esm/deps/deno.land/std@0.182.0/testing/_format.js
-esm/deps/deno.land/std@0.182.0/testing/_format.js.map
-esm/deps/deno.land/std@0.182.0/testing/_format.d.ts
-script/deps/deno.land/std@0.182.0/testing/_format.js
-script/deps/deno.land/std@0.182.0/testing/_format.js.map
-script/deps/deno.land/std@0.182.0/testing/_format.d.ts
-esm/deps/deno.land/std@0.182.0/testing/asserts.js
-esm/deps/deno.land/std@0.182.0/testing/asserts.js.map
-esm/deps/deno.land/std@0.182.0/testing/asserts.d.ts
-script/deps/deno.land/std@0.182.0/testing/asserts.js
-script/deps/deno.land/std@0.182.0/testing/asserts.js.map
-script/deps/deno.land/std@0.182.0/testing/asserts.d.ts
+esm/deps/deno.land/std@0.181.0/fmt/colors.js
+esm/deps/deno.land/std@0.181.0/fmt/colors.js.map
+esm/deps/deno.land/std@0.181.0/fmt/colors.d.ts
+script/deps/deno.land/std@0.181.0/fmt/colors.js
+script/deps/deno.land/std@0.181.0/fmt/colors.js.map
+script/deps/deno.land/std@0.181.0/fmt/colors.d.ts
+esm/deps/deno.land/std@0.181.0/testing/_diff.js
+esm/deps/deno.land/std@0.181.0/testing/_diff.js.map
+esm/deps/deno.land/std@0.181.0/testing/_diff.d.ts
+script/deps/deno.land/std@0.181.0/testing/_diff.js
+script/deps/deno.land/std@0.181.0/testing/_diff.js.map
+script/deps/deno.land/std@0.181.0/testing/_diff.d.ts
+esm/deps/deno.land/std@0.181.0/testing/_format.js
+esm/deps/deno.land/std@0.181.0/testing/_format.js.map
+esm/deps/deno.land/std@0.181.0/testing/_format.d.ts
+script/deps/deno.land/std@0.181.0/testing/_format.js
+script/deps/deno.land/std@0.181.0/testing/_format.js.map
+script/deps/deno.land/std@0.181.0/testing/_format.d.ts
+esm/deps/deno.land/std@0.181.0/testing/asserts.js
+esm/deps/deno.land/std@0.181.0/testing/asserts.js.map
+esm/deps/deno.land/std@0.181.0/testing/asserts.d.ts
+script/deps/deno.land/std@0.181.0/testing/asserts.js
+script/deps/deno.land/std@0.181.0/testing/asserts.js.map
+script/deps/deno.land/std@0.181.0/testing/asserts.d.ts
 esm/_dnt.test_shims.js
 esm/_dnt.test_shims.js.map
 esm/_dnt.test_shims.d.ts
@@ -987,6 +987,25 @@ Deno.test("should build and type check declaration import project", async () => 
   });
 });
 
+Deno.test("using declaration project", async () => {
+  await runTest("using_decl_project", {
+    entryPoints: ["mod.ts"],
+    outDir: "./npm",
+    shims: {
+      deno: {
+        test: true,
+      },
+    },
+    compilerOptions: {
+      lib: ["ESNext.Disposable"],
+    },
+    package: {
+      name: "declaration_project",
+      version: "0.0.0",
+    },
+  });
+});
+
 export interface Output {
   packageJson: any;
   npmIgnore: string;
@@ -1009,7 +1028,8 @@ async function runTest(
     | "shim_project"
     | "test_project"
     | "tla_project"
-    | "web_socket_project",
+    | "web_socket_project"
+    | "using_decl_project",
   options: BuildOptions,
   checkOutput?: (output: Output) => Promise<void> | void,
 ) {
@@ -1018,6 +1038,7 @@ async function runTest(
     ? path.fromFileUrl(options.outDir)
     : options.outDir;
   Deno.chdir(`./tests/${project}`);
+  tryRemoveOutDir();
   try {
     await build(options);
     const getFileText = (filePath: string) => {
@@ -1046,14 +1067,17 @@ async function runTest(
       });
     }
   } finally {
+    tryRemoveOutDir();
+    Deno.chdir(originalCwd);
+  }
+
+  function tryRemoveOutDir() {
     try {
       Deno.removeSync(outDirPath, { recursive: true });
     } catch (err) {
       if (!(err instanceof Deno.errors.NotFound)) {
         console.error(`Error removing dir: ${err}`);
       }
-    } finally {
-      Deno.chdir(originalCwd);
     }
   }
 }

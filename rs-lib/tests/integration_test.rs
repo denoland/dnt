@@ -572,7 +572,7 @@ async fn transform_remote_files() {
           "/mod.ts",
           concat!(
             "import * as other from 'http://localhost/mod.ts';\n",
-            "import 'https://deno.land/std@0.182.0/mod.ts';",
+            "import 'https://deno.land/std@0.181.0/mod.ts';",
           ),
         )
         .add_remote_file(
@@ -607,7 +607,7 @@ async fn transform_remote_files() {
           &[("content-type", "application/javascript")],
         )
         .add_remote_file(
-          "https://deno.land/std@0.182.0/mod.ts",
+          "https://deno.land/std@0.181.0/mod.ts",
           "console.log(5);",
         )
         .add_remote_file_with_headers(
@@ -640,7 +640,7 @@ async fn transform_remote_files() {
         "mod.ts",
         concat!(
           "import * as other from './deps/localhost/mod.js';\n",
-          "import './deps/deno.land/std@0.182.0/mod.js';",
+          "import './deps/deno.land/std@0.181.0/mod.js';",
         )
       ),
       (
@@ -671,7 +671,7 @@ async fn transform_remote_files() {
         "deps/localhost/sub/subfolder.js",
         "import * as localhost2 from '../../localhost2.js';"
       ),
-      ("deps/deno.land/std@0.182.0/mod.ts", "console.log(5);"),
+      ("deps/deno.land/std@0.181.0/mod.ts", "console.log(5);"),
       (
         "deps/localhost2.js",
         "import * as localhost3Mod from './localhost3/mod.js';"
@@ -1217,7 +1217,7 @@ async fn node_module_mapping() {
         .add_local_file(
           "/mod.ts",
           concat!(
-            "import * as path from 'https://deno.land/std@0.182.0/node/path.ts';\n",
+            "import * as path from 'https://deno.land/std@0.181.0/node/path.ts';\n",
             "import { performance } from 'https://deno.land/std@0.156.0/node/perf_hooks.ts';\n",
             "import * as fs from 'https://deno.land/std/node/fs/promises.ts';",
           ),
@@ -1551,7 +1551,7 @@ async fn test_entry_points_same_module_multiple_places() {
         .add_local_file(
           "/mod.ts",
           concat!(
-            "export * from 'https://deno.land/std@0.182.0/path.ts';\n",
+            "export * from 'https://deno.land/std@0.181.0/path.ts';\n",
             "import * as deps from './deps.ts';",
           ),
         )
@@ -1560,16 +1560,16 @@ async fn test_entry_points_same_module_multiple_places() {
         .add_local_file(
           "/deps.ts",
           concat!(
-            "export * from 'https://deno.land/std@0.182.0/path.ts';\n",
-            "export * from 'https://deno.land/std@0.182.0/flags.ts';",
+            "export * from 'https://deno.land/std@0.181.0/path.ts';\n",
+            "export * from 'https://deno.land/std@0.181.0/flags.ts';",
           ),
         )
         .add_remote_file(
-          "https://deno.land/std@0.182.0/flags.ts",
+          "https://deno.land/std@0.181.0/flags.ts",
           "export class Flags {}",
         )
         .add_remote_file(
-          "https://deno.land/std@0.182.0/path.ts",
+          "https://deno.land/std@0.181.0/path.ts",
           "export class Path {}",
         )
         .add_local_file("/mod.test.ts", "import * as deps from './deps.ts';");
@@ -1585,22 +1585,22 @@ async fn test_entry_points_same_module_multiple_places() {
       (
         "mod.ts",
         concat!(
-          "export * from './deps/deno.land/std@0.182.0/path.js';\n",
+          "export * from './deps/deno.land/std@0.181.0/path.js';\n",
           "import * as deps from './deps.js';",
         )
       ),
       (
         "deps.ts",
         concat!(
-          "export * from './deps/deno.land/std@0.182.0/path.js';\n",
-          "export * from './deps/deno.land/std@0.182.0/flags.js';",
+          "export * from './deps/deno.land/std@0.181.0/path.js';\n",
+          "export * from './deps/deno.land/std@0.181.0/flags.js';",
         )
       ),
       (
-        "deps/deno.land/std@0.182.0/flags.ts",
+        "deps/deno.land/std@0.181.0/flags.ts",
         "export class Flags {}"
       ),
-      ("deps/deno.land/std@0.182.0/path.ts", "export class Path {}")
+      ("deps/deno.land/std@0.181.0/path.ts", "export class Path {}")
     ]
   );
   assert_eq!(result.main.entry_points, &[PathBuf::from("mod.ts")]);
