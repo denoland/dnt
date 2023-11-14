@@ -103,3 +103,7 @@ export function valueToUrl(value: string) {
     return path.toFileUrl(path.resolve(value)).toString();
   }
 }
+
+export function getDntVersion(url = import.meta.url) {
+  return /\/dnt@([0-9]+\.[0-9]+\.[0-9]+)\//.exec(url)?.[1] ?? "dev";
+}

@@ -1,6 +1,6 @@
 import { path } from "./mod.deps.ts";
 import { assertEquals, assertRejects } from "./test.deps.ts";
-import { runCommand, valueToUrl } from "./utils.ts";
+import { getDntVersion, runCommand, valueToUrl } from "./utils.ts";
 
 Deno.test({
   name: "should error when command doesn't exist",
@@ -29,4 +29,13 @@ Deno.test("valueToUrl", () => {
     path.toFileUrl(path.resolve("test")).toString(),
   );
   assertEquals(valueToUrl("file:///test"), "file:///test");
+});
+
+Deno.test("getDntVersion", () => {
+  assertEquals(getDntVersion("https://deno.land/x/dnt@0.1.0/mod.ts"), "0.1.0");
+  assertEquals(
+    getDntVersion("https://deno.land/x/dnt@20.21.22/mod.ts"),
+    "20.21.22",
+  );
+  assertEquals(getDntVersion("file:///test/mod.ts"), "dev");
 });
