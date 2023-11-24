@@ -499,6 +499,13 @@ export async function build(options: BuildOptions): Promise<void> {
   }
 
   function createPackageJson() {
+    if (options.package?.files != null) {
+      warn(
+        "Specifying `files` for the package.json is not recommended " +
+          "because it will cause the .npmignore file to not be respected.",
+      );
+    }
+
     const packageJsonObj = getPackageJson({
       entryPoints,
       transformOutput,
