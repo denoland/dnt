@@ -8,9 +8,10 @@ function assertEquals(a: unknown, b: unknown) {
 
 Deno.test("should get array from async generator", async () => {
   // example from https://www.npmjs.com/package/array-from-async
-  async function *generator() {
-    for (let i = 0; i < 4; i++)
+  async function* generator() {
+    for (let i = 0; i < 4; i++) {
       yield i * 2;
+    }
   }
 
   const result = await fromAsync(generator());
