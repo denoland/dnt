@@ -1,10 +1,10 @@
-import jsonData from "./data.json" assert { type: "json" };
+import jsonData from "./data.json" with { type: "json" };
 
 export function getOutput() {
   return jsonData.prop;
 }
 
 export async function getDynamicOutput() {
-  const module = await import("./data.json", { assert: { type: "json" } });
+  const module = await import("./data.json", { with: { type: "json" } });
   return module.default.prop;
 }
