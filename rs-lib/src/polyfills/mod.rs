@@ -3,12 +3,19 @@
 use std::collections::HashSet;
 
 use deno_ast::swc::common::SyntaxContext;
+use deno_ast::view::Expr;
 use deno_ast::view::Node;
+use deno_ast::view::ObjectPatProp;
+use deno_ast::view::Pat;
 use deno_ast::view::Program;
+use deno_ast::view::PropName;
+use deno_ast::SourceRanged;
 
+use crate::Dependency;
 use crate::ScriptTarget;
 
 mod array_find_last;
+mod array_from_async;
 mod error_cause;
 mod import_meta;
 mod object_has_own;
@@ -22,12 +29,69 @@ pub trait Polyfill {
     context: &PolyfillVisitContext<'_, '_>,
   ) -> bool;
   fn get_file_text(&self) -> &'static str;
+  fn dependencies(&self) -> Vec<Dependency> {
+    Vec::new()
+  }
 }
 
 pub struct PolyfillVisitContext<'a, 'b> {
   pub program: Program<'b>,
   pub unresolved_context: SyntaxContext,
   pub top_level_decls: &'a HashSet<String>,
+}
+
+impl<'a, 'b> PolyfillVisitContext<'a, 'b> {
+  pub fn has_global_property_access(
+    &self,
+    node: Node,
+    global_name: &str,
+    property_name: &str,
+  ) -> bool {
+    match node {
+      // ex. Object.hasOwn
+      Node::MemberExpr(member_expr) => {
+        if let Expr::Ident(obj_ident) = &member_expr.obj {
+          obj_ident.ctxt() == self.unresolved_context
+            && !self.top_level_decls.contains(global_name)
+            && obj_ident.text_fast(self.program) == global_name
+            && member_expr.prop.text_fast(self.program) == property_name
+        } else {
+          false
+        }
+      }
+      // ex. const { hasOwn } = Object;
+      Node::VarDeclarator(decl) => {
+        let init = match &decl.init {
+          Some(Expr::Ident(ident)) => ident,
+          _ => return false,
+        };
+        let props = match &decl.name {
+          Pat::Object(obj) => &obj.props,
+          _ => return false,
+        };
+        init.ctxt() == self.unresolved_context
+          && !self.top_level_decls.contains(global_name)
+          && init.text_fast(self.program) == global_name
+          && props.iter().any(|prop| {
+            match prop {
+              ObjectPatProp::Rest(_) => true, // unknown, so include
+              ObjectPatProp::Assign(assign) => {
+                assign.key.text_fast(self.program) == property_name
+              }
+              ObjectPatProp::KeyValue(key_value) => match &key_value.key {
+                PropName::BigInt(_) | PropName::Num(_) => false,
+                PropName::Computed(_) => true, // unknown, so include
+                PropName::Ident(ident) => {
+                  ident.text_fast(self.program) == property_name
+                }
+                PropName::Str(str) => str.value() == property_name,
+              },
+            }
+          })
+      }
+      _ => false,
+    }
+  }
 }
 
 pub fn polyfills_for_target(target: ScriptTarget) -> Vec<Box<dyn Polyfill>> {
@@ -43,6 +107,7 @@ fn all_polyfills() -> Vec<Box<dyn Polyfill>> {
     Box::new(error_cause::ErrorCausePolyfill),
     Box::new(string_replace_all::StringReplaceAllPolyfill),
     Box::new(array_find_last::ArrayFindLastPolyfill),
+    Box::new(array_from_async::ArrayFromAsyncPolyfill),
     Box::new(import_meta::ImportMetaPolyfill),
   ]
 }

@@ -1938,7 +1938,7 @@ async fn json_module_re_export() {
       loader
         .add_local_file(
           "/mod.ts",
-          r#"export { default as Test } from './data.json' assert { type: "json" };"#
+          r#"export { default as Test } from './data.json' with { type: "json" };"#
         )
         .add_local_file("/data.json", r#"{ "prop": 5 }"#);
     })

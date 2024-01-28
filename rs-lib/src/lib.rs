@@ -506,6 +506,18 @@ fn check_add_polyfill_file_to_environment(
       }
     }
   }
+  for polyfill in &env_context.found_polyfills {
+    for dep in polyfill.dependencies() {
+      if !env_context
+        .environment
+        .dependencies
+        .iter()
+        .any(|d| d.name == dep.name)
+      {
+        env_context.environment.dependencies.push(dep);
+      }
+    }
+  }
 }
 
 fn check_add_shim_file_to_environment(
