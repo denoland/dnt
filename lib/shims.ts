@@ -103,7 +103,7 @@ function getDenoShim(): Shim {
   return {
     package: {
       name: "@deno/shim-deno",
-      version: "~0.17.0",
+      version: "~0.18.0",
     },
     globalNames: ["Deno"],
   };
@@ -197,7 +197,7 @@ function getUndiciShim(): Shim {
   return {
     package: {
       name: "undici",
-      version: "^5.27.2",
+      version: "^6.0.0",
     },
     globalNames: [
       "fetch",
