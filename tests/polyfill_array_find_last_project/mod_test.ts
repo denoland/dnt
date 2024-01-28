@@ -42,3 +42,7 @@ Deno.test("should find last in array", () => {
     undefined,
   );
 });
+
+Deno.test("should find last for Uint8Array", () => {
+  assertEquals(findLast(new Uint8Array([1, 2, 3]), () => true), 3);
+});
