@@ -33,7 +33,7 @@ declare global {
       thisArg?: any,
     ): number;
   }
-  interface Uint8Array<T> {
+  interface Uint8Array {
     /**
      * Returns the value of the last element in the array where predicate is true, and undefined
      * otherwise.
@@ -72,9 +72,9 @@ declare global {
   }
 }
 
-function findLastIndex(self: any, callbackfn: number, that: any[]) {
+function findLastIndex(self: any, callbackfn: any, that: any) {
   const boundFunc = that === undefined ? callbackfn : callbackfn.bind(that);
-  let index = this.length - 1;
+  let index = self.length - 1;
   while (index >= 0) {
     const result = boundFunc(self[index], index, self);
     if (result) {
@@ -85,9 +85,9 @@ function findLastIndex(self: any, callbackfn: number, that: any[]) {
   return -1;
 }
 
-function findLast(self: any, callbackfn: number, that: any[]) {
+function findLast(self: any, callbackfn: any, that: any) {
   const index = self.findLastIndex(callbackfn, that);
-  return index === -1 ? undefined : this[index];
+  return index === -1 ? undefined : self[index];
 }
 
 if (!Array.prototype.findLastIndex) {
