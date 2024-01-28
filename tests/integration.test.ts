@@ -10,7 +10,7 @@ import { build, BuildOptions, ShimOptions } from "../mod.ts";
 import { path } from "../lib/mod.deps.ts";
 
 const versions = {
-  denoShim: "~0.17.0",
+  denoShim: "~0.18.0",
   denoTestShim: "~0.5.0",
   cryptoShim: "~0.3.1",
   domExceptionShim: "^4.0.0",
@@ -18,7 +18,7 @@ const versions = {
   promptsShim: "~0.1.0",
   timersShim: "~0.1.0",
   weakRefSham: "~0.1.0",
-  undici: "^5.27.2",
+  undici: "^6.0.0",
   picocolors: "^1.0.0",
   nodeTypes: "^20.9.0",
   tsLib: "^2.6.2",
