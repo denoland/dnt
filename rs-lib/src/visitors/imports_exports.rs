@@ -87,7 +87,7 @@ fn visit_children(node: Node, context: &mut Context) -> Result<()> {
       Node::CallExpr(call_expr) => {
         if matches!(call_expr.callee, Callee::Import(_)) {
           if let Some(Node::Str(src)) =
-            call_expr.args.get(0).map(|a| a.expr.as_node())
+            call_expr.args.first().map(|a| a.expr.as_node())
           {
             visit_module_specifier(src, context);
             if call_expr.args.len() > 1 {

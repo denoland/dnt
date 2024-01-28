@@ -821,6 +821,23 @@ Deno.test("should build and test the array find last polyfill project", async ()
   });
 });
 
+Deno.test("should build and test the array.fromAsync polyfill project", async () => {
+  await runTest("polyfill_array_from_async_project", {
+    entryPoints: ["mod.ts"],
+    outDir: "./npm",
+    shims: {
+      ...getAllShimOptions(false),
+      deno: "dev",
+    },
+    package: {
+      name: "polyfill-package",
+      version: "1.0.0",
+    },
+  }, (output) => {
+    output.assertExists("esm/_dnt.polyfills.js");
+  });
+});
+
 Deno.test("should build and test module mappings files project", async () => {
   await runTest("module_mappings_project", {
     entryPoints: ["mod.ts"],
@@ -1029,6 +1046,7 @@ async function runTest(
     | "json_module_project"
     | "package_mappings_project"
     | "polyfill_project"
+    | "polyfill_array_from_async_project"
     | "polyfill_array_find_last_project"
     | "module_mappings_project"
     | "node_types_project"
