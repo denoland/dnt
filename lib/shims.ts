@@ -208,7 +208,11 @@ function getUndiciShim(): Shim {
       "Response",
       typeOnly("BodyInit"),
       typeOnly("HeadersInit"),
+      typeOnly("ReferrerPolicy"),
       typeOnly("RequestInit"),
+      typeOnly("RequestCache"),
+      typeOnly("RequestMode"),
+      typeOnly("RequestRedirect"),
       typeOnly("ResponseInit"),
     ],
   };
