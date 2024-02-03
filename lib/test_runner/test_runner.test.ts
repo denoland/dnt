@@ -99,6 +99,31 @@ GokG
   );
 });
 
+Deno.test("only test definitions", async () => {
+  const context = getContext();
+  await assertRejects(
+    async () => {
+      await runTestDefinitions([{
+        name: "won't run",
+        fn: () => {
+          throw new Error("FAIL");
+        },
+      }, {
+        only: true,
+        name: "my test",
+        fn: () => {}, // pass
+      }], context);
+    },
+    Error,
+    "Exit code 1 thrown.",
+  );
+  wildcardAssertEquals(
+    context.output,
+    `test my test[WILDCARD]
+error: Test failed because the "only" option was used.\n`,
+  );
+});
+
 function getContext() {
   let output = "";
   return {

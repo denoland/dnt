@@ -23,6 +23,7 @@ export interface RunTestDefinitionsOptions {
 export interface TestDefinition {
   name: string;
   fn: (context: TestContext) => Promise<void> | void;
+  only?: boolean;
   ignore?: boolean;
 }
 
@@ -46,6 +47,10 @@ export async function runTestDefinitions(
   options: RunTestDefinitionsOptions,
 ) {
   const testFailures = [];
+  const hasOnly = testDefinitions.some((d) => d.only);
+  if (hasOnly) {
+    testDefinitions = testDefinitions.filter((d) => d.only);
+  }
   for (const definition of testDefinitions) {
     options.process.stdout.write("test " + definition.name + " ...");
     if (definition.ignore) {
@@ -86,6 +91,11 @@ export async function runTestDefinitions(
         indentText((failure.err?.stack ?? failure.err).toString(), 1),
       );
     }
+    options.process.exit(1);
+  } else if (hasOnly) {
+    options.process.stdout.write(
+      'error: Test failed because the "only" option was used.\n',
+    );
     options.process.exit(1);
   }
 
