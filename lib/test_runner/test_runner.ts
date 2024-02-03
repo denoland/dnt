@@ -93,7 +93,9 @@ export async function runTestDefinitions(
     }
     options.process.exit(1);
   } else if (hasOnly) {
-    options.process.stdout.write("error: Test failed because the \"only\" option was used.\n");
+    options.process.stdout.write(
+      'error: Test failed because the "only" option was used.\n',
+    );
     options.process.exit(1);
   }
 

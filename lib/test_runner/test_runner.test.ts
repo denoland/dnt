@@ -107,7 +107,7 @@ Deno.test("only test definitions", async () => {
         name: "won't run",
         fn: () => {
           throw new Error("FAIL");
-        }
+        },
       }, {
         only: true,
         name: "my test",
