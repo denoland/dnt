@@ -19,6 +19,7 @@ mod array_from_async;
 mod error_cause;
 mod import_meta;
 mod object_has_own;
+mod promise_with_resolvers;
 mod string_replace_all;
 
 pub trait Polyfill {
@@ -109,6 +110,7 @@ fn all_polyfills() -> Vec<Box<dyn Polyfill>> {
     Box::new(array_find_last::ArrayFindLastPolyfill),
     Box::new(array_from_async::ArrayFromAsyncPolyfill),
     Box::new(import_meta::ImportMetaPolyfill),
+    Box::new(promise_with_resolvers::PromiseWithResolversPolyfill),
   ]
 }
 

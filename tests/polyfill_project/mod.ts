@@ -7,3 +7,7 @@ export function hasOwn(a: { prop?: number }) {
     err.cause = new Error("test");
   }
 }
+
+export function withResolvers<T>() {
+  return Promise.withResolvers<T>();
+}
