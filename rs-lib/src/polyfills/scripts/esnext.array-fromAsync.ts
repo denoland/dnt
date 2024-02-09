@@ -137,7 +137,7 @@ async function fromAsync(this: any, items: any, mapfn: any, thisArg: any) {
     result.length = i;
     return result;
   }
-};
+}
 
 if (!Array.fromAsync) {
   (Array as any).fromAsync = fromAsync;
