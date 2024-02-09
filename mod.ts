@@ -130,6 +130,7 @@ export interface BuildOptions {
      * @default false
      */
     importHelpers?: boolean;
+    stripInternal?: boolean;
     strictBindCallApply?: boolean;
     strictFunctionTypes?: boolean;
     strictNullChecks?: boolean;
@@ -252,7 +253,7 @@ export async function build(options: BuildOptions): Promise<void> {
       outDir: typesOutDir,
       allowJs: true,
       alwaysStrict: true,
-      stripInternal: true,
+      stripInternal: options.compilerOptions?.stripInternal,
       strictBindCallApply: options.compilerOptions?.strictBindCallApply ?? true,
       strictFunctionTypes: options.compilerOptions?.strictFunctionTypes ?? true,
       strictNullChecks: options.compilerOptions?.strictNullChecks ?? true,
