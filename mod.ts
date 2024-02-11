@@ -73,6 +73,9 @@ export interface BuildOptions {
    * @default "inline"
    */
   declaration?: "inline" | "separate" | false;
+  /** Create declaration map files. Defaults to `true` if `declaration` is enabled and `skipSourceOutput` is `false`.
+   */
+  declarationMap?: boolean;
   /** Include a CommonJS or UMD module.
    * @default "cjs"
    */
@@ -196,6 +199,8 @@ export async function build(options: BuildOptions): Promise<void> {
       ? "inline"
       : options.declaration ?? "inline",
   };
+  const declarationMap = options.declarationMap ??
+    (!!options.declaration && !options.skipSourceOutput);
   const packageManager = options.packageManager ?? "npm";
   const scriptTarget = options.compilerOptions?.target ?? "ES2021";
   const entryPoints: EntryPoint[] = options.entryPoints.map((e, i) => {
@@ -269,6 +274,7 @@ export async function build(options: BuildOptions): Promise<void> {
       noUncheckedIndexedAccess:
         options.compilerOptions?.noUncheckedIndexedAccess ?? false,
       declaration: !!options.declaration,
+      declarationMap,
       esModuleInterop: false,
       isolatedModules: true,
       useDefineForClassFields: true,
@@ -356,6 +362,7 @@ export async function build(options: BuildOptions): Promise<void> {
     log("Emitting ESM package...");
     project.compilerOptions.set({
       declaration: options.declaration === "inline",
+      declarationMap: declarationMap ? options.declaration === "inline" : false,
       outDir: esmOutDir,
     });
     program = project.createProgram();
@@ -375,6 +382,7 @@ export async function build(options: BuildOptions): Promise<void> {
     log("Emitting script package...");
     project.compilerOptions.set({
       declaration: options.declaration === "inline",
+      declarationMap: declarationMap ? options.declaration === "inline" : false,
       esModuleInterop: true,
       outDir: scriptOutDir,
       module: options.scriptModule === "umd"
