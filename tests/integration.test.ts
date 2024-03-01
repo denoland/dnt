@@ -262,6 +262,7 @@ Deno.test("should build test project with declarations inline by default", async
       entryPoints: ["mod.ts"],
       outDir: "./npm",
       declaration,
+      declarationMap: false,
       shims: {
         deno: "dev",
       },
@@ -276,8 +277,11 @@ Deno.test("should build test project with declarations inline by default", async
       output.assertNotExists("script/mod.js.map");
       output.assertNotExists("esm/mod.js.map");
       output.assertNotExists("types/mod.d.ts");
+      output.assertNotExists("types/mod.d.ts.map");
       output.assertExists("script/mod.d.ts");
+      output.assertNotExists("script/mod.d.ts.map");
       output.assertExists("esm/mod.d.ts");
+      output.assertNotExists("esm/mod.d.ts.map");
       assertEquals(output.packageJson, {
         name: "add",
         version: "1.0.0",
@@ -304,6 +308,42 @@ Deno.test("should build test project with declarations inline by default", async
       });
     });
   }
+});
+
+Deno.test("should build test project with declaration maps by default", async () => {
+  await runTest("test_project", {
+    entryPoints: ["mod.ts"],
+    outDir: "./npm",
+    declaration: "inline",
+    shims: {
+      deno: "dev",
+    },
+    package: {
+      name: "add",
+      version: "1.0.0",
+    },
+  }, (output) => {
+    output.assertNotExists("types/mod.d.ts");
+    output.assertExists("script/mod.d.ts.map");
+    output.assertExists("esm/mod.d.ts.map");
+  });
+
+  await runTest("test_project", {
+    entryPoints: ["mod.ts"],
+    outDir: "./npm",
+    declaration: "separate",
+    shims: {
+      deno: "dev",
+    },
+    package: {
+      name: "add",
+      version: "1.0.0",
+    },
+  }, (output) => {
+    output.assertExists("types/mod.d.ts.map");
+    output.assertNotExists("script/mod.d.ts.map");
+    output.assertNotExists("esm/mod.d.ts.map");
+  });
 });
 
 Deno.test("should build bin project", async () => {
