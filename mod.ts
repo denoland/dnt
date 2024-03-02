@@ -1,5 +1,8 @@
 // Copyright 2018-2023 the Deno authors. All rights reserved. MIT license.
 
+import * as colors from "@std/fmt/colors";
+import * as path from "@std/path";
+import { createProjectSync, ts } from "@ts-morph/bootstrap";
 import {
   getCompilerLibOption,
   getCompilerScriptTarget,
@@ -11,7 +14,6 @@ import {
   type SourceMapOptions,
   transformCodeToTarget,
 } from "./lib/compiler.ts";
-import { colors, createProjectSync, path, ts } from "./lib/mod.deps.ts";
 import { type ShimOptions, shimOptionsToTransformShims } from "./lib/shims.ts";
 import { getNpmIgnoreText } from "./lib/npm_ignore.ts";
 import type { PackageJson, ScriptTarget } from "./lib/types.ts";
@@ -25,10 +27,10 @@ import * as compilerTransforms from "./lib/compiler_transforms.ts";
 import { getPackageJson } from "./lib/package_json.ts";
 import { getTestRunnerCode } from "./lib/test_runner/get_test_runner_code.ts";
 
+export { emptyDir } from "@std/fs/empty_dir";
 export type { PackageJson } from "./lib/types.ts";
 export type { LibName, SourceMapOptions } from "./lib/compiler.ts";
 export type { ShimOptions } from "./lib/shims.ts";
-export { emptyDir } from "./lib/mod.deps.ts";
 
 export interface EntryPoint {
   /**

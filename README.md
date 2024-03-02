@@ -29,11 +29,13 @@ There are several steps done in a pipeline:
 
 ## Setup
 
+1. `deno add @deno/dnt`
+
 1. Create a build script file:
 
    ```ts
    // ex. scripts/build_npm.ts
-   import { build, emptyDir } from "https://deno.land/x/dnt/mod.ts";
+   import { build, emptyDir } from "@deno/dnt";
 
    await emptyDir("./npm");
 

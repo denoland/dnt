@@ -1,7 +1,7 @@
 // Copyright 2018-2023 the Deno authors. All rights reserved. MIT license.
 
-import * as deps from "./mod.deps.ts";
-import { path } from "./mod.deps.ts";
+import { expandGlob } from "@std/fs/expand_glob";
+import * as path from "@std/path";
 
 /** Gets the files found in the provided root dir path based on the glob. */
 export async function glob(options: {
@@ -10,7 +10,7 @@ export async function glob(options: {
   excludeDirs: string[];
 }) {
   const paths: string[] = [];
-  const entries = deps.glob.expandGlob(options.pattern, {
+  const entries = expandGlob(options.pattern, {
     root: options.rootDir,
     extended: true,
     globstar: true,

@@ -1,3 +1,5 @@
+import { ts } from "@ts-morph/bootstrap";
+import { assertEquals, assertThrows } from "@std/assert";
 import {
   getCompilerLibOption,
   getCompilerScriptTarget,
@@ -6,8 +8,6 @@ import {
   libNamesToCompilerOption,
   SourceMapOptions,
 } from "./compiler.ts";
-import { ts } from "./mod.deps.ts";
-import { assertEquals, assertThrows } from "./test.deps.ts";
 import { ScriptTarget } from "./types.ts";
 
 Deno.test("script target should have expected outputs", () => {

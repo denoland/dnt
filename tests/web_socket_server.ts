@@ -1,7 +1,5 @@
-import { serve } from "https://deno.land/std@0.181.0/http/mod.ts";
-
 const port = 8089;
-serve(handleReq, { port });
+Deno.serve({ port }, handleReq);
 console.log("Ready");
 
 function handleReq(req: Request): Response {

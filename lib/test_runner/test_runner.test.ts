@@ -1,7 +1,7 @@
 // Copyright 2018-2023 the Deno authors. All rights reserved. MIT license.
 
 import { runTestDefinitions } from "./test_runner.ts";
-import { assertEquals, assertRejects } from "../test.deps.ts";
+import { assertEquals, assertRejects } from "@std/assert";
 import { wildcardAssertEquals } from "../test_utils.ts";
 
 Deno.test("no test definitions", async () => {

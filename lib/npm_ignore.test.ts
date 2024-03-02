@@ -1,6 +1,6 @@
 // Copyright 2018-2023 the Deno authors. All rights reserved. MIT license.
 
-import { assertEquals } from "./test.deps.ts";
+import { assertEquals } from "@std/assert";
 import { getNpmIgnoreText } from "./npm_ignore.ts";
 import { SourceMapOptions } from "./compiler.ts";
 

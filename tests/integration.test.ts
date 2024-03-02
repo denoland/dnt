@@ -4,10 +4,10 @@ import {
   assertEquals,
   assertRejects,
   assertStringIncludes,
-} from "https://deno.land/std@0.181.0/testing/asserts.ts";
+} from "@std/assert";
+import * as path from "@std/path"
 import { ShimValue } from "../lib/shims.ts";
 import { build, BuildOptions, ShimOptions } from "../mod.ts";
-import { path } from "../lib/mod.deps.ts";
 
 const versions = {
   denoShim: "~0.18.0",

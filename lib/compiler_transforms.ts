@@ -1,6 +1,6 @@
 // Copyright 2018-2023 the Deno authors. All rights reserved. MIT license.
 
-import { ts } from "./mod.deps.ts";
+import { ts } from "@ts-morph/bootstrap";
 
 // transform `import.meta.url` to a replacement that works in script modules
 export const transformImportMeta: ts.TransformerFactory<ts.SourceFile> = (
