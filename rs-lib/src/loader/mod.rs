@@ -8,6 +8,7 @@ use std::rc::Rc;
 use anyhow::Result;
 use deno_ast::ModuleSpecifier;
 use deno_graph::source::CacheSetting;
+use deno_graph::source::LoaderChecksum;
 use futures::future;
 use futures::Future;
 
@@ -28,7 +29,7 @@ pub struct LoadResponse {
   /// The resolved specifier after re-directs.
   pub specifier: ModuleSpecifier,
   pub headers: Option<HashMap<String, String>>,
-  pub content: String,
+  pub content: Vec<u8>,
 }
 
 pub trait Loader {
@@ -36,6 +37,7 @@ pub trait Loader {
     &self,
     url: ModuleSpecifier,
     cache_setting: CacheSetting,
+    maybe_checksum: Option<LoaderChecksum>,
   ) -> Pin<Box<dyn Future<Output = Result<Option<LoadResponse>>> + 'static>>;
 }
 
@@ -75,8 +77,7 @@ impl<'a> deno_graph::source::Loader for SourceLoader<'a> {
   fn load(
     &mut self,
     specifier: &ModuleSpecifier,
-    _is_dynamic: bool,
-    cache_setting: CacheSetting,
+    load_options: deno_graph::source::LoadOptions,
   ) -> deno_graph::source::LoadFuture {
     let specifier = match self.specifier_mappings.get(specifier) {
       Some(MappedSpecifier::Package(mapping)) => {
@@ -112,7 +113,13 @@ impl<'a> deno_graph::source::Loader for SourceLoader<'a> {
     let loader = self.loader.clone();
     let specifier = specifier.to_owned();
     Box::pin(async move {
-      let resp = loader.load(specifier.clone(), cache_setting).await;
+      let resp = loader
+        .load(
+          specifier.clone(),
+          load_options.cache_setting,
+          load_options.maybe_checksum,
+        )
+        .await;
       resp.map(|r| {
         r.map(|r| deno_graph::source::LoadResponse::Module {
           specifier: r.specifier,
@@ -135,7 +142,7 @@ fn get_dummy_module(
   Box::pin(future::ready(Ok(Some(
     deno_graph::source::LoadResponse::Module {
       specifier: specifier.clone(),
-      content: "".into(),
+      content: b"".to_vec().into(),
       maybe_headers: Some(headers),
     },
   ))))

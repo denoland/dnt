@@ -83,7 +83,7 @@ impl Mappings {
       remote_specifiers_to_paths(specifiers.remote.iter())
     {
       let media_type = match module_graph.get(&specifier) {
-        Module::Esm(esm) => esm.media_type,
+        Module::Js(esm) => esm.media_type,
         Module::Json(json) => json.media_type,
         Module::Npm(_) | Module::Node(_) | Module::External(_) => {
           MediaType::Unknown

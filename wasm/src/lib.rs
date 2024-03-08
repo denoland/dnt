@@ -23,7 +23,11 @@ static ALLOC: wee_alloc::WeeAlloc = wee_alloc::WeeAlloc::INIT;
 
 #[wasm_bindgen(module = "/helpers.js")]
 extern "C" {
-  async fn fetch_specifier(specifier: String, cache_setting: u8) -> JsValue;
+  async fn fetch_specifier(
+    specifier: String,
+    cache_setting: u8,
+    maybe_checksum: Option<String>,
+  ) -> JsValue;
 }
 
 struct JsLoader {}
@@ -33,6 +37,7 @@ impl dnt::Loader for JsLoader {
     &self,
     url: dnt::ModuleSpecifier,
     cache_setting: dnt::CacheSetting,
+    maybe_checksum: Option<dnt::LoaderChecksum>,
   ) -> std::pin::Pin<
     Box<dyn Future<Output = Result<Option<dnt::LoadResponse>>> + 'static>,
   > {
@@ -45,6 +50,7 @@ impl dnt::Loader for JsLoader {
           dnt::CacheSetting::Use => 1,
           dnt::CacheSetting::Reload => 2,
         },
+        maybe_checksum.map(|c| c.into_string()),
       )
       .await;
       if resp.is_null() || resp.is_undefined() {

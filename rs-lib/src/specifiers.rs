@@ -70,7 +70,7 @@ pub fn get_specifiers<'a>(
         } else {
           found_module_specifiers.push(module.specifier().clone());
 
-          if let Some(module) = module.esm() {
+          if let Some(module) = module.js() {
             for dep in module.dependencies.values() {
               if let Some(specifier) = dep.get_code() {
                 pending.push(specifier);

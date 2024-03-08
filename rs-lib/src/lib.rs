@@ -40,6 +40,7 @@ use visitors::GetImportExportsTextChangesParams;
 
 pub use deno_ast::ModuleSpecifier;
 pub use deno_graph::source::CacheSetting;
+pub use deno_graph::source::LoaderChecksum;
 pub use loader::LoadResponse;
 pub use loader::Loader;
 pub use utils::url_to_file_path;
@@ -344,12 +345,14 @@ pub async fn transform(options: TransformOptions) -> Result<TransformOutput> {
     };
 
     let file_text = match module {
-      Module::Esm(_) => {
+      Module::Js(_) => {
         let parsed_source = module_graph.get_parsed_source(specifier);
         let text_changes = parsed_source
           .with_view(|program| -> Result<Vec<TextChange>> {
-            let ignore_line_indexes =
-              get_ignore_line_indexes(parsed_source.specifier(), program);
+            let ignore_line_indexes = get_ignore_line_indexes(
+              parsed_source.specifier().as_str(),
+              program,
+            );
             let top_level_decls =
               get_top_level_decls(program, parsed_source.top_level_context());
             warnings.extend(ignore_line_indexes.warnings);

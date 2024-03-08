@@ -143,19 +143,21 @@ impl PolyfillTester {
     use deno_ast::MediaType;
     use deno_ast::ModuleSpecifier;
     use deno_graph::ModuleParser;
+    use deno_graph::ParseOptions;
 
     use crate::analyze::get_top_level_decls;
     use crate::parser::ScopeAnalysisParser;
     use crate::visitors::fill_polyfills;
     use crate::visitors::FillPolyfillsParams;
 
-    let parser = ScopeAnalysisParser::new();
+    let parser = ScopeAnalysisParser::default();
     let parsed_source = parser
-      .parse_module(
-        &ModuleSpecifier::parse("file://test.ts").unwrap(),
-        text.into(),
-        MediaType::TypeScript,
-      )
+      .parse_module(ParseOptions {
+        specifier: &ModuleSpecifier::parse("file://test.ts").unwrap(),
+        source: text.into(),
+        media_type: MediaType::TypeScript,
+        scope_analysis: true,
+      })
       .unwrap();
     parsed_source.with_view(|program| {
       let mut searching_polyfills = vec![(self.create_polyfill)()];

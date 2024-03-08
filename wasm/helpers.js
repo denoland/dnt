@@ -2,8 +2,8 @@ import { createCache } from "@deno/cache-dir";
 
 const fileFetcher = createCache();
 
-export function fetch_specifier(specifier, cacheSettingVal) {
-  return fileFetcher.load(new URL(specifier), getCacheSetting(cacheSettingVal));
+export function fetch_specifier(specifier, cacheSettingVal, checksum) {
+  return fileFetcher.load(new URL(specifier), getCacheSetting(cacheSettingVal), checksum);
 }
 
 function getCacheSetting(val) {
