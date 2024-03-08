@@ -1,4 +1,6 @@
 {
+  "name": "@deno/dnt",
+  "version": "0.0.0",
   "tasks": {
     "test": "deno test -A",
     "build": "deno run -A jsr:@deno/wasmbuild@0.15.4 --out lib/pkg"
@@ -10,6 +12,20 @@
         "camelcase"
       ]
     }
+  },
+  "publish": {
+    "exclude": [
+      "rs-lib/",
+      "tests/",
+      "Cargo.lock",
+      "deno.lock",
+      ".clippy.toml",
+      ".rustfmt.toml",
+      ".github",
+      ".gitattributes",
+      "**/*.toml",
+      "**/*.test.ts"
+    ]
   },
   "exclude": [
     "target/",
@@ -38,5 +54,9 @@
     "@std/path": "jsr:@std/path@^0.218.2",
     "@ts-morph/bootstrap": "npm:@ts-morph/bootstrap@0.22",
     "code-block-writer": "npm:code-block-writer@^13.0.1"
+  },
+  "exports": {
+    ".": "./mod.ts",
+    "./transform": "./transform.ts"
   }
 }
