@@ -16,7 +16,7 @@ serialization = ["serde"]
 anyhow = "1.0.70"
 base64 = "0.13.1"
 deno_ast = { version = "0.34.2", features = ["transforms", "view", "visit", "utils"] }
-deno_graph = { version = "0.69.7", features = [] }
+deno_graph = { version = "0.69.7", features = ["wasm_executor"], default-features = false }
 futures = "0.3.25"
 import_map = { version = "0.19.1", features = ["ext"] }
 jsonc-parser = { version = "0.23.0", features = ["serde"] }
