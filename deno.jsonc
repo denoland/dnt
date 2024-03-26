@@ -13,8 +13,14 @@
       ]
     }
   },
+  "format": {
+    "exclude": [
+      "!lib/pkg/"
+    ]
+  },
   "publish": {
     "exclude": [
+      "!lib/pkg/",
       "rs-lib/",
       "tests/",
       "Cargo.lock",
