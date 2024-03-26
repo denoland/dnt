@@ -14,7 +14,7 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 30
     steps:
-    - uses: actions/checkout@v3
+    - uses: actions/checkout@v4
     - uses: dsherret/rust-toolchain-file@v1
     - uses: Swatinem/rust-cache@v2
     - uses: denoland/setup-deno@v1
@@ -40,3 +40,5 @@ jobs:
       run: cargo test --all-targets --all-features --release
     - name: Test (Deno)
       run: deno task test
+    - name: Publish on tag
+      run: deno run -A jsr:@david/publish-on-tag@0.1.2
