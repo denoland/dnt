@@ -113,6 +113,11 @@ impl<'a> deno_graph::source::Loader for SourceLoader<'a> {
     let loader = self.loader.clone();
     let specifier = specifier.to_owned();
     Box::pin(async move {
+      if specifier.scheme() == "node" {
+        return Ok(Some(deno_graph::source::LoadResponse::External {
+          specifier,
+        }));
+      }
       let resp = loader
         .load(
           specifier.clone(),
