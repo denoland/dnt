@@ -120,29 +120,31 @@ function runTest(options: {
   assertEquals(fileText, getExpectedText());
 
   function getExpectedText() {
-    let startText = options.expectHasSrcFolder ? "src/\n" : "";
+    let startText = options.expectHasSrcFolder ? "/src/\n" : "";
     if (options.includeEsModule !== false) {
-      startText += "esm/mod.test.js\n";
-      startText += options.sourceMaps === true ? "esm/mod.test.js.map\n" : "";
+      startText += "/esm/mod.test.js\n";
+      if (options.sourceMaps === true) {
+        startText += "/esm/mod.test.js.map\n";
+      }
       if (options.declaration === "inline") {
-        startText += "esm/mod.test.d.ts\n";
+        startText += "/esm/mod.test.d.ts\n";
       }
     }
     if (options.includeScriptModule !== false) {
-      startText += "script/mod.test.js\n";
-      startText += options.sourceMaps === true
-        ? "script/mod.test.js.map\n"
-        : "";
+      startText += "/script/mod.test.js\n";
+      if (options.sourceMaps === true) {
+        startText += "/script/mod.test.js.map\n";
+      }
       if (options.declaration === "inline") {
-        startText += "script/mod.test.d.ts\n";
+        startText += "/script/mod.test.d.ts\n";
       }
     }
     if (options.declaration === "separate") {
-      startText += "types/mod.test.d.ts\n";
+      startText += "/types/mod.test.d.ts\n";
     }
 
     return startText +
-      `test_runner.js
+      `/test_runner.js
 yarn.lock
 pnpm-lock.yaml
 `;

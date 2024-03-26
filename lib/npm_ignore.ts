@@ -15,7 +15,7 @@ export function getNpmIgnoreText(options: {
   // to exclude something, but then the output directory still has that file
   const lines = [];
   if (!isUsingSourceMaps() || options.inlineSources) {
-    lines.push("src/");
+    lines.push("/src/");
   }
   for (const fileName of getTestFileNames()) {
     lines.push(fileName);
@@ -28,30 +28,30 @@ export function getNpmIgnoreText(options: {
       const filePath = file.filePath.replace(/\.ts$/i, ".js");
       const dtsFilePath = file.filePath.replace(/\.ts$/i, ".d.ts");
       if (options.includeEsModule) {
-        const esmFilePath = `esm/${filePath}`;
+        const esmFilePath = `/esm/${filePath}`;
         yield esmFilePath;
         if (options.sourceMap === true) {
           yield `${esmFilePath}.map`;
         }
         if (options.declaration === "inline") {
-          yield `esm/${dtsFilePath}`;
+          yield `/esm/${dtsFilePath}`;
         }
       }
       if (options.includeScriptModule) {
-        const scriptFilePath = `script/${filePath}`;
+        const scriptFilePath = `/script/${filePath}`;
         yield scriptFilePath;
         if (options.sourceMap === true) {
           yield `${scriptFilePath}.map`;
         }
         if (options.declaration === "inline") {
-          yield `script/${dtsFilePath}`;
+          yield `/script/${dtsFilePath}`;
         }
       }
       if (options.declaration === "separate") {
-        yield `types/${dtsFilePath}`;
+        yield `/types/${dtsFilePath}`;
       }
     }
-    yield "test_runner.js";
+    yield "/test_runner.js";
   }
 
   function isUsingSourceMaps() {
