@@ -5,7 +5,7 @@ use std::collections::HashSet;
 
 use anyhow::Result;
 use deno_ast::ModuleSpecifier;
-use deno_graph::EsmModule;
+use deno_graph::JsModule;
 use deno_graph::Module;
 use deno_graph::Resolution;
 
@@ -34,7 +34,7 @@ pub fn resolve_declaration_file_mappings(
 ) -> Result<BTreeMap<ModuleSpecifier, DeclarationFileResolution>> {
   let mut type_dependencies = BTreeMap::new();
 
-  for module in modules.iter().filter_map(|m| m.esm()) {
+  for module in modules.iter().filter_map(|m| m.js()) {
     fill_types_for_module(module_graph, module, &mut type_dependencies)?;
   }
 
@@ -98,12 +98,12 @@ fn select_best_types_dep(
       } else if is_dep_referrer_code {
         true
       } else if let Some(dep_source) =
-        module_graph.get(&dep.specifier).esm().map(|m| &m.source)
+        module_graph.get(&dep.specifier).js().map(|m| &m.source)
       {
         // as a last resort, use the declaration file that's the largest
         if let Some(selected_source) = module_graph
           .get(&selected_dep.specifier)
-          .esm()
+          .js()
           .map(|m| &m.source)
         {
           dep_source.len() > selected_source.len()
@@ -125,7 +125,7 @@ fn select_best_types_dep(
 
 fn fill_types_for_module(
   module_graph: &ModuleGraph,
-  module: &EsmModule,
+  module: &JsModule,
   type_dependencies: &mut BTreeMap<ModuleSpecifier, HashSet<TypesDependency>>,
 ) -> Result<()> {
   // check for the module specifying its type dependency
@@ -159,7 +159,7 @@ fn fill_types_for_module(
       if let Some(code_dep) = dep.get_code() {
         if module_graph
           .get(type_dep)
-          .esm()
+          .js()
           .map(|module| is_declaration_file(module.media_type))
           .unwrap_or(false)
         {
@@ -172,7 +172,7 @@ fn fill_types_for_module(
   return Ok(());
 
   fn add_type_dependency(
-    module: &EsmModule,
+    module: &JsModule,
     code_specifier: &ModuleSpecifier,
     type_specifier: &ModuleSpecifier,
     type_dependencies: &mut BTreeMap<ModuleSpecifier, HashSet<TypesDependency>>,

@@ -1,5 +1,5 @@
 // Copyright 2018-2023 the Deno authors. All rights reserved. MIT license.
-import { assertEquals } from "./test.deps.ts";
+import { assertEquals } from "@std/assert";
 
 export function wildcardAssertEquals(actual: string, expected: string) {
   const parts = expected.split("[WILDCARD]");

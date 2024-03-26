@@ -1,6 +1,7 @@
 // Copyright 2018-2023 the Deno authors. All rights reserved. MIT license.
 
-import { path, ts } from "./mod.deps.ts";
+import { ts } from "@ts-morph/bootstrap";
+import * as path from "@std/path";
 import { ScriptTarget } from "./types.ts";
 
 export function outputDiagnostics(diagnostics: readonly ts.Diagnostic[]) {

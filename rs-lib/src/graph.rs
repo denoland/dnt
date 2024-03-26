@@ -25,6 +25,8 @@ use deno_graph::source::ResolveError;
 use deno_graph::CapturingModuleAnalyzer;
 use deno_graph::Module;
 use deno_graph::ParsedSourceStore;
+use deno_graph::Range;
+use import_map::ImportMapOptions;
 
 pub struct ModuleGraphOptions<'a> {
   pub entry_points: Vec<ModuleSpecifier>,
@@ -63,7 +65,7 @@ impl ModuleGraph {
       get_all_specifier_mappers(),
       options.specifier_mappings,
     );
-    let source_parser = ScopeAnalysisParser::new();
+    let source_parser = ScopeAnalysisParser;
     let capturing_analyzer =
       CapturingModuleAnalyzer::new(Some(Box::new(source_parser)), None);
     let mut graph = deno_graph::ModuleGraph::new(deno_graph::GraphKind::All);
@@ -84,6 +86,10 @@ impl ModuleGraph {
           reporter: None,
           npm_resolver: None,
           workspace_members: Default::default(),
+          file_system: None,
+          jsr_url_provider: None,
+          module_parser: Some(&source_parser),
+          executor: Default::default(),
         },
       )
       .await;
@@ -232,11 +238,11 @@ impl ImportMapResolver {
     loader: &dyn Loader,
   ) -> Result<Self> {
     let response = loader
-      .load(import_map_url.clone(), CacheSetting::Use)
+      .load(import_map_url.clone(), CacheSetting::Use, None)
       .await?
       .ok_or_else(|| anyhow!("Could not find {}", import_map_url))?;
     let value = jsonc_parser::parse_to_serde_value(
-      &response.content,
+      &String::from_utf8(response.content)?,
       &jsonc_parser::ParseOptions {
         allow_comments: true,
         allow_loose_object_property_names: true,
@@ -244,7 +250,14 @@ impl ImportMapResolver {
       },
     )?
     .unwrap_or_else(|| serde_json::Value::Object(Default::default()));
-    let result = import_map::parse_from_value(import_map_url, value)?;
+    let result = import_map::parse_from_value_with_options(
+      import_map_url.clone(),
+      value,
+      ImportMapOptions {
+        address_hook: None,
+        expand_imports: true,
+      },
+    )?;
     // if !result.diagnostics.is_empty() {
     //   todo: surface diagnostics maybe? It seems like this should not be hard error according to import map spec
     //   bail!("Import map diagnostics:\n{}", result.diagnostics.into_iter().map(|d| format!("  - {}", d)).collect::<Vec<_>>().join("\n"));
@@ -261,12 +274,12 @@ impl deno_graph::source::Resolver for ImportMapResolver {
   fn resolve(
     &self,
     specifier: &str,
-    referrer: &ModuleSpecifier,
+    referrer_range: &Range,
     _mode: ResolutionMode,
   ) -> Result<ModuleSpecifier, ResolveError> {
     self
       .0
-      .resolve(specifier, referrer)
+      .resolve(specifier, &referrer_range.specifier)
       .map_err(|err| ResolveError::Other(err.into()))
   }
 }

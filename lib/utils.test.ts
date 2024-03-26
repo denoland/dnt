@@ -1,5 +1,5 @@
-import { path } from "./mod.deps.ts";
-import { assertEquals, assertRejects } from "./test.deps.ts";
+import * as path from "@std/path";
+import { assertEquals, assertRejects } from "@std/assert";
 import { getDntVersion, runCommand, valueToUrl } from "./utils.ts";
 
 Deno.test({

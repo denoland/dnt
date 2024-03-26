@@ -8,6 +8,7 @@ use std::pin::Pin;
 use anyhow::anyhow;
 use anyhow::Result;
 use deno_graph::source::CacheSetting;
+use deno_graph::source::LoaderChecksum;
 use futures::Future;
 
 use deno_node_transform::url_to_file_path;
@@ -91,13 +92,14 @@ impl Loader for InMemoryLoader {
     &self,
     specifier: ModuleSpecifier,
     _cache_setting: CacheSetting,
+    _maybe_checksum: Option<LoaderChecksum>,
   ) -> Pin<Box<dyn Future<Output = Result<Option<LoadResponse>>> + 'static>> {
     if specifier.scheme() == "file" {
       let file_path = url_to_file_path(&specifier).unwrap();
       let result = self.local_files.get(&file_path).map(ToOwned::to_owned);
       return Box::pin(async move {
         Ok(result.map(|result| LoadResponse {
-          content: result,
+          content: result.into_bytes(),
           headers: None,
           specifier,
         }))
@@ -109,7 +111,7 @@ impl Loader for InMemoryLoader {
       .map(|result| match result {
         Ok(result) => Ok(LoadResponse {
           specifier, // todo: test a re-direct
-          content: result.0.clone(),
+          content: result.0.clone().into(),
           headers: result.1.clone(),
         }),
         Err(err) => Err(err),

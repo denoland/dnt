@@ -1,6 +1,6 @@
 // Copyright 2018-2023 the Deno authors. All rights reserved. MIT license.
 
-import { CodeBlockWriter } from "../mod.deps.ts";
+import CodeBlockWriter from "code-block-writer";
 import { runTestDefinitions } from "./test_runner.ts";
 
 export function getTestRunnerCode(options: {

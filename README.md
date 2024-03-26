@@ -1,6 +1,6 @@
 # dnt - Deno to Node Transform
 
-[![deno doc](https://doc.deno.land/badge.svg)](https://doc.deno.land/https/deno.land/x/dnt/mod.ts)
+[![JSR](https://jsr.io/badges/@deno/dnt)](https://jsr.io/@deno/dnt)
 
 Deno to npm package build tool.
 
@@ -15,9 +15,8 @@ There are several steps done in a pipeline:
    - Rewrites module specifiers.
    - Injects [shims](https://github.com/denoland/node_deno_shims) for any `Deno`
      namespace or other global name usages as specified.
-   - Rewrites [Skypack](https://www.skypack.dev/) and [esm.sh](https://esm.sh/)
-     specifiers to bare specifiers and includes these dependencies in a
-     package.json.
+   - Rewrites [esm.sh](https://esm.sh/) specifiers to bare specifiers and
+     includes these dependencies in a package.json.
    - When remote modules cannot be resolved to an npm package, it downloads them
      and rewrites specifiers to make them local.
    - Allows mapping any specifier to an npm package.
@@ -29,11 +28,13 @@ There are several steps done in a pipeline:
 
 ## Setup
 
+1. `deno add @deno/dnt`
+
 1. Create a build script file:
 
    ```ts
    // ex. scripts/build_npm.ts
-   import { build, emptyDir } from "https://deno.land/x/dnt/mod.ts";
+   import { build, emptyDir } from "@deno/dnt";
 
    await emptyDir("./npm");
 

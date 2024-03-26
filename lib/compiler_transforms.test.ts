@@ -1,7 +1,7 @@
 // Copyright 2018-2023 the Deno authors. All rights reserved. MIT license.
 
-import { assertEquals } from "./test.deps.ts";
-import { ts } from "./mod.deps.ts";
+import { assertEquals } from "@std/assert";
+import { ts } from "@ts-morph/bootstrap";
 import { transformImportMeta } from "./compiler_transforms.ts";
 
 function testImportReplacements(input: string, output: string, cjs = true) {

@@ -173,11 +173,16 @@ pub fn prepend_statement_to_text(
   // It's not great to have to reparse the file for this. Perhaps there is a utility
   // function in swc or maybe add one to deno_ast for parsing out the leading comments
   let text_info = SourceTextInfo::from_string(std::mem::take(file_text));
+  let media_type = MediaType::from_path(file_path);
   let parsed_module = parse_module(ParseParams {
-    specifier: file_path.to_string_lossy().to_string(),
+    specifier: ModuleSpecifier::parse(&format!(
+      "file:///file{}",
+      media_type.as_ts_extension()
+    ))
+    .unwrap(),
     capture_tokens: true,
     maybe_syntax: None,
-    media_type: MediaType::from_path(file_path),
+    media_type,
     scope_analysis: false,
     text_info: text_info.clone(),
   });

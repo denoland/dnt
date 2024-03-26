@@ -1,13 +1,9 @@
 // Copyright 2018-2023 the Deno authors. All rights reserved. MIT license.
 
-import {
-  assertEquals,
-  assertRejects,
-  assertStringIncludes,
-} from "https://deno.land/std@0.181.0/testing/asserts.ts";
+import { assertEquals, assertRejects, assertStringIncludes } from "@std/assert";
+import * as path from "@std/path";
 import { ShimValue } from "../lib/shims.ts";
 import { build, BuildOptions, ShimOptions } from "../mod.ts";
-import { path } from "../lib/mod.deps.ts";
 
 const versions = {
   denoShim: "~0.18.0",
@@ -1071,6 +1067,70 @@ Deno.test("using declaration project", async () => {
   });
 });
 
+Deno.test("should build jsr project", async () => {
+  await runTest("jsr_project", {
+    entryPoints: ["mod.ts"],
+    outDir: "./npm",
+    typeCheck: "both",
+    shims: {
+      ...getAllShimOptions(false),
+      deno: "dev",
+      weakRef: true,
+    },
+    package: {
+      name: "add",
+      version: "1.0.0",
+    },
+    compilerOptions: {
+      importHelpers: true,
+    },
+  }, (output) => {
+    output.assertNotExists("script/mod.js.map");
+    output.assertNotExists("esm/mod.js.map");
+    assertEquals(output.packageJson, {
+      name: "add",
+      version: "1.0.0",
+      main: "./script/mod.js",
+      module: "./esm/mod.js",
+      exports: {
+        ".": {
+          import: "./esm/mod.js",
+          require: "./script/mod.js",
+        },
+      },
+      scripts: {
+        test: "node test_runner.js",
+      },
+      dependencies: {
+        tslib: versions.tsLib,
+        "@deno/sham-weakref": versions.weakRefSham,
+      },
+      devDependencies: {
+        "@types/node": versions.nodeTypes,
+        picocolors: versions.picocolors,
+        "@deno/shim-deno": versions.denoShim,
+      },
+      _generatedBy: "dnt@dev",
+    });
+    assertEquals(
+      output.npmIgnore,
+      `src/
+esm/mod.test.js
+esm/mod.test.d.ts
+script/mod.test.js
+script/mod.test.d.ts
+esm/_dnt.test_shims.js
+esm/_dnt.test_shims.d.ts
+script/_dnt.test_shims.js
+script/_dnt.test_shims.d.ts
+test_runner.js
+yarn.lock
+pnpm-lock.yaml
+`,
+    );
+  });
+});
+
 export interface Output {
   packageJson: any;
   npmIgnore: string;
@@ -1084,6 +1144,7 @@ async function runTest(
     | "declaration_import_project"
     | "import_map_project"
     | "json_module_project"
+    | "jsr_project"
     | "package_mappings_project"
     | "polyfill_project"
     | "polyfill_array_from_async_project"
