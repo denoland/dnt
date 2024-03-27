@@ -1,7 +1,7 @@
 // Copyright 2018-2024 the Deno authors. MIT license.
 
 import { assertEquals } from "@std/assert";
-import { getPackageJson, GetPackageJsonOptions } from "./package_json.ts";
+import { getPackageJson, type GetPackageJsonOptions } from "./package_json.ts";
 
 const versions = {
   picocolors: "^1.0.0",

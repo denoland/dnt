@@ -7,7 +7,7 @@
  */
 
 import { instantiate } from "./lib/pkg/dnt_wasm.generated.js";
-import { ScriptTarget } from "./lib/types.ts";
+import type { ScriptTarget } from "./lib/types.ts";
 import { valueToUrl } from "./lib/utils.ts";
 
 /** Specifier to specifier mappings. */

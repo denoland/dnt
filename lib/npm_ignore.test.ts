@@ -2,7 +2,7 @@
 
 import { assertEquals } from "@std/assert";
 import { getNpmIgnoreText } from "./npm_ignore.ts";
-import { SourceMapOptions } from "./compiler.ts";
+import type { SourceMapOptions } from "./compiler.ts";
 
 Deno.test("should include src directory when the source files are not necessary", () => {
   runTest({
