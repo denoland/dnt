@@ -1,4 +1,4 @@
-// Copyright 2018-2023 the Deno authors. All rights reserved. MIT license.
+// Copyright 2018-2024 the Deno authors. MIT license.
 
 import { isDeno } from "https://deno.land/x/which_runtime@0.2.0/mod.ts";
 import { output } from "./mod.ts";

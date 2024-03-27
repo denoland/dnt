@@ -10,8 +10,7 @@ Takes a Deno module and creates an npm package for use in Node.js.
 
 There are several steps done in a pipeline:
 
-1. Transforms Deno code to Node/canonical TypeScript including files found by
-   `deno test`.
+1. Transforms Deno code to Node including files found by `deno test`.
    - Rewrites module specifiers.
    - Injects [shims](https://github.com/denoland/node_deno_shims) for any `Deno`
      namespace or other global name usages as specified.

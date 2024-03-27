@@ -1,4 +1,10 @@
-// Copyright 2018-2023 the Deno authors. All rights reserved. MIT license.
+// Copyright 2018-2024 the Deno authors. MIT license.
+
+/**
+ * Lower level `transform` functionality that's used by the CLI
+ * to convert Deno code to Node code.
+ * @module
+ */
 
 import { instantiate } from "./lib/pkg/dnt_wasm.generated.js";
 import { ScriptTarget } from "./lib/types.ts";
