@@ -296,6 +296,7 @@ dependencies = [
  "base64 0.13.1",
  "deno_ast",
  "deno_graph",
+ "deno_semver",
  "futures",
  "import_map",
  "jsonc-parser",

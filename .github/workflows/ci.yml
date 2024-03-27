@@ -38,7 +38,7 @@ jobs:
         deno lint
 
     - name: Build
-      run: cargo build --all-targets --all-features --release
+      run: deno task build
     - name: Test (Rust)
       run: cargo test --all-targets --all-features --release
     - name: Test (Deno)

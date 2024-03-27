@@ -60,9 +60,6 @@ static ESMSH_MAPPING_RE: Lazy<Regex> = Lazy::new(|| {
   )
   .unwrap()
 });
-static NPM_MAPPING_RE: Lazy<Regex> = Lazy::new(|| {
-  Regex::new(r"^npm:/?(@?[^@?]+)(@[0-9.\^~\-A-Za-z]+)?(?:/([^#?]+))?$").unwrap()
-});
 
 struct SkypackMapper;
 
@@ -136,17 +133,13 @@ struct NpmMapper;
 
 impl SpecifierMapper for NpmMapper {
   fn map(&self, specifier: &ModuleSpecifier) -> Option<PackageMappedSpecifier> {
-    let captures = NPM_MAPPING_RE.captures(specifier.as_str())?;
-
+    let npm_specifier =
+      deno_semver::npm::NpmPackageReqReference::from_str(specifier.as_str())
+        .ok()?;
     Some(PackageMappedSpecifier {
-      name: captures.get(1).unwrap().as_str().to_string(),
-      version: Some(
-        captures
-          .get(2)
-          .map(|m| m.as_str()[1..].to_string())
-          .unwrap_or_else(|| "*".to_string()),
-      ),
-      sub_path: captures.get(3).map(|m| m.as_str().to_string()),
+      name: npm_specifier.req().name.clone(),
+      version: Some(npm_specifier.req().version_req.version_text().to_string()),
+      sub_path: npm_specifier.sub_path().map(|s| s.to_string()),
       peer_dependency: false,
     })
   }
@@ -287,6 +280,42 @@ mod test {
         name: "package".to_string(),
         version: Some("^2.1".to_string()),
         sub_path: None,
+        peer_dependency: false
+      })
+    );
+    assert_eq!(
+      mapper.map(&ModuleSpecifier::parse("npm:preact/hooks").unwrap()),
+      Some(PackageMappedSpecifier {
+        name: "preact".to_string(),
+        version: Some("*".to_string()),
+        sub_path: Some("hooks".to_string()),
+        peer_dependency: false
+      })
+    );
+    assert_eq!(
+      mapper.map(&ModuleSpecifier::parse("npm:package/sub/path").unwrap()),
+      Some(PackageMappedSpecifier {
+        name: "package".to_string(),
+        version: Some("*".to_string()),
+        sub_path: Some("sub/path".to_string()),
+        peer_dependency: false
+      })
+    );
+    assert_eq!(
+      mapper.map(&ModuleSpecifier::parse("npm:@scope/name/path/sub").unwrap()),
+      Some(PackageMappedSpecifier {
+        name: "@scope/name".to_string(),
+        version: Some("*".to_string()),
+        sub_path: Some("path/sub".to_string()),
+        peer_dependency: false
+      })
+    );
+    assert_eq!(
+      mapper.map(&ModuleSpecifier::parse("npm:package@^2.1/sub_path").unwrap()),
+      Some(PackageMappedSpecifier {
+        name: "package".to_string(),
+        version: Some("^2.1".to_string()),
+        sub_path: Some("sub_path".to_string()),
         peer_dependency: false
       })
     );
