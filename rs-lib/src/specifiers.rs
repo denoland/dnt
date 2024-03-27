@@ -106,11 +106,20 @@ pub fn get_specifiers<'a>(
     .collect::<Vec<_>>();
 
   for module in all_modules.iter() {
-    match module.specifier().scheme().to_lowercase().as_str() {
-      "file" => local_specifiers.push(module.specifier().clone()),
-      "http" | "https" => remote_specifiers.push(module.specifier().clone()),
-      _ => {
-        anyhow::bail!("Unhandled scheme on url: {}", module.specifier());
+    match module {
+      Module::Js(_) | Module::Json(_) => {
+        match module.specifier().scheme().to_lowercase().as_str() {
+          "file" => local_specifiers.push(module.specifier().clone()),
+          "http" | "https" => {
+            remote_specifiers.push(module.specifier().clone())
+          }
+          _ => {
+            anyhow::bail!("Unhandled scheme on url: {}", module.specifier());
+          }
+        }
+      }
+      Module::Npm(_) | Module::Node(_) | Module::External(_) => {
+        // ignore
       }
     }
   }

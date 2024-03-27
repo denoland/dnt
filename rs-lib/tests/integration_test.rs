@@ -2060,6 +2060,25 @@ async fn module_decl_string_literal_change_specifier() {
   );
 }
 
+#[tokio::test]
+async fn node_specifier() {
+  let result = TestBuilder::new()
+    .with_loader(|loader| {
+      loader.add_local_file(
+        "/mod.ts",
+        "import * as fs from 'node:fs'; console.log(fs);",
+      );
+    })
+    .transform()
+    .await
+    .unwrap();
+
+  assert_files!(
+    result.main.files,
+    &[("mod.ts", "import * as fs from 'node:fs'; console.log(fs);"),]
+  );
+}
+
 fn get_shim_file_text(mut text: String) -> String {
   text.push('\n');
   text.push_str(

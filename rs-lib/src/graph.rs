@@ -211,6 +211,7 @@ impl ModuleGraph {
           None
         }
       })
+      .filter(|s| !matches!(s.scheme(), "node"))
   }
 
   pub fn all_modules(&self) -> impl Iterator<Item = &Module> {
