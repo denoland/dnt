@@ -1,4 +1,4 @@
-// Copyright 2018-2023 the Deno authors. All rights reserved. MIT license.
+// Copyright 2018-2024 the Deno authors. MIT license.
 
 import { assertEquals } from "@std/assert";
 import { getNpmIgnoreText } from "./npm_ignore.ts";

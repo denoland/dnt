@@ -1,4 +1,4 @@
-// Copyright 2018-2023 the Deno authors. All rights reserved. MIT license.
+// Copyright 2018-2024 the Deno authors. MIT license.
 
 // This code isn't bullet proof and is lazily designed
 // for the purpose of the test. Don't use it elsewhere.

@@ -1,4 +1,4 @@
-// Copyright 2018-2023 the Deno authors. All rights reserved. MIT license.
+// Copyright 2018-2024 the Deno authors. MIT license.
 import CodeBlockWriter from "https://deno.land/x/code_block_writer@11.0.0/mod.ts";
 import { using } from "npm:using-statement@^0.4";
 

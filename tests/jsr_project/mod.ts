@@ -1,4 +1,4 @@
-// Copyright 2018-2023 the Deno authors. All rights reserved. MIT license.
+// Copyright 2018-2024 the Deno authors. MIT license.
 
 import { parse } from "jsr:@std/csv/parse";
 import { assertEquals } from "jsr:@std/assert/assert_equals";
