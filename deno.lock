@@ -6,12 +6,15 @@
       "jsr:@deno/graph@^0.69.7": "jsr:@deno/graph@0.69.7",
       "jsr:@std/assert": "jsr:@std/assert@0.220.1",
       "jsr:@std/assert@0.220": "jsr:@std/assert@0.220.1",
+      "jsr:@std/assert@0.221": "jsr:@std/assert@0.221.0",
       "jsr:@std/assert@^0.218.2": "jsr:@std/assert@0.218.2",
       "jsr:@std/assert@^0.220.1": "jsr:@std/assert@0.220.1",
+      "jsr:@std/assert@^0.221.0": "jsr:@std/assert@0.221.0",
       "jsr:@std/bytes@^0.218.2": "jsr:@std/bytes@0.218.2",
-      "jsr:@std/csv": "jsr:@std/csv@0.220.1",
+      "jsr:@std/csv": "jsr:@std/csv@0.221.0",
       "jsr:@std/fmt@^0.218.2": "jsr:@std/fmt@0.218.2",
       "jsr:@std/fmt@^0.220.1": "jsr:@std/fmt@0.220.1",
+      "jsr:@std/fmt@^0.221.0": "jsr:@std/fmt@0.221.0",
       "jsr:@std/fs@^0.218.2": "jsr:@std/fs@0.218.2",
       "jsr:@std/io@^0.218.2": "jsr:@std/io@0.218.2",
       "jsr:@std/path@^0.218.2": "jsr:@std/path@0.218.2",
@@ -44,6 +47,12 @@
           "jsr:@std/fmt@^0.220.1"
         ]
       },
+      "@std/assert@0.221.0": {
+        "integrity": "a5f1aa6e7909dbea271754fd4ab3f4e687aeff4873b4cef9a320af813adb489a",
+        "dependencies": [
+          "jsr:@std/fmt@^0.221.0"
+        ]
+      },
       "@std/bytes@0.218.2": {
         "integrity": "91fe54b232dcca73856b79a817247f4a651dbb60d51baafafb6408c137241670"
       },
@@ -53,11 +62,20 @@
           "jsr:@std/assert@^0.220.1"
         ]
       },
+      "@std/csv@0.221.0": {
+        "integrity": "c78e42619fe10e4711ad0d2ab789487e763eb6602d493a087f62c51f3914c195",
+        "dependencies": [
+          "jsr:@std/assert@^0.221.0"
+        ]
+      },
       "@std/fmt@0.218.2": {
         "integrity": "99526449d2505aa758b6cbef81e7dd471d8b28ec0dcb1491d122b284c548788a"
       },
       "@std/fmt@0.220.1": {
         "integrity": "3b1a698477a26b1dacbbee26db1a65030a005c6d71db3b3a0e59f8a638f04d7a"
+      },
+      "@std/fmt@0.221.0": {
+        "integrity": "379fed69bdd9731110f26b9085aeb740606b20428ce6af31ef6bd45ef8efa62a"
       },
       "@std/fs@0.218.2": {
         "integrity": "dd9431453f7282e8c577cc22c9e6d036055a9a980b5549f887d6012969fabcca",
