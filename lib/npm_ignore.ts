@@ -1,7 +1,7 @@
 // Copyright 2018-2024 the Deno authors. MIT license.
 
-import { OutputFile } from "../transform.ts";
-import { SourceMapOptions } from "./compiler.ts";
+import type { OutputFile } from "../transform.ts";
+import type { SourceMapOptions } from "./compiler.ts";
 
 export function getNpmIgnoreText(options: {
   sourceMap?: SourceMapOptions;

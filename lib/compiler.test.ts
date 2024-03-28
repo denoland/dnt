@@ -6,9 +6,9 @@ import {
   getCompilerSourceMapOptions,
   getTopLevelAwaitLocation,
   libNamesToCompilerOption,
-  SourceMapOptions,
+  type SourceMapOptions,
 } from "./compiler.ts";
-import { ScriptTarget } from "./types.ts";
+import type { ScriptTarget } from "./types.ts";
 
 Deno.test("script target should have expected outputs", () => {
   const cases: {

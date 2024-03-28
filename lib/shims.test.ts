@@ -2,7 +2,7 @@
 
 import { assertEquals } from "@std/assert";
 import { shimOptionsToTransformShims } from "./shims.ts";
-import { PackageShim } from "../transform.ts";
+import type { PackageShim } from "../transform.ts";
 
 Deno.test("should get when all true", () => {
   const result = shimOptionsToTransformShims({

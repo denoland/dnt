@@ -1,8 +1,8 @@
 // Copyright 2018-2024 the Deno authors. MIT license.
 
 import type { EntryPoint, ShimOptions } from "../mod.ts";
-import { TransformOutput } from "../transform.ts";
-import { PackageJson } from "./types.ts";
+import type { TransformOutput } from "../transform.ts";
+import type { PackageJson } from "./types.ts";
 import { getDntVersion } from "./utils.ts";
 
 export interface GetPackageJsonOptions {

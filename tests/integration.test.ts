@@ -2,8 +2,8 @@
 
 import { assertEquals, assertRejects, assertStringIncludes } from "@std/assert";
 import * as path from "@std/path";
-import { ShimValue } from "../lib/shims.ts";
-import { build, BuildOptions, ShimOptions } from "../mod.ts";
+import type { ShimValue } from "../lib/shims.ts";
+import { build, type BuildOptions, type ShimOptions } from "../mod.ts";
 
 const versions = {
   denoShim: "~0.18.0",

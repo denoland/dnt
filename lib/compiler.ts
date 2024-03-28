@@ -2,7 +2,7 @@
 
 import { ts } from "@ts-morph/bootstrap";
 import * as path from "@std/path";
-import { ScriptTarget } from "./types.ts";
+import type { ScriptTarget } from "./types.ts";
 
 export function outputDiagnostics(diagnostics: readonly ts.Diagnostic[]) {
   const host: ts.FormatDiagnosticsHost = {
