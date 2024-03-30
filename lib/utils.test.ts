@@ -22,6 +22,7 @@ Deno.test({
 Deno.test("valueToUrl", () => {
   assertEquals(valueToUrl("npm:test"), "npm:test");
   assertEquals(valueToUrl("node:path"), "node:path");
+  assertEquals(valueToUrl("jsr:@scope/package"), "jsr:@scope/package");
   assertEquals(valueToUrl("https://deno.land"), "https://deno.land");
   assertEquals(valueToUrl("http://deno.land"), "http://deno.land");
   assertEquals(

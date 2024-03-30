@@ -95,6 +95,7 @@ export function valueToUrl(value: string) {
     lowerCaseValue.startsWith("http:") ||
     lowerCaseValue.startsWith("https:") ||
     lowerCaseValue.startsWith("npm:") ||
+    lowerCaseValue.startsWith("jsr:") ||
     lowerCaseValue.startsWith("node:") ||
     lowerCaseValue.startsWith("file:")
   ) {
