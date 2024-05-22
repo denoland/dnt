@@ -6,7 +6,7 @@ import type { ShimValue } from "../lib/shims.ts";
 import { build, type BuildOptions, type ShimOptions } from "../mod.ts";
 
 const versions = {
-  denoShim: "~0.18.0",
+  denoShim: "~0.19.1",
   denoTestShim: "~0.5.0",
   cryptoShim: "~0.3.1",
   domExceptionShim: "^4.0.0",
@@ -15,8 +15,8 @@ const versions = {
   timersShim: "~0.1.0",
   weakRefSham: "~0.1.0",
   undici: "^6.0.0",
-  picocolors: "^1.0.0",
-  nodeTypes: "^20.9.0",
+  picocolors: "^1.0.1",
+  nodeTypes: "^20.12.12",
   tsLib: "^2.6.2",
 };
 
