@@ -58,7 +58,7 @@
     "@std/fmt": "jsr:@std/fmt@^0.218.2",
     "@std/fs": "jsr:@std/fs@^0.218.2",
     "@std/path": "jsr:@std/path@^0.218.2",
-    "@ts-morph/bootstrap": "npm:@ts-morph/bootstrap@0.22",
+    "@ts-morph/bootstrap": "npm:@ts-morph/bootstrap@0.23",
     "code-block-writer": "npm:code-block-writer@^13.0.1"
   },
   "exports": {

@@ -19,7 +19,7 @@
       "jsr:@std/io@^0.218.2": "jsr:@std/io@0.218.2",
       "jsr:@std/path@^0.218.2": "jsr:@std/path@0.218.2",
       "jsr:@std/testing@0.220": "jsr:@std/testing@0.220.1",
-      "npm:@ts-morph/bootstrap@0.22": "npm:@ts-morph/bootstrap@0.22.0",
+      "npm:@ts-morph/bootstrap@0.23": "npm:@ts-morph/bootstrap@0.23.0",
       "npm:@types/node": "npm:@types/node@18.16.19",
       "npm:code-block-writer@^13.0.1": "npm:code-block-writer@13.0.1",
       "npm:using-statement@^0.4": "npm:using-statement@0.4.2"
@@ -123,17 +123,17 @@
           "fastq": "fastq@1.17.1"
         }
       },
-      "@ts-morph/bootstrap@0.22.0": {
-        "integrity": "sha512-MI5q7pid4swAlE2lcHwHRa6rcjoIMyT6fy8uuZm8BGg7DHGi/H5bQ0GMZzbk3N0r/LfStMdOYPkl+3IwvfIQ2g==",
+      "@ts-morph/bootstrap@0.23.0": {
+        "integrity": "sha512-ymJv4mgtELz7hMrm8ZBdONW2GaAjO3EcdS3Edc/91t0wiBsl6v4ge67nPAJrGZo75kM2loQfyYwHl864PdPbTw==",
         "dependencies": {
-          "@ts-morph/common": "@ts-morph/common@0.22.0"
+          "@ts-morph/common": "@ts-morph/common@0.23.0"
         }
       },
-      "@ts-morph/common@0.22.0": {
-        "integrity": "sha512-HqNBuV/oIlMKdkLshXd1zKBqNQCsuPEsgQOkfFQ/eUKjRlwndXW1AjN9LVkBEIukm00gGXSRmfkl0Wv5VXLnlw==",
+      "@ts-morph/common@0.23.0": {
+        "integrity": "sha512-m7Lllj9n/S6sOkCkRftpM7L24uvmfXQFedlW/4hENcuJH1HHm9u5EgxZb9uVjQSCGrbBWBkOGgcTxNg36r6ywA==",
         "dependencies": {
           "fast-glob": "fast-glob@3.3.2",
-          "minimatch": "minimatch@9.0.3",
+          "minimatch": "minimatch@9.0.4",
           "mkdirp": "mkdirp@3.0.1",
           "path-browserify": "path-browserify@1.0.1"
         }
@@ -215,8 +215,8 @@
           "picomatch": "picomatch@2.3.1"
         }
       },
-      "minimatch@9.0.3": {
-        "integrity": "sha512-RHiac9mvaRw0x3AYRgDC1CxAP7HTcNrrECeA8YYJeWnpo+2Q5CegtZjaotWTWxDG3UeGA1coE05iH1mPjT/2mg==",
+      "minimatch@9.0.4": {
+        "integrity": "sha512-KqWh+VchfxcMNRAJjj2tnsSJdNbHsVgnkBhTNrW7AjVo6OvLtxw8zfT9oLw1JSohlFzJ8jCoTgaoXvJ+kHt6fw==",
         "dependencies": {
           "brace-expansion": "brace-expansion@2.0.1"
         }
@@ -325,7 +325,7 @@
       "jsr:@std/fmt@^0.218.2",
       "jsr:@std/fs@^0.218.2",
       "jsr:@std/path@^0.218.2",
-      "npm:@ts-morph/bootstrap@0.22",
+      "npm:@ts-morph/bootstrap@0.23",
       "npm:code-block-writer@^13.0.1"
     ]
   }
