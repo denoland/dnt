@@ -41,6 +41,7 @@ pub fn get_all_specifier_mappers() -> Vec<Box<dyn SpecifierMapper>> {
     Box::new(DenoStdNodeSpecifierMapper::new("url")),
     Box::new(DenoStdNodeSpecifierMapper::new("util")),
     Box::new(DenoStdNodeSpecifierMapper::new("worker_threads")),
+    Box::new(JsrMapper),
     Box::new(SkypackMapper),
     Box::new(EsmShMapper),
     Box::new(NpmMapper),
@@ -140,6 +141,22 @@ impl SpecifierMapper for NpmMapper {
       name: npm_specifier.req().name.clone(),
       version: Some(npm_specifier.req().version_req.version_text().to_string()),
       sub_path: npm_specifier.sub_path().map(|s| s.to_string()),
+      peer_dependency: false,
+    })
+  }
+}
+
+struct JsrMapper;
+
+impl SpecifierMapper for JsrMapper {
+  fn map(&self, specifier: &ModuleSpecifier) -> Option<PackageMappedSpecifier> {
+    let req_ref =
+      deno_semver::jsr::JsrPackageReqReference::from_specifier(specifier)
+        .ok()?;
+    Some(PackageMappedSpecifier {
+      name: req_ref.req().name.clone(),
+      version: Some(req_ref.req().version_req.to_string()),
+      sub_path: req_ref.sub_path().map(|s| s.to_string()),
       peer_dependency: false,
     })
   }
@@ -334,6 +351,59 @@ mod test {
         name: "@project/name".to_string(),
         version: Some("2.1.3".to_string()),
         sub_path: None,
+        peer_dependency: false
+      })
+    );
+  }
+
+  #[test]
+  fn test_jsr_mapper() {
+    let mapper = JsrMapper;
+    assert_eq!(
+      mapper.map(&ModuleSpecifier::parse("jsr:@scope/name").unwrap()),
+      Some(PackageMappedSpecifier {
+        name: "@scope/name".to_string(),
+        version: Some("*".to_string()),
+        sub_path: None,
+        peer_dependency: false
+      })
+    );
+    assert_eq!(
+      mapper.map(&ModuleSpecifier::parse("jsr:name@2.1.3/mod.ts").unwrap()),
+      Some(PackageMappedSpecifier {
+        name: "name".to_string(),
+        version: Some("2.1.3".to_string()),
+        sub_path: Some("mod.ts".to_string()),
+        peer_dependency: false
+      })
+    );
+    assert_eq!(
+      mapper.map(
+        &ModuleSpecifier::parse("jsr:@project/name@2.1.3/mod.ts").unwrap()
+      ),
+      Some(PackageMappedSpecifier {
+        name: "@project/name".to_string(),
+        version: Some("2.1.3".to_string()),
+        sub_path: Some("mod.ts".to_string()),
+        peer_dependency: false
+      })
+    );
+    assert_eq!(
+      mapper.map(&ModuleSpecifier::parse("jsr:@project/name@2.1.3").unwrap()),
+      Some(PackageMappedSpecifier {
+        name: "@project/name".to_string(),
+        version: Some("2.1.3".to_string()),
+        sub_path: None,
+        peer_dependency: false
+      })
+    );
+    assert_eq!(
+      mapper
+        .map(&ModuleSpecifier::parse("jsr:@project/name/sub-path").unwrap()),
+      Some(PackageMappedSpecifier {
+        name: "@project/name".to_string(),
+        version: Some("*".to_string()),
+        sub_path: Some("sub-path".to_string()),
         peer_dependency: false
       })
     );

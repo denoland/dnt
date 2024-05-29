@@ -1067,6 +1067,58 @@ Deno.test("using declaration project", async () => {
   });
 });
 
+Deno.test("should build jsr mapped project", async () => {
+  await runTest("jsr_map_project", {
+    entryPoints: ["mod.ts"],
+    outDir: "./npm",
+    typeCheck: "both",
+    shims: {
+      deno: {
+        test: true,
+      },
+    },
+    package: {
+      name: "add",
+      version: "1.0.0",
+    },
+    mappings: {
+      "jsr:@std/csv/parse": {
+        name: "csv-parse",
+        version: "*",
+      },
+    },
+  }, (output) => {
+    output.assertNotExists("script/mod.js.map");
+    output.assertNotExists("esm/mod.js.map");
+    assertEquals(output.packageJson, {
+      name: "add",
+      version: "1.0.0",
+      main: "./script/mod.js",
+      module: "./esm/mod.js",
+      exports: {
+        ".": {
+          import: "./esm/mod.js",
+          require: "./script/mod.js",
+        },
+      },
+      scripts: {
+        test: "node test_runner.js",
+      },
+      dependencies: {
+        tslib: versions.tsLib,
+        "@deno/sham-weakref": versions.weakRefSham,
+        "assert": "*"
+      },
+      devDependencies: {
+        "@types/node": versions.nodeTypes,
+        picocolors: versions.picocolors,
+        "@deno/shim-deno": versions.denoShim,
+      },
+      _generatedBy: "dnt@dev",
+    });
+  });
+})
+
 Deno.test("should build jsr project", async () => {
   await runTest("jsr_project", {
     entryPoints: ["mod.ts"],
@@ -1144,6 +1196,7 @@ async function runTest(
     | "declaration_import_project"
     | "import_map_project"
     | "json_module_project"
+    | "jsr_map_project"
     | "jsr_project"
     | "package_mappings_project"
     | "polyfill_project"
