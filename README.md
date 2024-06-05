@@ -57,7 +57,7 @@ There are several steps done in a pipeline:
        bugs: {
          url: "https://github.com/username/repo/issues",
        },
-       scripts: {}
+       scripts: {},
      },
      postBuild() {
        // steps to run after building and before running the tests
