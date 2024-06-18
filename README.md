@@ -768,3 +768,18 @@ let output_result = transform(TransformOptions {
   specifier_mappings: None,
 }).await?;
 ```
+
+## Developing on DNT
+You'll need `Deno`, `rustup` and `Cargo`. If you're a [Nix](https://nixos.org/) user you can just run:
+```shell
+nix develop
+```
+in this folder to get a shell with all dependencies satisfied.
+You can then build DNT via:
+```shell
+deno task build
+```
+and run the tests after via
+```
+deno task test
+```
