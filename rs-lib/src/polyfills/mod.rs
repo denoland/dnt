@@ -150,7 +150,7 @@ impl PolyfillTester {
     use crate::visitors::fill_polyfills;
     use crate::visitors::FillPolyfillsParams;
 
-    let parser = ScopeAnalysisParser::default();
+    let parser = ScopeAnalysisParser;
     let parsed_source = parser
       .parse_module(ParseOptions {
         specifier: &ModuleSpecifier::parse("file://test.ts").unwrap(),

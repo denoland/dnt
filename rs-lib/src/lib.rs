@@ -229,7 +229,8 @@ pub enum ScriptTarget {
   ES2020 = 7,
   ES2021 = 8,
   ES2022 = 9,
-  Latest = 10,
+  ES2023 = 10,
+  Latest = 11,
 }
 
 pub struct TransformOptions {

@@ -32,12 +32,12 @@ jobs:
       run: |
         cargo fmt --all -- --check
         deno fmt --check
-    - name: Cargo lint
+    - name: Lint (Cargo)
       run: cargo clippy --all-targets --all-features --release
 
     - name: Build
       run: deno task build
-    - name: Deno lint
+    - name: Lint (Deno)
       run: deno lint
     - name: Test (Rust)
       run: cargo test --all-targets --all-features --release
