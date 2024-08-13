@@ -60,7 +60,7 @@ impl ModuleGraph {
       ),
       None => None,
     };
-    let mut loader = SourceLoader::new(
+    let loader = SourceLoader::new(
       loader,
       get_all_specifier_mappers(),
       options.specifier_mappings,
@@ -77,19 +77,19 @@ impl ModuleGraph {
           .chain(options.test_entry_points.iter())
           .map(|s| s.to_owned())
           .collect(),
-        &mut loader,
+        &loader,
         deno_graph::BuildOptions {
           is_dynamic: false,
           imports: Default::default(),
           resolver: resolver.as_ref().map(|r| r.as_resolver()),
-          module_analyzer: Some(&capturing_analyzer),
+          locker: None,
+          module_analyzer: &capturing_analyzer,
           reporter: None,
           npm_resolver: None,
-          workspace_members: Default::default(),
-          file_system: None,
-          jsr_url_provider: None,
-          module_parser: Some(&source_parser),
+          file_system: Default::default(),
+          jsr_url_provider: Default::default(),
           executor: Default::default(),
+          passthrough_jsr_specifiers: false,
         },
       )
       .await;

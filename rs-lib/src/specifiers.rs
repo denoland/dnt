@@ -8,6 +8,7 @@ use anyhow::Result;
 use deno_ast::ModuleSpecifier;
 use deno_graph::Module;
 use deno_graph::Resolution;
+use deno_semver::npm::NpmPackageReqReference;
 
 use crate::declaration_file_resolution::resolve_declaration_file_mappings;
 use crate::declaration_file_resolution::DeclarationFileResolution;
@@ -67,6 +68,15 @@ pub fn get_specifiers<'a>(
         {
           found_mapped_specifiers
             .insert(module.specifier().clone(), mapped_entry);
+        } else if let Ok(npm_specifier) =
+          deno_semver::npm::NpmPackageReqReference::from_specifier(
+            module.specifier(),
+          )
+        {
+          found_mapped_specifiers.insert(
+            module.specifier().clone(),
+            PackageMappedSpecifier::from_npm_specifier(&npm_specifier),
+          );
         } else {
           found_module_specifiers.push(module.specifier().clone());
 
@@ -118,8 +128,21 @@ pub fn get_specifiers<'a>(
           }
         }
       }
-      Module::Npm(_) | Module::Node(_) | Module::External(_) => {
+      Module::Npm(_) | Module::Node(_) => {
         // ignore
+      }
+      Module::External(module) => {
+        let specifier = &module.specifier;
+        if let Ok(npm_specifier) =
+          NpmPackageReqReference::from_specifier(specifier)
+        {
+          if !found_mapped_specifiers.contains_key(specifier) {
+            specifiers.mapped_packages.insert(
+              specifier.clone(),
+              PackageMappedSpecifier::from_npm_specifier(&npm_specifier),
+            );
+          }
+        }
       }
     }
   }

@@ -23,25 +23,25 @@ jobs:
     - uses: denoland/setup-deno@v1
       with:
         deno-version: ~1.x
-    - uses: actions/setup-node@v2
+    - uses: actions/setup-node@v4
       with:
-        node-version: '18'
+        node-version: '20'
         registry-url: 'https://registry.npmjs.org'
 
     - name: Format
       run: |
         cargo fmt --all -- --check
         deno fmt --check
-    - name: Lint
-      run: |
-        cargo clippy --all-targets --all-features --release
-        deno lint
+    - name: Lint (Cargo)
+      run: cargo clippy --all-targets --all-features --release
 
     - name: Build
       run: deno task build
+    - name: Lint (Deno)
+      run: deno lint
     - name: Test (Rust)
       run: cargo test --all-targets --all-features --release
     - name: Test (Deno)
       run: deno task test
     - name: Publish on tag
-      run: deno run -A jsr:@david/publish-on-tag@0.1.3
+      run: deno run -A jsr:@david/publish-on-tag@0.1.4
