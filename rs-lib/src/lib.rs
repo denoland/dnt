@@ -20,6 +20,7 @@ use anyhow::bail;
 use deno_ast::apply_text_changes;
 use deno_ast::TextChange;
 use deno_graph::Module;
+use deno_semver::npm::NpmPackageReqReference;
 use graph::ModuleGraphOptions;
 use mappings::Mappings;
 use mappings::SYNTHETIC_SPECIFIERS;
@@ -124,6 +125,15 @@ pub struct PackageMappedSpecifier {
 }
 
 impl PackageMappedSpecifier {
+  pub fn from_npm_specifier(npm_specifier: &NpmPackageReqReference) -> Self {
+    Self {
+      name: npm_specifier.req().name.clone(),
+      version: Some(npm_specifier.req().version_req.version_text().to_string()),
+      sub_path: npm_specifier.sub_path().map(|s| s.to_string()),
+      peer_dependency: false,
+    }
+  }
+
   pub(crate) fn module_specifier_text(&self) -> String {
     if let Some(path) = &self.sub_path {
       format!("{}/{}", self.name, path)
@@ -409,7 +419,7 @@ pub async fn transform(options: TransformOptions) -> Result<TransformOutput> {
             )
           })?;
 
-        apply_text_changes(parsed_source.text_info().text_str(), text_changes)
+        apply_text_changes(parsed_source.text(), text_changes)
       }
       Module::Json(module) => {
         format!("export default {};", strip_bom(&module.source).trim(),)
@@ -702,5 +712,91 @@ fn get_declaration_warnings(specifiers: &Specifiers) -> Vec<String> {
     post_message: &str,
   ) -> String {
     format!("Duplicate declaration file found for {}\n  Specified {} in {}\n  Selected {}\n  {}", code_specifier, dep.specifier, dep.referrer, selected_dep.specifier, post_message)
+  }
+}
+
+#[cfg(test)]
+mod test {
+  use super::*;
+
+  #[test]
+  fn test_npm_mapper() {
+    fn parse(specifier: &str) -> Option<PackageMappedSpecifier> {
+      let npm_specifier = NpmPackageReqReference::from_str(specifier).ok()?;
+      Some(PackageMappedSpecifier::from_npm_specifier(&npm_specifier))
+    }
+
+    assert_eq!(
+      parse("npm:package"),
+      Some(PackageMappedSpecifier {
+        name: "package".to_string(),
+        version: Some("*".to_string()),
+        sub_path: None,
+        peer_dependency: false
+      })
+    );
+    assert_eq!(
+      parse("npm:package@^2.1"),
+      Some(PackageMappedSpecifier {
+        name: "package".to_string(),
+        version: Some("^2.1".to_string()),
+        sub_path: None,
+        peer_dependency: false
+      })
+    );
+    assert_eq!(
+      parse("npm:preact/hooks"),
+      Some(PackageMappedSpecifier {
+        name: "preact".to_string(),
+        version: Some("*".to_string()),
+        sub_path: Some("hooks".to_string()),
+        peer_dependency: false
+      })
+    );
+    assert_eq!(
+      parse("npm:package/sub/path"),
+      Some(PackageMappedSpecifier {
+        name: "package".to_string(),
+        version: Some("*".to_string()),
+        sub_path: Some("sub/path".to_string()),
+        peer_dependency: false
+      })
+    );
+    assert_eq!(
+      parse("npm:@scope/name/path/sub"),
+      Some(PackageMappedSpecifier {
+        name: "@scope/name".to_string(),
+        version: Some("*".to_string()),
+        sub_path: Some("path/sub".to_string()),
+        peer_dependency: false
+      })
+    );
+    assert_eq!(
+      parse("npm:package@^2.1/sub_path"),
+      Some(PackageMappedSpecifier {
+        name: "package".to_string(),
+        version: Some("^2.1".to_string()),
+        sub_path: Some("sub_path".to_string()),
+        peer_dependency: false
+      })
+    );
+    assert_eq!(
+      parse("npm:@project/name@2.1.3"),
+      Some(PackageMappedSpecifier {
+        name: "@project/name".to_string(),
+        version: Some("2.1.3".to_string()),
+        sub_path: None,
+        peer_dependency: false
+      })
+    );
+    assert_eq!(
+      parse("npm:/@project/name@2.1.3"),
+      Some(PackageMappedSpecifier {
+        name: "@project/name".to_string(),
+        version: Some("2.1.3".to_string()),
+        sub_path: None,
+        peer_dependency: false
+      })
+    );
   }
 }

@@ -1,5 +1,6 @@
 // Copyright 2018-2024 the Deno authors. MIT license.
 
+use std::cell::RefCell;
 use std::collections::BTreeMap;
 use std::collections::HashMap;
 use std::pin::Pin;
@@ -49,7 +50,7 @@ pub struct LoaderSpecifiers {
 
 pub struct SourceLoader<'a> {
   loader: Rc<dyn Loader>,
-  specifiers: LoaderSpecifiers,
+  specifiers: RefCell<LoaderSpecifiers>,
   specifier_mappers: Vec<Box<dyn SpecifierMapper>>,
   specifier_mappings: &'a HashMap<ModuleSpecifier, MappedSpecifier>,
 }
@@ -69,13 +70,13 @@ impl<'a> SourceLoader<'a> {
   }
 
   pub fn into_specifiers(self) -> LoaderSpecifiers {
-    self.specifiers
+    self.specifiers.take()
   }
 }
 
 impl<'a> deno_graph::source::Loader for SourceLoader<'a> {
   fn load(
-    &mut self,
+    &self,
     specifier: &ModuleSpecifier,
     load_options: deno_graph::source::LoadOptions,
   ) -> deno_graph::source::LoadFuture {
@@ -83,6 +84,7 @@ impl<'a> deno_graph::source::Loader for SourceLoader<'a> {
       Some(MappedSpecifier::Package(mapping)) => {
         self
           .specifiers
+          .borrow_mut()
           .mapped_packages
           .insert(specifier.clone(), mapping.clone());
         // provide a dummy file so that this module can be analyzed later
@@ -91,6 +93,7 @@ impl<'a> deno_graph::source::Loader for SourceLoader<'a> {
       Some(MappedSpecifier::Module(redirect)) => {
         self
           .specifiers
+          .borrow_mut()
           .mapped_modules
           .insert(specifier.clone(), redirect.clone());
         redirect
@@ -100,8 +103,10 @@ impl<'a> deno_graph::source::Loader for SourceLoader<'a> {
           if let Some(entry) = mapper.map(specifier) {
             self
               .specifiers
+              .borrow_mut()
               .mapped_packages
               .insert(specifier.clone(), entry);
+
             // provide a dummy file so that this module can be analyzed later
             return get_dummy_module(specifier);
           }

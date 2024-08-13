@@ -14,9 +14,9 @@ default = ["console_error_panic_hook"]
 anyhow = "1.0.51"
 dnt = { path = "../rs-lib", default-features = false, features = ["serialization"], package="deno_node_transform" }
 getrandom = { version = "*", features = ["js"] }
-js-sys = "=0.3.68"
-wasm-bindgen = { version = "=0.2.91", features = ["serde-serialize"] }
-wasm-bindgen-futures = "=0.4.41"
+js-sys = "=0.3.69"
+wasm-bindgen = { version = "=0.2.92", features = ["serde-serialize"] }
+wasm-bindgen-futures = "=0.4.42"
 
 # The `console_error_panic_hook` crate provides better debugging of panics by
 # logging them with `console.error`. This is great for development, but requires

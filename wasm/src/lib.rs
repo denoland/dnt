@@ -30,7 +30,7 @@ extern "C" {
   ) -> JsValue;
 }
 
-struct JsLoader {}
+struct JsLoader;
 
 impl dnt::Loader for JsLoader {
   fn load(

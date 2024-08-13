@@ -93,7 +93,7 @@ impl Mappings {
         specifier,
         get_mapped_file_path(
           media_type,
-          &deps_path.join(suggested_path),
+          deps_path.join(suggested_path),
           &mut mapped_filepaths_no_ext,
         ),
       );
@@ -173,7 +173,7 @@ impl Mappings {
 
   pub fn get_file_path(&self, specifier: &ModuleSpecifier) -> &PathBuf {
     self.inner.get(specifier).unwrap_or_else(|| {
-      panic!("Could not find file path for specifier: {}", specifier)
+      panic!("Could not find file path for specifier: {}", specifier,);
     })
   }
 }
