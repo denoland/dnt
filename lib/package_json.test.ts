@@ -102,7 +102,7 @@ Deno.test("single entrypoint", () => {
       devDependencies: {
         "@types/node": versions.nodeTypes,
       },
-      scripts: undefined,
+      scripts: {},
       exports: {
         ".": {
           import: {
@@ -137,7 +137,7 @@ Deno.test("single entrypoint", () => {
       devDependencies: {
         "@types/node": versions.nodeTypes,
       },
-      scripts: undefined,
+      scripts: {},
       exports: {
         ".": {
           import: {
@@ -169,7 +169,7 @@ Deno.test("single entrypoint", () => {
       devDependencies: {
         "@types/node": versions.nodeTypes,
       },
-      scripts: undefined,
+      scripts: {},
       _generatedBy: "dnt@dev",
     },
   );
@@ -193,7 +193,7 @@ Deno.test("single entrypoint", () => {
       devDependencies: {
         "@types/node": versions.nodeTypes,
       },
-      scripts: undefined,
+      scripts: {},
       exports: {
         ".": {
           import: "./esm/mod.js",
@@ -226,7 +226,7 @@ Deno.test("single entrypoint", () => {
       devDependencies: {
         "@types/node": versions.nodeTypes,
       },
-      scripts: undefined,
+      scripts: {},
       exports: {
         ".": {
           import: "./esm/mod.js",
@@ -353,7 +353,7 @@ Deno.test("multiple entrypoints", () => {
         },
       },
     },
-    scripts: undefined,
+    scripts: {},
     _generatedBy: "dnt@dev",
   });
 });
@@ -423,7 +423,7 @@ Deno.test("binary entrypoints", () => {
         },
       },
     },
-    scripts: undefined,
+    scripts: {},
     _generatedBy: "dnt@dev",
   });
 });
