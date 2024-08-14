@@ -94,7 +94,7 @@ export function getPackageJson({
       // override with specified scripts
       ...(packageJsonObj.scripts ?? {}),
     })
-    : packageJsonObj.scripts;
+    : packageJsonObj.scripts ?? {};
   const mainExport = exports.length > 0
     ? {
       module: includeEsModule ? `./esm/${exports[0].path}` : undefined,
