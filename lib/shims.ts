@@ -103,7 +103,7 @@ function getDenoShim(): Shim {
   return {
     package: {
       name: "@deno/shim-deno",
-      version: "~0.18.0",
+      version: "~0.19.1",
     },
     globalNames: ["Deno"],
   };
