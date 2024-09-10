@@ -15,8 +15,8 @@ const versions = {
   timersShim: "~0.1.0",
   weakRefSham: "~0.1.0",
   undici: "^6.0.0",
-  picocolors: "^1.0.1",
-  nodeTypes: "^20.12.12",
+  picocolors: "^1.1.0",
+  nodeTypes: "^20.16.5",
   tsLib: "^2.6.2",
 };
 

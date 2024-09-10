@@ -3,9 +3,12 @@
 import { assertEquals } from "@std/assert";
 import { getPackageJson, type GetPackageJsonOptions } from "./package_json.ts";
 
+/**
+ * versions must be sync with versions from ./package_json.ts
+ */
 const versions = {
-  picocolors: "^1.0.1",
-  nodeTypes: "^20.12.12",
+  picocolors: "^1.1.0",
+  nodeTypes: "^20.16.5",
   tsLib: "^2.6.2",
 };
 
