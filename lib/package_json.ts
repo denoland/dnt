@@ -4,6 +4,14 @@ import type { EntryPoint, ShimOptions } from "../mod.ts";
 import type { TransformOutput } from "../transform.ts";
 import type { PackageJson } from "./types.ts";
 import { getDntVersion } from "./utils.ts";
+/**
+ * versions must be sync with versions from ./package_json.test.ts
+ */
+const versions = {
+  picocolors: "^1.1.0",
+  nodeTypes: "^20.16.5",
+  tsLib: "^2.6.2",
+};
 
 export interface GetPackageJsonOptions {
   transformOutput: TransformOutput;
@@ -41,7 +49,7 @@ export function getPackageJson({
     // typescript helpers library (https://www.npmjs.com/package/tslib)
     ...(includeTsLib
       ? {
-        tslib: "^2.6.2",
+        tslib: versions.tsLib,
       }
       : {}),
     // add dependencies from transform
@@ -67,7 +75,7 @@ export function getPackageJson({
     ? ({
       ...(!Object.keys(dependencies).includes("picocolors")
         ? {
-          "picocolors": "^1.0.0",
+          "picocolors": versions.picocolors,
         }
         : {}),
       // add dependencies from transform
@@ -81,7 +89,7 @@ export function getPackageJson({
   const devDependencies = {
     ...(shouldIncludeTypesNode()
       ? {
-        "@types/node": "^20.9.0",
+        "@types/node": versions.nodeTypes,
       }
       : {}),
     ...testDevDependencies,
