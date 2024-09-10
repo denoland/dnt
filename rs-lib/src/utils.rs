@@ -1,9 +1,10 @@
-// Copyright 2018-2023 &the Deno authors. All rights reserved. MIT license.
+// Copyright 2018-2024 the Deno authors. MIT license.
 
 use std::collections::BTreeMap;
 use std::collections::HashSet;
 use std::path::Path;
 use std::path::PathBuf;
+use std::sync::Arc;
 
 use anyhow::Result;
 use deno_ast::apply_text_changes;
@@ -14,7 +15,6 @@ use deno_ast::MediaType;
 use deno_ast::ModuleSpecifier;
 use deno_ast::ParseParams;
 use deno_ast::SourceRangedForSpanned;
-use deno_ast::SourceTextInfo;
 use deno_ast::SourceTextInfoProvider;
 use deno_ast::TextChange;
 
@@ -172,7 +172,8 @@ pub fn prepend_statement_to_text(
 ) {
   // It's not great to have to reparse the file for this. Perhaps there is a utility
   // function in swc or maybe add one to deno_ast for parsing out the leading comments
-  let text_info = SourceTextInfo::from_string(std::mem::take(file_text));
+  let text = std::mem::take(file_text);
+  let text: Arc<str> = text.into();
   let media_type = MediaType::from_path(file_path);
   let parsed_module = parse_module(ParseParams {
     specifier: ModuleSpecifier::parse(&format!(
@@ -184,17 +185,17 @@ pub fn prepend_statement_to_text(
     maybe_syntax: None,
     media_type,
     scope_analysis: false,
-    text_info: text_info.clone(),
+    text: text.clone(),
   });
   match parsed_module {
     Ok(parsed_module) => parsed_module.with_view(|program| {
       let text_change =
         text_change_for_prepend_statement_to_text(program, statement_text);
-      *file_text = apply_text_changes(text_info.text_str(), vec![text_change]);
+      *file_text = apply_text_changes(text.as_ref(), vec![text_change]);
     }),
     Err(_) => {
       // should never happen... fallback...
-      *file_text = format!("{}\n{}", statement_text, text_info.text_str(),);
+      *file_text = format!("{}\n{}", statement_text, text);
     }
   }
 }

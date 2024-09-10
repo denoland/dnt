@@ -51,6 +51,7 @@ pub fn is_in_type(mut node: Node) -> bool {
       | Node::ForStmt(_)
       | Node::Function(_)
       | Node::GetterProp(_)
+      | Node::IdentName(_)
       | Node::IfStmt(_)
       | Node::Import(_)
       | Node::ImportDecl(_)

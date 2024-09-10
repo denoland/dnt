@@ -43,7 +43,6 @@ pub fn get_all_specifier_mappers() -> Vec<Box<dyn SpecifierMapper>> {
     Box::new(DenoStdNodeSpecifierMapper::new("worker_threads")),
     Box::new(SkypackMapper),
     Box::new(EsmShMapper),
-    Box::new(NpmMapper),
   ]
 }
 
@@ -124,22 +123,6 @@ impl SpecifierMapper for EsmShMapper {
       name: captures.get(2).unwrap().as_str().to_string(),
       version: Some(captures.get(3).unwrap().as_str().to_string()),
       sub_path,
-      peer_dependency: false,
-    })
-  }
-}
-
-struct NpmMapper;
-
-impl SpecifierMapper for NpmMapper {
-  fn map(&self, specifier: &ModuleSpecifier) -> Option<PackageMappedSpecifier> {
-    let npm_specifier =
-      deno_semver::npm::NpmPackageReqReference::from_str(specifier.as_str())
-        .ok()?;
-    Some(PackageMappedSpecifier {
-      name: npm_specifier.req().name.clone(),
-      version: Some(npm_specifier.req().version_req.version_text().to_string()),
-      sub_path: npm_specifier.sub_path().map(|s| s.to_string()),
       peer_dependency: false,
     })
   }
@@ -259,83 +242,6 @@ mod test {
       mapper
         .map(&ModuleSpecifier::parse("https://esm.sh/gh/owner/repo").unwrap()),
       None,
-    );
-  }
-
-  #[test]
-  fn test_npm_mapper() {
-    let mapper = NpmMapper;
-    assert_eq!(
-      mapper.map(&ModuleSpecifier::parse("npm:package").unwrap()),
-      Some(PackageMappedSpecifier {
-        name: "package".to_string(),
-        version: Some("*".to_string()),
-        sub_path: None,
-        peer_dependency: false
-      })
-    );
-    assert_eq!(
-      mapper.map(&ModuleSpecifier::parse("npm:package@^2.1").unwrap()),
-      Some(PackageMappedSpecifier {
-        name: "package".to_string(),
-        version: Some("^2.1".to_string()),
-        sub_path: None,
-        peer_dependency: false
-      })
-    );
-    assert_eq!(
-      mapper.map(&ModuleSpecifier::parse("npm:preact/hooks").unwrap()),
-      Some(PackageMappedSpecifier {
-        name: "preact".to_string(),
-        version: Some("*".to_string()),
-        sub_path: Some("hooks".to_string()),
-        peer_dependency: false
-      })
-    );
-    assert_eq!(
-      mapper.map(&ModuleSpecifier::parse("npm:package/sub/path").unwrap()),
-      Some(PackageMappedSpecifier {
-        name: "package".to_string(),
-        version: Some("*".to_string()),
-        sub_path: Some("sub/path".to_string()),
-        peer_dependency: false
-      })
-    );
-    assert_eq!(
-      mapper.map(&ModuleSpecifier::parse("npm:@scope/name/path/sub").unwrap()),
-      Some(PackageMappedSpecifier {
-        name: "@scope/name".to_string(),
-        version: Some("*".to_string()),
-        sub_path: Some("path/sub".to_string()),
-        peer_dependency: false
-      })
-    );
-    assert_eq!(
-      mapper.map(&ModuleSpecifier::parse("npm:package@^2.1/sub_path").unwrap()),
-      Some(PackageMappedSpecifier {
-        name: "package".to_string(),
-        version: Some("^2.1".to_string()),
-        sub_path: Some("sub_path".to_string()),
-        peer_dependency: false
-      })
-    );
-    assert_eq!(
-      mapper.map(&ModuleSpecifier::parse("npm:@project/name@2.1.3").unwrap()),
-      Some(PackageMappedSpecifier {
-        name: "@project/name".to_string(),
-        version: Some("2.1.3".to_string()),
-        sub_path: None,
-        peer_dependency: false
-      })
-    );
-    assert_eq!(
-      mapper.map(&ModuleSpecifier::parse("npm:/@project/name@2.1.3").unwrap()),
-      Some(PackageMappedSpecifier {
-        name: "@project/name".to_string(),
-        version: Some("2.1.3".to_string()),
-        sub_path: None,
-        peer_dependency: false
-      })
     );
   }
 }

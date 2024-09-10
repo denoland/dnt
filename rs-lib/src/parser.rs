@@ -5,7 +5,6 @@ use deno_ast::parse_module;
 use deno_ast::ParseDiagnostic;
 use deno_ast::ParseParams;
 use deno_ast::ParsedSource;
-use deno_ast::SourceTextInfo;
 use deno_graph::ModuleParser;
 use deno_graph::ParseOptions;
 
@@ -19,7 +18,7 @@ impl ModuleParser for ScopeAnalysisParser {
   ) -> Result<ParsedSource, ParseDiagnostic> {
     parse_module(ParseParams {
       specifier: options.specifier.clone(),
-      text_info: SourceTextInfo::new(options.source),
+      text: options.source,
       media_type: options.media_type,
       capture_tokens: true,
       scope_analysis: true,

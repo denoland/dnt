@@ -1,6 +1,6 @@
 // Copyright 2018-2024 the Deno authors. MIT license.
 
-import { expandGlob } from "@std/fs/expand_glob";
+import { expandGlob } from "@std/fs/expand-glob";
 import * as path from "@std/path";
 
 /** Gets the files found in the provided root dir path based on the glob. */
@@ -95,6 +95,7 @@ export function valueToUrl(value: string) {
     lowerCaseValue.startsWith("http:") ||
     lowerCaseValue.startsWith("https:") ||
     lowerCaseValue.startsWith("npm:") ||
+    lowerCaseValue.startsWith("jsr:") ||
     lowerCaseValue.startsWith("node:") ||
     lowerCaseValue.startsWith("file:")
   ) {

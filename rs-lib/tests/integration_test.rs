@@ -2079,6 +2079,28 @@ async fn node_specifier() {
   );
 }
 
+#[tokio::test]
+async fn npm_specifier() {
+  let result = TestBuilder::new()
+    .with_loader(|loader| {
+      loader.add_local_file(
+        "/mod.ts",
+        "import * as pkg from 'npm:using-statement@^0.4'; console.log(pkg);",
+      );
+    })
+    .transform()
+    .await
+    .unwrap();
+
+  assert_files!(
+    result.main.files,
+    &[(
+      "mod.ts",
+      "import * as pkg from 'using-statement'; console.log(pkg);"
+    )]
+  );
+}
+
 fn get_shim_file_text(mut text: String) -> String {
   text.push('\n');
   text.push_str(

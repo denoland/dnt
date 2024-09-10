@@ -38,6 +38,8 @@ export function getCompilerScriptTarget(target: ScriptTarget) {
       return ts.ScriptTarget.ES2021;
     case "ES2022":
       return ts.ScriptTarget.ES2022;
+    case "ES2023":
+      return ts.ScriptTarget.ES2023;
     case "Latest":
       return ts.ScriptTarget.Latest;
     default:
@@ -150,6 +152,8 @@ export function getCompilerLibOption(target: ScriptTarget): LibName[] {
       return ["ES2021"];
     case "ES2022":
       return ["ES2022"];
+    case "ES2023":
+      return ["ES2023"];
     case "Latest":
       return ["ESNext"];
     default: {
