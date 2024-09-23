@@ -857,6 +857,21 @@ Deno.test("should build and test the array find last polyfill project", async ()
   });
 });
 
+Deno.test("should build and test the import meta polyfill project", async () => {
+  await runTest("polyfill_import_meta_project", {
+    test: true,
+    entryPoints: ["mod.ts"],
+    outDir: "./npm",
+    shims: { deno: "dev" },
+    package: {
+      name: "polyfill-import-meta-project",
+      version: "0.0.0",
+    },
+  }, (output) => {
+    output.assertExists("esm/_dnt.polyfills.js");
+  });
+});
+
 Deno.test("should build and test the array.fromAsync polyfill project", async () => {
   await runTest("polyfill_array_from_async_project", {
     entryPoints: ["mod.ts"],
@@ -1149,6 +1164,7 @@ async function runTest(
     | "polyfill_project"
     | "polyfill_array_from_async_project"
     | "polyfill_array_find_last_project"
+    | "polyfill_import_meta_project"
     | "module_mappings_project"
     | "node_types_project"
     | "undici_project"
