@@ -108,6 +108,10 @@ Deno.test("should build test project - basic", async () => {
 /esm/deps/deno.land/std@0.181.0/testing/asserts.d.ts
 /script/deps/deno.land/std@0.181.0/testing/asserts.js
 /script/deps/deno.land/std@0.181.0/testing/asserts.d.ts
+/esm/_dnt.test_polyfills.js
+/esm/_dnt.test_polyfills.d.ts
+/script/_dnt.test_polyfills.js
+/script/_dnt.test_polyfills.d.ts
 /esm/_dnt.test_shims.js
 /esm/_dnt.test_shims.d.ts
 /script/_dnt.test_shims.js
@@ -173,6 +177,8 @@ Deno.test("should build test project without esm", async () => {
 /types/deps/deno.land/std@0.181.0/testing/_format.d.ts
 /script/deps/deno.land/std@0.181.0/testing/asserts.js
 /types/deps/deno.land/std@0.181.0/testing/asserts.d.ts
+/script/_dnt.test_polyfills.js
+/types/_dnt.test_polyfills.d.ts
 /script/_dnt.test_shims.js
 /types/_dnt.test_shims.d.ts
 /test_runner.js
@@ -527,6 +533,12 @@ Deno.test("should build with source maps", async () => {
 /script/deps/deno.land/std@0.181.0/testing/asserts.js
 /script/deps/deno.land/std@0.181.0/testing/asserts.js.map
 /script/deps/deno.land/std@0.181.0/testing/asserts.d.ts
+/esm/_dnt.test_polyfills.js
+/esm/_dnt.test_polyfills.js.map
+/esm/_dnt.test_polyfills.d.ts
+/script/_dnt.test_polyfills.js
+/script/_dnt.test_polyfills.js.map
+/script/_dnt.test_polyfills.d.ts
 /esm/_dnt.test_shims.js
 /esm/_dnt.test_shims.js.map
 /esm/_dnt.test_shims.d.ts
