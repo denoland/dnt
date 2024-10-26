@@ -27,7 +27,7 @@ There are several steps done in a pipeline:
 
 ## Setup
 
-1. `deno add @deno/dnt`
+1. `deno add jsr:@deno/dnt`
 
 1. Create a build script file:
 
