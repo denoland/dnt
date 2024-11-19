@@ -96,6 +96,10 @@ impl<'a, 'b> PolyfillVisitContext<'a, 'b> {
 }
 
 pub fn polyfills_for_target(target: ScriptTarget) -> Vec<Box<dyn Polyfill>> {
+  if matches!(target, ScriptTarget::Latest) {
+    return Vec::new();
+  }
+
   all_polyfills()
     .into_iter()
     .filter(|p| p.use_for_target(target))
