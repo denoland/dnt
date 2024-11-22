@@ -214,6 +214,7 @@ Deno.test("should build with all options off", async () => {
       devDependencies: {
         "@types/node": versions.nodeTypes,
       },
+      scripts: {},
       _generatedBy: "dnt@dev",
     });
 
