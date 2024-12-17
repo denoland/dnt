@@ -171,6 +171,14 @@ export interface BuildOptions {
      * @default false
      */
     emitDecoratorMetadata?: boolean;
+    /**
+     * Enable experimental support for legacy experimental decorators.
+     *
+     * See more: https://www.typescriptlang.org/tsconfig#experimentalDecorators
+     * @remarks This is true by default for backwards compatibility. To use the new decorators, set this to `false`.
+     * @default true
+     */
+    experimentalDecorators?: boolean;
     useUnknownInCatchVariables?: boolean;
   };
   /** Filter out diagnostics that you want to ignore during type checking and emitting.
@@ -280,7 +288,8 @@ export async function build(options: BuildOptions): Promise<void> {
       esModuleInterop: false,
       isolatedModules: true,
       useDefineForClassFields: true,
-      experimentalDecorators: true,
+      experimentalDecorators: options.compilerOptions?.experimentalDecorators ??
+        true,
       emitDecoratorMetadata: options.compilerOptions?.emitDecoratorMetadata ??
         false,
       jsx: ts.JsxEmit.React,
