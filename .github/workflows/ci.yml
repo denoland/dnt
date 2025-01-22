@@ -5,43 +5,43 @@ on:
   push:
     branches: [main]
     tags:
-    - '*'
+      - "*"
 concurrency:
   group: ${{ github.workflow }}-${{ !contains(github.event.pull_request.labels.*.name, 'test-flaky-ci') && github.head_ref || github.run_id }}
   cancel-in-progress: true
 jobs:
   test:
     permissions:
-        contents: read
-        id-token: write
+      contents: read
+      id-token: write
     runs-on: ubuntu-latest
     timeout-minutes: 30
     steps:
-    - uses: actions/checkout@v4
-    - uses: dsherret/rust-toolchain-file@v1
-    - uses: Swatinem/rust-cache@v2
-    - uses: denoland/setup-deno@v2
-      with:
-        deno-version: ~2.x
-    - uses: actions/setup-node@v4
-      with:
-        node-version: '20'
-        registry-url: 'https://registry.npmjs.org'
+      - uses: actions/checkout@v4
+      - uses: dsherret/rust-toolchain-file@v1
+      - uses: Swatinem/rust-cache@v2
+      - uses: denoland/setup-deno@v2
+        with:
+          deno-version: ~2.x
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          registry-url: "https://registry.npmjs.org"
 
-    - name: Format
-      run: |
-        cargo fmt --all -- --check
-        deno fmt --check
-    - name: Lint (Cargo)
-      run: cargo clippy --all-targets --all-features --release
+      - name: Format
+        run: |
+          cargo fmt --all -- --check
+          deno fmt --check
+      - name: Lint (Cargo)
+        run: cargo clippy --all-targets --all-features --release
 
-    - name: Build
-      run: deno task build
-    - name: Lint (Deno)
-      run: deno lint
-    - name: Test (Rust)
-      run: cargo test --all-targets --all-features --release
-    - name: Test (Deno)
-      run: deno task test
-    - name: Publish on tag
-      run: deno run -A jsr:@david/publish-on-tag@0.2.0
+      - name: Build
+        run: deno task build
+      - name: Lint (Deno)
+        run: deno lint
+      - name: Test (Rust)
+        run: cargo test --all-targets --all-features --release
+      - name: Test (Deno)
+        run: deno task test
+      - name: Publish on tag
+        run: deno run -A jsr:@david/publish-on-tag@0.2.0
