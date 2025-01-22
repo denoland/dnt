@@ -4,7 +4,7 @@ export function hasOwn(a: { prop?: number }) {
   try {
     return Object.hasOwn(a, "prop");
   } catch (err) {
-    err.cause = new Error("test");
+    (err as any).cause = new Error("test");
   }
 }
 
