@@ -44,4 +44,4 @@ jobs:
     - name: Test (Deno)
       run: deno task test
     - name: Publish on tag
-      run: deno run -A jsr:@david/publish-on-tag@0.1.4
+      run: deno run -A jsr:@david/publish-on-tag@0.2.0
