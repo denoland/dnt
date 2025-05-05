@@ -79,7 +79,6 @@ pub struct TransformOptions {
   pub test_shims: Vec<Shim>,
   pub mappings: HashMap<ModuleSpecifier, MappedSpecifier>,
   pub target: ScriptTarget,
-  pub cwd: ModuleSpecifier,
   pub import_map: Option<ModuleSpecifier>,
 }
 
@@ -100,18 +99,23 @@ async fn transform_inner(options: JsValue) -> Result<JsValue, anyhow::Error> {
   // with "invalid type: unit value, expected a boolean" and didn't say exactly
   // where it errored.
   // let options: TransformOptions = serde_wasm_bindgen::from_value(options)?;
-  let cwd = deno_path_util::url_to_file_path(&options.cwd)?;
   let maybe_config_path = match options.import_map.as_ref() {
     Some(import_map) => Some(deno_path_util::url_to_file_path(&import_map)?),
     None => None,
   };
-  let cwd = [cwd];
+  let entry_points = parse_module_specifiers(options.entry_points)?;
+  let paths = entry_points
+    .iter()
+    .filter_map(|e| {
+      deno_path_util::url_to_file_path(&deno_path_util::url_parent(e)).ok()
+    })
+    .collect::<Vec<_>>();
   let workspace_directory =
     deno_config::workspace::WorkspaceDirectory::discover(
       &sys_traits::impls::RealSys,
       match maybe_config_path.as_ref() {
         Some(config_path) => WorkspaceDiscoverStart::ConfigFile(&config_path),
-        None => WorkspaceDiscoverStart::Paths(&cwd),
+        None => WorkspaceDiscoverStart::Paths(&paths),
       },
       &WorkspaceDiscoverOptions {
         additional_config_file_names: &[],
@@ -124,7 +128,7 @@ async fn transform_inner(options: JsValue) -> Result<JsValue, anyhow::Error> {
     )?;
 
   let result = dnt::transform(dnt::TransformOptions {
-    entry_points: parse_module_specifiers(options.entry_points)?,
+    entry_points,
     test_entry_points: parse_module_specifiers(options.test_entry_points)?,
     shims: options.shims,
     test_shims: options.test_shims,
