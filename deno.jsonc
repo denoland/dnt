@@ -53,7 +53,7 @@
     "tests/web_socket_project/npm"
   ],
   "imports": {
-    "@deno/cache-dir": "jsr:@deno/cache-dir@^0.17",
+    "@deno/cache-dir": "jsr:@deno/cache-dir@^0.20",
     "@std/assert": "jsr:@std/assert@1",
     "@std/fmt": "jsr:@std/fmt@1",
     "@std/fs": "jsr:@std/fs@1",
