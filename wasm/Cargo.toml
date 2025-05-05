@@ -12,7 +12,9 @@ default = ["console_error_panic_hook"]
 
 [dependencies]
 anyhow = "1.0.51"
+deno_config.workspace = true
 deno_error.workspace = true
+deno_path_util.workspace = true
 dnt = { path = "../rs-lib", default-features = false, features = ["serialization"], package="deno_node_transform" }
 getrandom = { version = "*", features = ["js"] }
 js-sys = "=0.3.69"

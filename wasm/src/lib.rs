@@ -7,7 +7,10 @@ use std::future::Future;
 use std::rc::Rc;
 use std::sync::Arc;
 
+use anyhow::Context;
 use anyhow::Result;
+use deno_config::workspace::WorkspaceDiscoverOptions;
+use deno_config::workspace::WorkspaceDiscoverStart;
 use deno_error::JsErrorBox;
 use dnt::LoadError;
 use dnt::MappedSpecifier;
@@ -76,6 +79,7 @@ pub struct TransformOptions {
   pub test_shims: Vec<Shim>,
   pub mappings: HashMap<ModuleSpecifier, MappedSpecifier>,
   pub target: ScriptTarget,
+  pub cwd: ModuleSpecifier,
   pub import_map: Option<ModuleSpecifier>,
 }
 
@@ -83,12 +87,41 @@ pub struct TransformOptions {
 pub async fn transform(options: JsValue) -> Result<JsValue, JsValue> {
   set_panic_hook();
 
+  transform_inner(options)
+    .await
+    // need to include the anyhow context
+    .map_err(|err| format!("{:#}", err).into())
+}
+
+async fn transform_inner(options: JsValue) -> Result<JsValue, anyhow::Error> {
   #[allow(deprecated)]
-  let options: TransformOptions = options.into_serde().unwrap();
+  let options: TransformOptions = options.into_serde()?;
   // todo(dsherret): try using this again sometime in the future... it errored
   // with "invalid type: unit value, expected a boolean" and didn't say exactly
   // where it errored.
   // let options: TransformOptions = serde_wasm_bindgen::from_value(options)?;
+  let cwd = deno_path_util::url_to_file_path(&options.cwd)?;
+  let maybe_config_path = match options.import_map.as_ref() {
+    Some(import_map) => Some(deno_path_util::url_to_file_path(&import_map)?),
+    None => None,
+  };
+  let cwd = [cwd];
+  let workspace_directory =
+    deno_config::workspace::WorkspaceDirectory::discover(
+      &sys_traits::impls::RealSys,
+      match maybe_config_path.as_ref() {
+        Some(config_path) => WorkspaceDiscoverStart::ConfigFile(&config_path),
+        None => WorkspaceDiscoverStart::Paths(&cwd),
+      },
+      &WorkspaceDiscoverOptions {
+        additional_config_file_names: &[],
+        deno_json_cache: None,
+        pkg_json_cache: None,
+        workspace_cache: None,
+        discover_pkg_json: true,
+        maybe_vendor_override: None,
+      },
+    )?;
 
   let result = dnt::transform(dnt::TransformOptions {
     entry_points: parse_module_specifiers(options.entry_points)?,
@@ -100,19 +133,17 @@ pub async fn transform(options: JsValue) -> Result<JsValue, JsValue> {
     target: options.target,
     import_map: options.import_map,
   })
-  .await
-  .map_err(|err| format!("{:#}", err))?; // need to include the anyhow context
-
+  .await?;
   Ok(serde_wasm_bindgen::to_value(&result).unwrap())
 }
 
 fn parse_module_specifiers(
   values: Vec<String>,
-) -> Result<Vec<ModuleSpecifier>, JsValue> {
+) -> Result<Vec<ModuleSpecifier>, anyhow::Error> {
   let mut specifiers = Vec::new();
   for value in values {
     let entry_point = dnt::ModuleSpecifier::parse(&value)
-      .map_err(|err| format!("Error parsing {}. {}", value, err))?;
+      .with_context(|| format!("Error parsing {}.", value))?;
     specifiers.push(entry_point);
   }
   Ok(specifiers)

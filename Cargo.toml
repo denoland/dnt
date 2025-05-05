@@ -12,5 +12,8 @@ members = [
 ]
 
 [workspace.dependencies]
+deno_config = "0.54.2"
 deno_error = "0.5.6"
+deno_path_util = "0.3.2"
+serde_json = { version = "1.0.140", features = ["preserve_order"] }
 sys_traits = { version = "0.1.9", features = ["real"] }

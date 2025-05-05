@@ -18,7 +18,7 @@ base64 = "0.13.1"
 deno_ast = { version = "0.46.6", features = ["transforms", "view", "visit", "utils"] }
 deno_error.workspace = true
 deno_graph = { version = "0.90.0", features = [], default-features = false }
-deno_path_util = "0.3.2"
+deno_path_util.workspace = true
 deno_semver = "0.7.1"
 futures = "0.3.25"
 import_map = { version = "0.21.0", features = ["ext"] }
@@ -28,7 +28,7 @@ pathdiff = "0.2.1"
 regex = "1.7"
 reqwest = { version = "0.11", features = ["rustls"], optional = true }
 serde = { version = "1.0.159", features = ["derive"], optional = true }
-serde_json = "1.0.96"
+serde_json.workspace = true
 sys_traits.workspace = true
 tokio = { version = "1", features = ["full"], optional = true }
 
