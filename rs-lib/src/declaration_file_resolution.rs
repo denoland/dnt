@@ -199,6 +199,6 @@ fn is_declaration_file(media_type: deno_ast::MediaType) -> bool {
   match media_type {
     Dts | Dmts | Dcts => true,
     JavaScript | Jsx | Mjs | Cjs | TypeScript | Mts | Cts | Tsx | Json
-    | Wasm | TsBuildInfo | SourceMap | Unknown => false,
+    | Wasm | Css | Html | Sql | SourceMap | Unknown => false,
   }
 }

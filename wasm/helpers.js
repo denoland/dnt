@@ -5,6 +5,8 @@ const fileFetcher = createCache();
 export function fetch_specifier(specifier, cacheSettingVal, checksum) {
   return fileFetcher.load(
     new URL(specifier),
+    // seems this is not used by file fetcher
+    /* is dynamic */ false,
     getCacheSetting(cacheSettingVal),
     checksum,
   );

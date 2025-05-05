@@ -88,7 +88,7 @@ export async function runTestDefinitions(
       options.process.stdout.write("\n\n");
       options.process.stdout.write(failure.name + "\n");
       options.process.stdout.write(
-        indentText((failure.err?.stack ?? failure.err).toString(), 1),
+        indentText(((failure.err as any)?.stack ?? failure.err).toString(), 1),
       );
     }
     options.process.exit(1);

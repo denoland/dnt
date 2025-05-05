@@ -19,14 +19,16 @@ use anyhow::Context;
 use anyhow::Result;
 use deno_ast::ModuleSpecifier;
 use deno_ast::ParsedSource;
+use deno_error::JsErrorBox;
 use deno_graph::source::CacheSetting;
-use deno_graph::source::ResolutionMode;
+use deno_graph::source::ResolutionKind;
 use deno_graph::source::ResolveError;
 use deno_graph::CapturingModuleAnalyzer;
 use deno_graph::Module;
 use deno_graph::ParsedSourceStore;
 use deno_graph::Range;
 use import_map::ImportMapOptions;
+use sys_traits::impls::RealSys;
 
 pub struct ModuleGraphOptions<'a> {
   pub entry_points: Vec<ModuleSpecifier>,
@@ -80,13 +82,14 @@ impl ModuleGraph {
         &loader,
         deno_graph::BuildOptions {
           is_dynamic: false,
+          skip_dynamic_deps: false,
           imports: Default::default(),
           resolver: resolver.as_ref().map(|r| r.as_resolver()),
           locker: None,
           module_analyzer: &capturing_analyzer,
           reporter: None,
           npm_resolver: None,
-          file_system: Default::default(),
+          file_system: &RealSys,
           jsr_url_provider: Default::default(),
           executor: Default::default(),
           passthrough_jsr_specifiers: false,
@@ -165,7 +168,10 @@ impl ModuleGraph {
     &self.graph.redirects
   }
 
-  pub fn resolve(&self, specifier: &ModuleSpecifier) -> ModuleSpecifier {
+  pub fn resolve<'a>(
+    &'a self,
+    specifier: &'a ModuleSpecifier,
+  ) -> &'a ModuleSpecifier {
     self.graph.resolve(specifier)
   }
 
@@ -196,6 +202,7 @@ impl ModuleGraph {
     self
       .graph
       .resolve_dependency(value, referrer, /* prefer_types */ false)
+      .map(|url| url.clone())
       .or_else(|| {
         let value_lower = value.to_lowercase();
         if value_lower.starts_with("https://")
@@ -276,11 +283,11 @@ impl deno_graph::source::Resolver for ImportMapResolver {
     &self,
     specifier: &str,
     referrer_range: &Range,
-    _mode: ResolutionMode,
+    _kind: ResolutionKind,
   ) -> Result<ModuleSpecifier, ResolveError> {
     self
       .0
       .resolve(specifier, &referrer_range.specifier)
-      .map_err(|err| ResolveError::Other(err.into()))
+      .map_err(|err| ResolveError::Other(JsErrorBox::from_err(err)))
   }
 }

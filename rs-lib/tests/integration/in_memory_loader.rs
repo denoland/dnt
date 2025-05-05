@@ -4,14 +4,16 @@ use std::collections::HashMap;
 use std::path::Path;
 use std::path::PathBuf;
 use std::pin::Pin;
+use std::sync::Arc;
 
-use anyhow::anyhow;
 use anyhow::Result;
+use deno_error::JsErrorBox;
 use deno_graph::source::CacheSetting;
 use deno_graph::source::LoaderChecksum;
+use deno_node_transform::LoadError;
+use deno_path_util::url_to_file_path;
 use futures::Future;
 
-use deno_node_transform::url_to_file_path;
 use deno_node_transform::LoadResponse;
 use deno_node_transform::Loader;
 use deno_node_transform::ModuleSpecifier;
@@ -93,7 +95,9 @@ impl Loader for InMemoryLoader {
     specifier: ModuleSpecifier,
     _cache_setting: CacheSetting,
     _maybe_checksum: Option<LoaderChecksum>,
-  ) -> Pin<Box<dyn Future<Output = Result<Option<LoadResponse>>> + 'static>> {
+  ) -> Pin<
+    Box<dyn Future<Output = Result<Option<LoadResponse>, LoadError>> + 'static>,
+  > {
     if specifier.scheme() == "file" {
       let file_path = url_to_file_path(&specifier).unwrap();
       let result = self.local_files.get(&file_path).map(ToOwned::to_owned);
@@ -118,7 +122,9 @@ impl Loader for InMemoryLoader {
       });
     let result = match result {
       Some(Ok(result)) => Ok(Some(result)),
-      Some(Err(err)) => Err(anyhow!("{}", err)),
+      Some(Err(err)) => Err(LoadError::Other(Arc::new(JsErrorBox::generic(
+        format!("{}", err),
+      )))),
       None => Ok(None),
     };
     Box::pin(futures::future::ready(result))

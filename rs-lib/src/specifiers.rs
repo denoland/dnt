@@ -131,6 +131,12 @@ pub fn get_specifiers<'a>(
       Module::Npm(_) | Module::Node(_) => {
         // ignore
       }
+      Module::Wasm(_) => {
+        anyhow::bail!(
+          "Not implemented support for Wasm modules: {}",
+          module.specifier()
+        );
+      }
       Module::External(module) => {
         let specifier = &module.specifier;
         if let Ok(npm_specifier) =

@@ -5,10 +5,13 @@ use std::collections::BTreeMap;
 use std::collections::HashMap;
 use std::pin::Pin;
 use std::rc::Rc;
+use std::sync::Arc;
 
 use anyhow::Result;
 use deno_ast::ModuleSpecifier;
+use deno_error::JsErrorBox;
 use deno_graph::source::CacheSetting;
+use deno_graph::source::LoadError;
 use deno_graph::source::LoaderChecksum;
 use futures::future;
 use futures::Future;
@@ -39,7 +42,9 @@ pub trait Loader {
     url: ModuleSpecifier,
     cache_setting: CacheSetting,
     maybe_checksum: Option<LoaderChecksum>,
-  ) -> Pin<Box<dyn Future<Output = Result<Option<LoadResponse>>> + 'static>>;
+  ) -> Pin<
+    Box<dyn Future<Output = Result<Option<LoadResponse>, LoadError>> + 'static>,
+  >;
 }
 
 #[derive(Debug, Default, Clone)]
@@ -130,13 +135,19 @@ impl<'a> deno_graph::source::Loader for SourceLoader<'a> {
           load_options.maybe_checksum,
         )
         .await;
-      resp.map(|r| {
-        r.map(|r| deno_graph::source::LoadResponse::Module {
-          specifier: r.specifier,
-          content: r.content.into(),
-          maybe_headers: r.headers,
+      resp
+        .map(|r| {
+          r.map(|r| deno_graph::source::LoadResponse::Module {
+            specifier: r.specifier,
+            content: r.content.into(),
+            maybe_headers: r.headers,
+          })
         })
-      })
+        .map_err(|err| {
+          deno_graph::source::LoadError::Other(Arc::new(JsErrorBox::from_err(
+            err,
+          )))
+        })
     })
   }
 }
