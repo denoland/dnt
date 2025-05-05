@@ -12,9 +12,11 @@ default = ["console_error_panic_hook"]
 
 [dependencies]
 anyhow = "1.0.51"
+deno_error.workspace = true
 dnt = { path = "../rs-lib", default-features = false, features = ["serialization"], package="deno_node_transform" }
 getrandom = { version = "*", features = ["js"] }
 js-sys = "=0.3.69"
+sys_traits = { workspace = true, features = ["real", "wasm"] }
 wasm-bindgen = { version = "=0.2.92", features = ["serde-serialize"] }
 wasm-bindgen-futures = "=0.4.42"
 

@@ -5,8 +5,11 @@ mod utils;
 use std::collections::HashMap;
 use std::future::Future;
 use std::rc::Rc;
+use std::sync::Arc;
 
 use anyhow::Result;
+use deno_error::JsErrorBox;
+use dnt::LoadError;
 use dnt::MappedSpecifier;
 use dnt::ModuleSpecifier;
 use dnt::ScriptTarget;
@@ -33,7 +36,10 @@ impl dnt::Loader for JsLoader {
     cache_setting: dnt::CacheSetting,
     maybe_checksum: Option<dnt::LoaderChecksum>,
   ) -> std::pin::Pin<
-    Box<dyn Future<Output = Result<Option<dnt::LoadResponse>>> + 'static>,
+    Box<
+      dyn Future<Output = Result<Option<dnt::LoadResponse>, LoadError>>
+        + 'static,
+    >,
   > {
     Box::pin(async move {
       let resp = fetch_specifier(
@@ -51,7 +57,9 @@ impl dnt::Loader for JsLoader {
         return Ok(None);
       }
       if !resp.is_object() {
-        anyhow::bail!("fetch response wasn't an object");
+        return Err(LoadError::Other(Arc::new(JsErrorBox::generic(
+          "fetch response wasn't an object",
+        ))));
       }
       let load_response = serde_wasm_bindgen::from_value(resp).unwrap();
       Ok(Some(load_response))

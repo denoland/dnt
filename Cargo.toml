@@ -10,3 +10,7 @@ members = [
   "rs-lib",
   "wasm",
 ]
+
+[workspace.dependencies]
+deno_error = "0.5.6"
+sys_traits = { version = "0.1.9", features = ["real"] }

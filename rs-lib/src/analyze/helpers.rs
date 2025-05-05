@@ -125,7 +125,6 @@ pub fn is_in_type(mut node: Node) -> bool {
       | Node::TsNamespaceDecl(_)
       | Node::TsNamespaceExportDecl(_)
       | Node::TsInstantiation(_) => Some(false),
-
       Node::TsArrayType(_)
       | Node::TsCallSignatureDecl(_)
       | Node::TsConditionalType(_)
@@ -143,6 +142,7 @@ pub fn is_in_type(mut node: Node) -> bool {
       | Node::TsInterfaceDecl(_)
       | Node::TsIntersectionType(_)
       | Node::TsKeywordType(_)
+      | Node::TsImportCallOptions(_)
       | Node::TsLitType(_)
       | Node::TsMappedType(_)
       | Node::TsMethodSignature(_)
@@ -169,8 +169,6 @@ pub fn is_in_type(mut node: Node) -> bool {
       | Node::TsTypeQuery(_)
       | Node::TsTypeRef(_)
       | Node::TsUnionType(_) => Some(true),
-
-      // may be a type
       Node::TsTypeAssertion(expr) => {
         Some(expr.type_ann.range().contains(&node.range()))
       }
@@ -180,8 +178,6 @@ pub fn is_in_type(mut node: Node) -> bool {
       Node::TsSatisfiesExpr(expr) => {
         Some(expr.type_ann.range().contains(&node.range()))
       }
-
-      // still need more info
       Node::BigInt(_)
       | Node::Bool(_)
       | Node::Null(_)

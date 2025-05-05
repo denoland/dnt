@@ -41,10 +41,10 @@ use visitors::GetImportExportsTextChangesParams;
 
 pub use deno_ast::ModuleSpecifier;
 pub use deno_graph::source::CacheSetting;
+pub use deno_graph::source::LoadError;
 pub use deno_graph::source::LoaderChecksum;
 pub use loader::LoadResponse;
 pub use loader::Loader;
-pub use utils::url_to_file_path;
 
 use crate::declaration_file_resolution::TypesDependency;
 use crate::utils::strip_bom;
@@ -127,7 +127,7 @@ pub struct PackageMappedSpecifier {
 impl PackageMappedSpecifier {
   pub fn from_npm_specifier(npm_specifier: &NpmPackageReqReference) -> Self {
     Self {
-      name: npm_specifier.req().name.clone(),
+      name: npm_specifier.req().name.to_string(),
       version: Some(npm_specifier.req().version_req.version_text().to_string()),
       sub_path: npm_specifier.sub_path().map(|s| s.to_string()),
       peer_dependency: false,
@@ -425,7 +425,10 @@ pub async fn transform(options: TransformOptions) -> Result<TransformOutput> {
       Module::Json(module) => {
         format!("export default {};", strip_bom(&module.source).trim(),)
       }
-      Module::Node(_) | Module::Npm(_) | Module::External(_) => {
+      Module::Node(_)
+      | Module::Npm(_)
+      | Module::External(_)
+      | Module::Wasm(_) => {
         bail!("Not implemented module kind for {}", module.specifier())
       }
     };

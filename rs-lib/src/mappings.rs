@@ -13,13 +13,13 @@ use anyhow::Result;
 use deno_ast::MediaType;
 use deno_ast::ModuleSpecifier;
 use deno_graph::Module;
+use deno_path_util::url_to_file_path;
 use once_cell::sync::Lazy;
 
 use crate::graph::ModuleGraph;
 use crate::specifiers::Specifiers;
 use crate::utils::get_unique_path;
 use crate::utils::partition_by_root_specifiers;
-use crate::utils::url_to_file_path;
 use crate::utils::with_extension;
 
 pub struct SyntheticSpecifiers {
@@ -85,6 +85,7 @@ impl Mappings {
       let media_type = match module_graph.get(&specifier) {
         Module::Js(esm) => esm.media_type,
         Module::Json(json) => json.media_type,
+        Module::Wasm(_) => MediaType::Wasm,
         Module::Npm(_) | Module::Node(_) | Module::External(_) => {
           MediaType::Unknown
         }

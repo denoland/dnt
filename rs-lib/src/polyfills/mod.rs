@@ -142,7 +142,7 @@ impl PolyfillTester {
   pub fn matches(&self, text: &str) -> bool {
     use deno_ast::MediaType;
     use deno_ast::ModuleSpecifier;
-    use deno_graph::ModuleParser;
+    use deno_graph::EsParser;
     use deno_graph::ParseOptions;
 
     use crate::analyze::get_top_level_decls;
@@ -152,7 +152,7 @@ impl PolyfillTester {
 
     let parser = ScopeAnalysisParser;
     let parsed_source = parser
-      .parse_module(ParseOptions {
+      .parse_program(ParseOptions {
         specifier: &ModuleSpecifier::parse("file://test.ts").unwrap(),
         source: text.into(),
         media_type: MediaType::TypeScript,

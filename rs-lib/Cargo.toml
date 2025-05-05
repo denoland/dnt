@@ -15,18 +15,21 @@ serialization = ["serde"]
 [dependencies]
 anyhow = "1.0.70"
 base64 = "0.13.1"
-deno_ast = { version = "0.41.3", features = ["transforms", "view", "visit", "utils"] }
-deno_graph = { version = "0.81.2", features = [], default-features = false }
-deno_semver = "0.5.10"
+deno_ast = { version = "0.46.6", features = ["transforms", "view", "visit", "utils"] }
+deno_error.workspace = true
+deno_graph = { version = "0.90.0", features = [], default-features = false }
+deno_path_util = "0.3.2"
+deno_semver = "0.7.1"
 futures = "0.3.25"
-import_map = { version = "0.20.0", features = ["ext"] }
-jsonc-parser = { version = "0.23.0", features = ["serde"] }
+import_map = { version = "0.21.0", features = ["ext"] }
+jsonc-parser = { version = "0.26.2", features = ["serde"] }
 once_cell = "1.17.1"
 pathdiff = "0.2.1"
 regex = "1.7"
 reqwest = { version = "0.11", features = ["rustls"], optional = true }
 serde = { version = "1.0.159", features = ["derive"], optional = true }
 serde_json = "1.0.96"
+sys_traits.workspace = true
 tokio = { version = "1", features = ["full"], optional = true }
 
 [dev-dependencies]
