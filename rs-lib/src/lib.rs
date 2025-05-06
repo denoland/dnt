@@ -251,7 +251,7 @@ pub struct TransformOptions {
   /// Version of ECMAScript that the final code will target.
   /// This controls whether certain polyfills should occur.
   pub target: ScriptTarget,
-  /// Optional import map.
+  pub config_file: Option<ModuleSpecifier>,
   pub import_map: Option<ModuleSpecifier>,
   pub cwd: PathBuf,
 }
@@ -315,11 +315,14 @@ pub async fn transform(
       deno_path_util::url_to_file_path(&deno_path_util::url_parent(e)).ok()
     })
     .collect::<Vec<_>>();
-  let maybe_import_map = match options.import_map.as_ref() {
-    Some(import_map) => deno_path_util::url_to_file_path(import_map).ok(),
-    None => None,
+  let maybe_config_path = match &options.config_file {
+    Some(config_file) => Some(deno_path_util::url_to_file_path(config_file)?),
+    None => options
+      .import_map
+      .as_ref()
+      .and_then(|import_map| deno_path_util::url_to_file_path(import_map).ok()),
   };
-  let config_discovery = match maybe_import_map.as_ref() {
+  let config_discovery = match maybe_config_path.as_ref() {
     Some(config_path) => ConfigDiscoveryOption::Path(config_path.clone()),
     None => {
       if paths.is_empty() {
@@ -367,7 +370,6 @@ pub async fn transform(
       package_json_dep_resolution: Some(
         deno_resolver::workspace::PackageJsonDepResolution::Enabled,
       ),
-      // todo: use options.import_map here
       specified_import_map: options.import_map.map(|url| {
         Box::new(ImportMapProvider {
           url,
@@ -476,8 +478,8 @@ pub async fn transform(
     };
 
     let file_text = match module {
-      Module::Js(_) => {
-        let parsed_source = module_graph.get_parsed_source(specifier);
+      Module::Js(module) => {
+        let parsed_source = module_graph.get_parsed_source(module)?;
         let text_changes = parsed_source
           .with_view(|program| -> Result<Vec<TextChange>> {
             let ignore_line_indexes = get_ignore_line_indexes(

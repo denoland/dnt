@@ -1404,6 +1404,45 @@ async fn transform_import_map() {
 }
 
 #[tokio::test]
+async fn transform_config_file() {
+  let result = TestBuilder::new()
+    .with_loader(|loader| {
+      loader
+        .add_local_file(
+          "/mod.ts",
+          "import * as remote from 'localhost/mod.ts';",
+        )
+        .add_local_file(
+          "/deno.json",
+          r#"{
+  // test comments
+  "imports": {
+    "localhost/": "/subdir/"
+  }
+}"#,
+        )
+        .add_local_file(
+          "/subdir/mod.ts",
+          "import * as myOther from './other.ts';",
+        )
+        .add_local_file("/subdir/other.ts", "export function test() {}");
+    })
+    .set_config_file("file:///deno.json")
+    .transform()
+    .await
+    .unwrap();
+
+  assert_files!(
+    result.main.files,
+    &[
+      ("mod.ts", "import * as remote from './subdir/mod.js';",),
+      ("subdir/mod.ts", "import * as myOther from './other.js';",),
+      ("subdir/other.ts", "export function test() {}",)
+    ]
+  );
+}
+
+#[tokio::test]
 async fn transform_multiple_entry_points() {
   let result = TestBuilder::new()
     .with_loader(|loader| {

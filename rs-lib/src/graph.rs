@@ -16,10 +16,14 @@ use crate::MappedSpecifier;
 use anyhow::bail;
 use anyhow::Result;
 use deno_ast::ModuleSpecifier;
+use deno_ast::ParseDiagnostic;
 use deno_ast::ParsedSource;
 use deno_config::workspace::WorkspaceDirectory;
 use deno_graph::CapturingModuleAnalyzer;
+use deno_graph::EsParser;
+use deno_graph::JsModule;
 use deno_graph::Module;
+use deno_graph::ParseOptions;
 use deno_graph::ParsedSourceStore;
 use deno_resolver::factory::WorkspaceFactorySys;
 use deno_resolver::graph::DenoGraphResolver;
@@ -190,17 +194,22 @@ impl ModuleGraph {
     })
   }
 
-  pub fn get_parsed_source(&self, specifier: &ModuleSpecifier) -> ParsedSource {
-    let specifier = self.graph.resolve(specifier);
-    self
+  pub fn get_parsed_source(
+    &self,
+    js_module: &JsModule,
+  ) -> Result<ParsedSource, ParseDiagnostic> {
+    match self
       .capturing_analyzer
-      .get_parsed_source(specifier)
-      .unwrap_or_else(|| {
-        panic!(
-          "dnt bug - Did not find parsed source for specifier: {}",
-          specifier
-        );
-      })
+      .get_parsed_source(&js_module.specifier)
+    {
+      Some(parsed_source) => Ok(parsed_source),
+      None => self.capturing_analyzer.parse_program(ParseOptions {
+        specifier: &js_module.specifier,
+        source: js_module.source.clone(),
+        media_type: js_module.media_type,
+        scope_analysis: false,
+      }),
+    }
   }
 
   pub fn resolve_dependency(

@@ -74,6 +74,7 @@ export interface TransformOptions {
   target: ScriptTarget;
   /// Path or url to the import map.
   importMap?: string;
+  configFile?: string;
   internalWasmUrl?: string;
   cwd: string;
 }

@@ -79,6 +79,7 @@ pub struct TransformOptions {
   pub mappings: HashMap<ModuleSpecifier, MappedSpecifier>,
   pub target: ScriptTarget,
   pub import_map: Option<ModuleSpecifier>,
+  pub config_file: Option<ModuleSpecifier>,
   pub cwd: ModuleSpecifier,
 }
 
@@ -111,6 +112,7 @@ async fn transform_inner(options: JsValue) -> Result<JsValue, anyhow::Error> {
       specifier_mappings: options.mappings,
       target: options.target,
       import_map: options.import_map,
+      config_file: options.config_file,
       cwd: deno_path_util::url_to_file_path(&options.cwd)?,
     },
   )
