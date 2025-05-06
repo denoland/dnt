@@ -14,6 +14,8 @@ use deno_node_transform::ScriptTarget;
 use deno_node_transform::Shim;
 use deno_node_transform::TransformOptions;
 use deno_node_transform::TransformOutput;
+use sys_traits::impls::InMemorySys;
+use sys_traits::EnvCurrentDir;
 
 use super::InMemoryLoader;
 
@@ -27,6 +29,7 @@ pub struct TestBuilder {
   test_shims: Vec<Shim>,
   target: ScriptTarget,
   import_map: Option<ModuleSpecifier>,
+  sys: InMemorySys,
 }
 
 impl TestBuilder {
@@ -42,7 +45,16 @@ impl TestBuilder {
       test_shims: Default::default(),
       target: ScriptTarget::ES5,
       import_map: None,
+      sys: Default::default(),
     }
+  }
+
+  pub fn with_sys(
+    &mut self,
+    mut action: impl FnMut(&mut InMemorySys),
+  ) -> &mut Self {
+    action(&mut self.sys);
+    self
   }
 
   pub fn with_loader(
@@ -173,20 +185,24 @@ impl TestBuilder {
         .iter()
         .map(|p| ModuleSpecifier::parse(p).unwrap()),
     );
-    transform(TransformOptions {
-      entry_points,
-      test_entry_points: self
-        .test_entry_points
-        .iter()
-        .map(|p| ModuleSpecifier::parse(p).unwrap())
-        .collect(),
-      shims: self.shims.clone(),
-      test_shims: self.test_shims.clone(),
-      loader: Some(Rc::new(self.loader.clone())),
-      specifier_mappings: self.specifier_mappings.clone(),
-      target: self.target,
-      import_map: self.import_map.clone(),
-    })
+    transform(
+      &self.sys,
+      TransformOptions {
+        entry_points,
+        test_entry_points: self
+          .test_entry_points
+          .iter()
+          .map(|p| ModuleSpecifier::parse(p).unwrap())
+          .collect(),
+        shims: self.shims.clone(),
+        test_shims: self.test_shims.clone(),
+        loader: Some(Rc::new(self.loader.clone())),
+        specifier_mappings: self.specifier_mappings.clone(),
+        target: self.target,
+        import_map: self.import_map.clone(),
+        cwd: self.sys.env_current_dir().unwrap(),
+      },
+    )
     .await
   }
 }

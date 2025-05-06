@@ -19,6 +19,8 @@ use analyze::get_ignore_line_indexes;
 use anyhow::bail;
 use deno_ast::apply_text_changes;
 use deno_ast::TextChange;
+use deno_config::workspace::WorkspaceDiscoverOptions;
+use deno_config::workspace::WorkspaceDiscoverStart;
 use deno_graph::Module;
 use deno_semver::npm::NpmPackageReqReference;
 use graph::ModuleGraphOptions;
@@ -29,6 +31,9 @@ use polyfills::build_polyfill_file;
 use polyfills::polyfills_for_target;
 use polyfills::Polyfill;
 use specifiers::Specifiers;
+use sys_traits::FsMetadata;
+use sys_traits::FsRead;
+use sys_traits::FsReadDir;
 use utils::get_relative_specifier;
 use utils::prepend_statement_to_text;
 use visitors::fill_polyfills;
@@ -246,6 +251,7 @@ pub struct TransformOptions {
   pub target: ScriptTarget,
   /// Optional import map.
   pub import_map: Option<ModuleSpecifier>,
+  pub cwd: PathBuf,
 }
 
 struct EnvironmentContext<'a> {
@@ -258,10 +264,49 @@ struct EnvironmentContext<'a> {
   used_shim: bool,
 }
 
-pub async fn transform(options: TransformOptions) -> Result<TransformOutput> {
+pub async fn transform(
+  sys: &(impl FsMetadata + FsRead + FsReadDir),
+  options: TransformOptions,
+) -> Result<TransformOutput> {
   if options.entry_points.is_empty() {
     anyhow::bail!("at least one entry point must be specified");
   }
+
+  let paths = options
+    .entry_points
+    .iter()
+    .filter_map(|e| {
+      deno_path_util::url_to_file_path(&deno_path_util::url_parent(e)).ok()
+    })
+    .collect::<Vec<_>>();
+  let maybe_config_path = match options.import_map.as_ref() {
+    Some(import_map) => Some(deno_path_util::url_to_file_path(&import_map)?),
+    None => None,
+  };
+  let cwd = [options.cwd];
+
+  let workspace_directory =
+    deno_config::workspace::WorkspaceDirectory::discover(
+      &sys_traits::impls::RealSys,
+      match maybe_config_path.as_ref() {
+        Some(config_path) => WorkspaceDiscoverStart::ConfigFile(&config_path),
+        None => {
+          if paths.is_empty() {
+            WorkspaceDiscoverStart::Paths(&cwd)
+          } else {
+            WorkspaceDiscoverStart::Paths(&paths)
+          }
+        }
+      },
+      &WorkspaceDiscoverOptions {
+        additional_config_file_names: &[],
+        deno_json_cache: None,
+        pkg_json_cache: None,
+        workspace_cache: None,
+        discover_pkg_json: true,
+        maybe_vendor_override: None,
+      },
+    )?;
 
   let (module_graph, specifiers) =
     crate::graph::ModuleGraph::build_with_specifiers(ModuleGraphOptions {

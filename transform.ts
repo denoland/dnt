@@ -75,6 +75,7 @@ export interface TransformOptions {
   /// Path or url to the import map.
   importMap?: string;
   internalWasmUrl?: string;
+  cwd: string;
 }
 
 /** Dependency in a package.json file. */

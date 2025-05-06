@@ -16,6 +16,7 @@ serialization = ["serde"]
 anyhow = "1.0.70"
 base64 = "0.13.1"
 deno_ast = { version = "0.46.6", features = ["transforms", "view", "visit", "utils"] }
+deno_config.workspace = true
 deno_error.workspace = true
 deno_graph = { version = "0.90.0", features = [], default-features = false }
 deno_path_util.workspace = true
@@ -34,3 +35,4 @@ tokio = { version = "1", features = ["full"], optional = true }
 
 [dev-dependencies]
 pretty_assertions = "1.3.0"
+sys_traits = { workspace = true, features = ["memory"] }

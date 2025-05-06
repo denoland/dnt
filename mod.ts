@@ -209,6 +209,7 @@ export async function build(options: BuildOptions): Promise<void> {
       ? "inline"
       : options.declaration ?? "inline",
   };
+  const cwd = Deno.cwd();
   const declarationMap = options.declarationMap ??
     (!!options.declaration && !options.skipSourceOutput);
   const packageManager = options.packageManager ?? "npm";
@@ -587,6 +588,7 @@ export async function build(options: BuildOptions): Promise<void> {
       target: scriptTarget,
       importMap: options.importMap,
       internalWasmUrl: options.internalWasmUrl,
+      cwd: path.toFileUrl(cwd).toString(),
     });
   }
 

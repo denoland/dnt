@@ -486,6 +486,7 @@ dependencies = [
  "anyhow",
  "base64 0.13.1",
  "deno_ast",
+ "deno_config",
  "deno_error",
  "deno_graph",
  "deno_path_util",
@@ -2399,6 +2400,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "f3374191d43a934854e99a46cd47f8124369e690353e0f8db42769218d083690"
 dependencies = [
  "js-sys",
+ "parking_lot",
  "wasm-bindgen",
 ]
 

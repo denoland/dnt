@@ -9,8 +9,6 @@ use std::sync::Arc;
 
 use anyhow::Context;
 use anyhow::Result;
-use deno_config::workspace::WorkspaceDiscoverOptions;
-use deno_config::workspace::WorkspaceDiscoverStart;
 use deno_error::JsErrorBox;
 use dnt::LoadError;
 use dnt::MappedSpecifier;
@@ -80,6 +78,7 @@ pub struct TransformOptions {
   pub mappings: HashMap<ModuleSpecifier, MappedSpecifier>,
   pub target: ScriptTarget,
   pub import_map: Option<ModuleSpecifier>,
+  pub cwd: ModuleSpecifier,
 }
 
 #[wasm_bindgen]
@@ -99,44 +98,21 @@ async fn transform_inner(options: JsValue) -> Result<JsValue, anyhow::Error> {
   // with "invalid type: unit value, expected a boolean" and didn't say exactly
   // where it errored.
   // let options: TransformOptions = serde_wasm_bindgen::from_value(options)?;
-  let maybe_config_path = match options.import_map.as_ref() {
-    Some(import_map) => Some(deno_path_util::url_to_file_path(&import_map)?),
-    None => None,
-  };
-  let entry_points = parse_module_specifiers(options.entry_points)?;
-  let paths = entry_points
-    .iter()
-    .filter_map(|e| {
-      deno_path_util::url_to_file_path(&deno_path_util::url_parent(e)).ok()
-    })
-    .collect::<Vec<_>>();
-  let workspace_directory =
-    deno_config::workspace::WorkspaceDirectory::discover(
-      &sys_traits::impls::RealSys,
-      match maybe_config_path.as_ref() {
-        Some(config_path) => WorkspaceDiscoverStart::ConfigFile(&config_path),
-        None => WorkspaceDiscoverStart::Paths(&paths),
-      },
-      &WorkspaceDiscoverOptions {
-        additional_config_file_names: &[],
-        deno_json_cache: None,
-        pkg_json_cache: None,
-        workspace_cache: None,
-        discover_pkg_json: true,
-        maybe_vendor_override: None,
-      },
-    )?;
 
-  let result = dnt::transform(dnt::TransformOptions {
-    entry_points,
-    test_entry_points: parse_module_specifiers(options.test_entry_points)?,
-    shims: options.shims,
-    test_shims: options.test_shims,
-    loader: Some(Rc::new(JsLoader {})),
-    specifier_mappings: options.mappings,
-    target: options.target,
-    import_map: options.import_map,
-  })
+  let result = dnt::transform(
+    &sys_traits::impls::RealSys,
+    dnt::TransformOptions {
+      entry_points: parse_module_specifiers(options.entry_points)?,
+      test_entry_points: parse_module_specifiers(options.test_entry_points)?,
+      shims: options.shims,
+      test_shims: options.test_shims,
+      loader: Some(Rc::new(JsLoader {})),
+      specifier_mappings: options.mappings,
+      target: options.target,
+      import_map: options.import_map,
+      cwd: deno_path_util::url_to_file_path(&options.cwd)?,
+    },
+  )
   .await?;
   Ok(serde_wasm_bindgen::to_value(&result).unwrap())
 }
@@ -144,11 +120,16 @@ async fn transform_inner(options: JsValue) -> Result<JsValue, anyhow::Error> {
 fn parse_module_specifiers(
   values: Vec<String>,
 ) -> Result<Vec<ModuleSpecifier>, anyhow::Error> {
-  let mut specifiers = Vec::new();
+  let mut specifiers = Vec::with_capacity(values.len());
   for value in values {
-    let entry_point = dnt::ModuleSpecifier::parse(&value)
-      .with_context(|| format!("Error parsing {}.", value))?;
-    specifiers.push(entry_point);
+    specifiers.push(parse_module_specifier(&value)?);
   }
   Ok(specifiers)
+}
+
+fn parse_module_specifier(
+  value: &str,
+) -> Result<ModuleSpecifier, anyhow::Error> {
+  ModuleSpecifier::parse(&value)
+    .with_context(|| format!("Error parsing {}.", value))
 }
