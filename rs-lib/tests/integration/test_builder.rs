@@ -183,7 +183,7 @@ impl TestBuilder {
         .map(|p| ModuleSpecifier::parse(p).unwrap()),
     );
     transform(
-      &self.loader.sys,
+      self.loader.sys.clone(),
       TransformOptions {
         entry_points,
         test_entry_points: self

@@ -100,7 +100,7 @@ async fn transform_inner(options: JsValue) -> Result<JsValue, anyhow::Error> {
   // let options: TransformOptions = serde_wasm_bindgen::from_value(options)?;
 
   let result = dnt::transform(
-    &sys_traits::impls::RealSys,
+    sys_traits::impls::RealSys,
     dnt::TransformOptions {
       entry_points: parse_module_specifiers(options.entry_points)?,
       test_entry_points: parse_module_specifiers(options.test_entry_points)?,

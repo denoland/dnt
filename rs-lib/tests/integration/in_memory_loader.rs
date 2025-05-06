@@ -18,6 +18,7 @@ use deno_node_transform::LoadResponse;
 use deno_node_transform::Loader;
 use deno_node_transform::ModuleSpecifier;
 use sys_traits::impls::InMemorySys;
+use sys_traits::EnvSetVar;
 use sys_traits::FsCreateDirAll;
 use sys_traits::FsRead;
 use sys_traits::FsWrite;
@@ -35,7 +36,8 @@ pub struct InMemoryLoader {
 impl InMemoryLoader {
   pub fn new() -> Self {
     let sys = InMemorySys::default();
-    sys.fs_create_dir_all("/").unwrap();
+    sys.env_set_var("DENO_DIR", "/.deno");
+    sys.fs_create_dir_all("/.deno").unwrap();
     Self {
       sys,
       remote_files: HashMap::new(),

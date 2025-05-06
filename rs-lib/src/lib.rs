@@ -22,6 +22,11 @@ use deno_ast::TextChange;
 use deno_config::workspace::WorkspaceDiscoverOptions;
 use deno_config::workspace::WorkspaceDiscoverStart;
 use deno_graph::Module;
+use deno_resolver::factory::ConfigDiscoveryOption;
+use deno_resolver::factory::ResolverFactoryOptions;
+use deno_resolver::factory::WorkspaceFactoryOptions;
+use deno_resolver::factory::WorkspaceFactorySys;
+use deno_resolver::NodeResolverOptions;
 use deno_semver::npm::NpmPackageReqReference;
 use graph::ModuleGraphOptions;
 use mappings::Mappings;
@@ -34,6 +39,7 @@ use specifiers::Specifiers;
 use sys_traits::FsMetadata;
 use sys_traits::FsRead;
 use sys_traits::FsReadDir;
+use sys_traits::ThreadSleep;
 use utils::get_relative_specifier;
 use utils::prepend_statement_to_text;
 use visitors::fill_polyfills;
@@ -265,7 +271,7 @@ struct EnvironmentContext<'a> {
 }
 
 pub async fn transform(
-  sys: &(impl FsMetadata + FsRead + FsReadDir),
+  sys: impl WorkspaceFactorySys,
   options: TransformOptions,
 ) -> Result<TransformOutput> {
   if options.entry_points.is_empty() {
@@ -283,31 +289,53 @@ pub async fn transform(
     Some(import_map) => deno_path_util::url_to_file_path(&import_map).ok(),
     None => None,
   };
-  let cwd = [options.cwd];
-  let discover_start = match maybe_import_map.as_ref() {
-    Some(config_path) => WorkspaceDiscoverStart::ConfigFile(&config_path),
+  let config_discovery = match maybe_import_map.as_ref() {
+    Some(config_path) => ConfigDiscoveryOption::Path(config_path.clone()),
     None => {
       if paths.is_empty() {
-        WorkspaceDiscoverStart::Paths(&cwd)
+        ConfigDiscoveryOption::DiscoverCwd
       } else {
-        WorkspaceDiscoverStart::Paths(&paths)
+        ConfigDiscoveryOption::Discover { start_paths: paths }
       }
     }
   };
 
-  let workspace_directory =
-    deno_config::workspace::WorkspaceDirectory::discover(
-      sys,
-      discover_start,
-      &WorkspaceDiscoverOptions {
-        additional_config_file_names: &[],
-        deno_json_cache: None,
-        pkg_json_cache: None,
-        workspace_cache: None,
-        discover_pkg_json: true,
-        maybe_vendor_override: None,
+  let factory = deno_resolver::factory::WorkspaceFactory::new(
+    sys,
+    options.cwd,
+    WorkspaceFactoryOptions {
+      additional_config_file_names: &[],
+      config_discovery,
+      deno_dir_path_provider: None,
+      is_package_manager_subcommand: false,
+      node_modules_dir: None,
+      no_npm: false,
+      npm_process_state: None,
+      vendor: None,
+    },
+  );
+
+  let workspace_dir = factory.workspace_directory();
+  let resolver_factory = deno_resolver::factory::ResolverFactory::new(
+    Rc::new(factory),
+    ResolverFactoryOptions {
+      npm_system_info: Default::default(),
+      node_resolver_options: NodeResolverOptions {
+        conditions_from_resolution_mode: Default::default(),
+        typescript_version: None,
       },
-    )?;
+      node_resolution_cache: None,
+      package_json_cache: None,
+      package_json_dep_resolution: Some(
+        deno_resolver::workspace::PackageJsonDepResolution::Enabled,
+      ),
+      // todo: use options.import_map here
+      specified_import_map: None,
+      bare_node_builtins: true,
+      unstable_sloppy_imports: true,
+    },
+  );
+  let deno_resolver = resolver_factory.deno_resolver().await?;
 
   let (module_graph, specifiers) =
     crate::graph::ModuleGraph::build_with_specifiers(ModuleGraphOptions {
