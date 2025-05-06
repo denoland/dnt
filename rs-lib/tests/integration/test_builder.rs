@@ -29,14 +29,12 @@ pub struct TestBuilder {
   test_shims: Vec<Shim>,
   target: ScriptTarget,
   import_map: Option<ModuleSpecifier>,
-  sys: InMemorySys,
 }
 
 impl TestBuilder {
   pub fn new() -> Self {
-    let loader = InMemoryLoader::new();
     Self {
-      loader,
+      loader: InMemoryLoader::new(),
       entry_point: "file:///mod.ts".to_string(),
       additional_entry_points: Vec::new(),
       test_entry_points: Vec::new(),
@@ -45,7 +43,6 @@ impl TestBuilder {
       test_shims: Default::default(),
       target: ScriptTarget::ES5,
       import_map: None,
-      sys: Default::default(),
     }
   }
 
@@ -53,7 +50,7 @@ impl TestBuilder {
     &mut self,
     mut action: impl FnMut(&mut InMemorySys),
   ) -> &mut Self {
-    action(&mut self.sys);
+    action(&mut self.loader.sys);
     self
   }
 
@@ -186,7 +183,7 @@ impl TestBuilder {
         .map(|p| ModuleSpecifier::parse(p).unwrap()),
     );
     transform(
-      &self.sys,
+      &self.loader.sys,
       TransformOptions {
         entry_points,
         test_entry_points: self
@@ -200,7 +197,7 @@ impl TestBuilder {
         specifier_mappings: self.specifier_mappings.clone(),
         target: self.target,
         import_map: self.import_map.clone(),
-        cwd: self.sys.env_current_dir().unwrap(),
+        cwd: self.loader.sys.env_current_dir().unwrap(),
       },
     )
     .await

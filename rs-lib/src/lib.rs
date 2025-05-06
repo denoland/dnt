@@ -279,25 +279,26 @@ pub async fn transform(
       deno_path_util::url_to_file_path(&deno_path_util::url_parent(e)).ok()
     })
     .collect::<Vec<_>>();
-  let maybe_config_path = match options.import_map.as_ref() {
-    Some(import_map) => Some(deno_path_util::url_to_file_path(&import_map)?),
+  let maybe_import_map = match options.import_map.as_ref() {
+    Some(import_map) => deno_path_util::url_to_file_path(&import_map).ok(),
     None => None,
   };
   let cwd = [options.cwd];
+  let discover_start = match maybe_import_map.as_ref() {
+    Some(config_path) => WorkspaceDiscoverStart::ConfigFile(&config_path),
+    None => {
+      if paths.is_empty() {
+        WorkspaceDiscoverStart::Paths(&cwd)
+      } else {
+        WorkspaceDiscoverStart::Paths(&paths)
+      }
+    }
+  };
 
   let workspace_directory =
     deno_config::workspace::WorkspaceDirectory::discover(
-      &sys_traits::impls::RealSys,
-      match maybe_config_path.as_ref() {
-        Some(config_path) => WorkspaceDiscoverStart::ConfigFile(&config_path),
-        None => {
-          if paths.is_empty() {
-            WorkspaceDiscoverStart::Paths(&cwd)
-          } else {
-            WorkspaceDiscoverStart::Paths(&paths)
-          }
-        }
-      },
+      sys,
+      discover_start,
       &WorkspaceDiscoverOptions {
         additional_config_file_names: &[],
         deno_json_cache: None,

@@ -1,8 +1,8 @@
 // Copyright 2018-2024 the Deno authors. MIT license.
 
 use std::collections::HashMap;
+use std::io::ErrorKind;
 use std::path::Path;
-use std::path::PathBuf;
 use std::pin::Pin;
 use std::sync::Arc;
 
@@ -17,6 +17,10 @@ use futures::Future;
 use deno_node_transform::LoadResponse;
 use deno_node_transform::Loader;
 use deno_node_transform::ModuleSpecifier;
+use sys_traits::impls::InMemorySys;
+use sys_traits::FsCreateDirAll;
+use sys_traits::FsRead;
+use sys_traits::FsWrite;
 
 type RemoteFileText = String;
 type RemoteFileHeaders = Option<HashMap<String, String>>;
@@ -24,14 +28,16 @@ type RemoteFileResult = Result<(RemoteFileText, RemoteFileHeaders), String>;
 
 #[derive(Clone)]
 pub struct InMemoryLoader {
-  local_files: HashMap<PathBuf, String>,
+  pub sys: InMemorySys,
   remote_files: HashMap<ModuleSpecifier, RemoteFileResult>,
 }
 
 impl InMemoryLoader {
   pub fn new() -> Self {
+    let sys = InMemorySys::default();
+    sys.fs_create_dir_all("/").unwrap();
     Self {
-      local_files: HashMap::new(),
+      sys,
       remote_files: HashMap::new(),
     }
   }
@@ -41,9 +47,9 @@ impl InMemoryLoader {
     path: impl AsRef<Path>,
     text: impl AsRef<str>,
   ) -> &mut Self {
-    self
-      .local_files
-      .insert(path.as_ref().to_path_buf(), text.as_ref().to_string());
+    let parent_dir = path.as_ref().parent().unwrap();
+    self.sys.fs_create_dir_all(parent_dir).unwrap();
+    self.sys.fs_write(path, text.as_ref().as_bytes()).unwrap();
     self
   }
 
@@ -100,10 +106,17 @@ impl Loader for InMemoryLoader {
   > {
     if specifier.scheme() == "file" {
       let file_path = url_to_file_path(&specifier).unwrap();
-      let result = self.local_files.get(&file_path).map(ToOwned::to_owned);
+      let result = self.sys.fs_read_to_string(&file_path);
       return Box::pin(async move {
-        Ok(result.map(|result| LoadResponse {
-          content: result.into_bytes(),
+        let maybe_data = match result {
+          Ok(data) => Some(data),
+          Err(err) if err.kind() == ErrorKind::NotFound => None,
+          Err(err) => {
+            return Err(LoadError::Other(Arc::new(JsErrorBox::from_err(err))))
+          }
+        };
+        Ok(maybe_data.map(|result| LoadResponse {
+          content: result.into_owned().into_bytes(),
           headers: None,
           specifier,
         }))
