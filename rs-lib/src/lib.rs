@@ -20,7 +20,6 @@ use anyhow::bail;
 use deno_ast::apply_text_changes;
 use deno_ast::TextChange;
 use deno_graph::Module;
-use deno_resolver::cjs::CjsTracker;
 use deno_resolver::factory::ConfigDiscoveryOption;
 use deno_resolver::factory::ResolverFactoryOptions;
 use deno_resolver::factory::SpecifiedImportMapProvider;
@@ -356,6 +355,8 @@ pub async fn transform(
   let resolver_factory = deno_resolver::factory::ResolverFactory::new(
     Rc::new(factory),
     ResolverFactoryOptions {
+      is_cjs_resolution_mode:
+        deno_resolver::cjs::IsCjsResolutionMode::ImplicitTypeCommonJs,
       npm_system_info: Default::default(),
       node_resolver_options: NodeResolverOptions {
         conditions_from_resolution_mode: Default::default(),
@@ -378,11 +379,7 @@ pub async fn transform(
     },
   );
   let deno_resolver = resolver_factory.deno_resolver().await?;
-  let cjs_tracker = CjsTracker::new(
-    resolver_factory.in_npm_package_checker()?.clone(),
-    resolver_factory.pkg_json_resolver().clone(),
-    deno_resolver::cjs::IsCjsResolutionMode::ImplicitTypeCommonJs,
-  );
+  let cjs_tracker = resolver_factory.cjs_tracker()?.clone();
 
   let (module_graph, specifiers) =
     crate::graph::ModuleGraph::build_with_specifiers(ModuleGraphOptions {

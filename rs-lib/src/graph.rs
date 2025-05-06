@@ -44,7 +44,7 @@ pub struct ModuleGraphOptions<'a, TSys: WorkspaceFactorySys> {
   pub resolver: Rc<DntDenoResolver<TSys>>,
   pub specifier_mappings: &'a HashMap<ModuleSpecifier, MappedSpecifier>,
   pub cjs_tracker:
-    deno_resolver::cjs::CjsTracker<DenoInNpmPackageChecker, TSys>,
+    Rc<deno_resolver::cjs::CjsTracker<DenoInNpmPackageChecker, TSys>>,
   pub workspace_dir: Rc<WorkspaceDirectory>,
 }
 
