@@ -28,6 +28,7 @@ extern "C" {
   ) -> JsValue;
 }
 
+#[derive(Debug)]
 struct JsLoader;
 
 impl dnt::Loader for JsLoader {
@@ -130,6 +131,6 @@ fn parse_module_specifiers(
 fn parse_module_specifier(
   value: &str,
 ) -> Result<ModuleSpecifier, anyhow::Error> {
-  ModuleSpecifier::parse(&value)
+  ModuleSpecifier::parse(value)
     .with_context(|| format!("Error parsing {}.", value))
 }

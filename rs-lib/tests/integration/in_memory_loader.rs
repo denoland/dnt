@@ -27,7 +27,7 @@ type RemoteFileText = String;
 type RemoteFileHeaders = Option<HashMap<String, String>>;
 type RemoteFileResult = Result<(RemoteFileText, RemoteFileHeaders), String>;
 
-#[derive(Clone)]
+#[derive(Debug, Clone)]
 pub struct InMemoryLoader {
   pub sys: InMemorySys,
   remote_files: HashMap<ModuleSpecifier, RemoteFileResult>,

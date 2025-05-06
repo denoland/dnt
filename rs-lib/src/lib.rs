@@ -19,13 +19,14 @@ use analyze::get_ignore_line_indexes;
 use anyhow::bail;
 use deno_ast::apply_text_changes;
 use deno_ast::TextChange;
-use deno_config::workspace::WorkspaceDiscoverOptions;
-use deno_config::workspace::WorkspaceDiscoverStart;
 use deno_graph::Module;
+use deno_resolver::cjs::CjsTracker;
 use deno_resolver::factory::ConfigDiscoveryOption;
 use deno_resolver::factory::ResolverFactoryOptions;
+use deno_resolver::factory::SpecifiedImportMapProvider;
 use deno_resolver::factory::WorkspaceFactoryOptions;
 use deno_resolver::factory::WorkspaceFactorySys;
+use deno_resolver::workspace::SpecifiedImportMap;
 use deno_resolver::NodeResolverOptions;
 use deno_semver::npm::NpmPackageReqReference;
 use graph::ModuleGraphOptions;
@@ -36,10 +37,6 @@ use polyfills::build_polyfill_file;
 use polyfills::polyfills_for_target;
 use polyfills::Polyfill;
 use specifiers::Specifiers;
-use sys_traits::FsMetadata;
-use sys_traits::FsRead;
-use sys_traits::FsReadDir;
-use sys_traits::ThreadSleep;
 use utils::get_relative_specifier;
 use utils::prepend_statement_to_text;
 use visitors::fill_polyfills;
@@ -260,6 +257,40 @@ pub struct TransformOptions {
   pub cwd: PathBuf,
 }
 
+#[derive(Debug)]
+struct ImportMapProvider {
+  url: ModuleSpecifier,
+  loader: Rc<dyn Loader>,
+}
+
+#[async_trait::async_trait(?Send)]
+impl SpecifiedImportMapProvider for ImportMapProvider {
+  async fn get(&self) -> Result<Option<SpecifiedImportMap>, anyhow::Error> {
+    let Some(response) = self
+      .loader
+      .load(self.url.clone(), CacheSetting::Use, None)
+      .await?
+    else {
+      return Ok(None);
+    };
+    let Some(value) = jsonc_parser::parse_to_serde_value(
+      &String::from_utf8(response.content)?,
+      &jsonc_parser::ParseOptions {
+        allow_comments: true,
+        allow_loose_object_property_names: true,
+        allow_trailing_commas: true,
+      },
+    )?
+    else {
+      return Ok(None);
+    };
+    Ok(Some(SpecifiedImportMap {
+      base_url: response.specifier,
+      value,
+    }))
+  }
+}
+
 struct EnvironmentContext<'a> {
   environment: TransformOutputEnvironment,
   searching_polyfills: Vec<Box<dyn Polyfill>>,
@@ -286,7 +317,7 @@ pub async fn transform(
     })
     .collect::<Vec<_>>();
   let maybe_import_map = match options.import_map.as_ref() {
-    Some(import_map) => deno_path_util::url_to_file_path(&import_map).ok(),
+    Some(import_map) => deno_path_util::url_to_file_path(import_map).ok(),
     None => None,
   };
   let config_discovery = match maybe_import_map.as_ref() {
@@ -315,7 +346,13 @@ pub async fn transform(
     },
   );
 
-  let workspace_dir = factory.workspace_directory();
+  let workspace_dir = factory.workspace_directory()?.clone();
+  let loader = options.loader.unwrap_or_else(|| {
+    #[cfg(feature = "tokio-loader")]
+    return Rc::new(crate::loader::DefaultLoader::new());
+    #[cfg(not(feature = "tokio-loader"))]
+    panic!("You must provide a loader or use the 'tokio-loader' feature.")
+  });
   let resolver_factory = deno_resolver::factory::ResolverFactory::new(
     Rc::new(factory),
     ResolverFactoryOptions {
@@ -330,12 +367,22 @@ pub async fn transform(
         deno_resolver::workspace::PackageJsonDepResolution::Enabled,
       ),
       // todo: use options.import_map here
-      specified_import_map: None,
+      specified_import_map: options.import_map.map(|url| {
+        Box::new(ImportMapProvider {
+          url,
+          loader: loader.clone(),
+        }) as Box<dyn SpecifiedImportMapProvider>
+      }),
       bare_node_builtins: true,
       unstable_sloppy_imports: true,
     },
   );
   let deno_resolver = resolver_factory.deno_resolver().await?;
+  let cjs_tracker = CjsTracker::new(
+    resolver_factory.in_npm_package_checker()?.clone(),
+    resolver_factory.pkg_json_resolver().clone(),
+    deno_resolver::cjs::IsCjsResolutionMode::ImplicitTypeCommonJs,
+  );
 
   let (module_graph, specifiers) =
     crate::graph::ModuleGraph::build_with_specifiers(ModuleGraphOptions {
@@ -357,8 +404,10 @@ pub async fn transform(
         )
         .collect(),
       specifier_mappings: &options.specifier_mappings,
-      loader: options.loader,
-      import_map: options.import_map,
+      loader,
+      resolver: deno_resolver.clone(),
+      cjs_tracker,
+      workspace_dir,
     })
     .await?;
 

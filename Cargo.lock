@@ -591,6 +591,7 @@ name = "deno_node_transform"
 version = "0.6.0"
 dependencies = [
  "anyhow",
+ "async-trait",
  "base64 0.13.1",
  "deno_ast",
  "deno_config",
@@ -678,6 +679,7 @@ dependencies = [
  "deno_cache_dir",
  "deno_config",
  "deno_error",
+ "deno_graph",
  "deno_media_type",
  "deno_npm",
  "deno_package_json",
@@ -1561,6 +1563,7 @@ dependencies = [
  "dashmap",
  "deno_config",
  "deno_error",
+ "deno_graph",
  "deno_media_type",
  "deno_package_json",
  "deno_path_util",

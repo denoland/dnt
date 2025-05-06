@@ -14,6 +14,7 @@ serialization = ["serde"]
 
 [dependencies]
 anyhow = "1.0.70"
+async-trait.workspace = true
 base64 = "0.13.1"
 deno_ast = { version = "0.46.6", features = ["transforms", "view", "visit", "utils"] }
 deno_config.workspace = true
