@@ -26,26 +26,16 @@ use deno_graph::Module;
 use deno_graph::ParseOptions;
 use deno_graph::ParsedSourceStore;
 use deno_resolver::factory::WorkspaceFactorySys;
-use deno_resolver::graph::DenoGraphResolver;
+use deno_resolver::graph::DefaultDenoResolverRc;
 use deno_resolver::npm::DenoInNpmPackageChecker;
-use deno_resolver::npm::NpmResolver;
 use deno_resolver::workspace::ScopedJsxImportSourceConfig;
-use deno_resolver::DenoIsBuiltInNodeModuleChecker;
-use deno_resolver::DenoResolver;
 use sys_traits::impls::RealSys;
-
-pub type DntDenoResolver<TSys> = DenoResolver<
-  DenoInNpmPackageChecker,
-  DenoIsBuiltInNodeModuleChecker,
-  NpmResolver<TSys>,
-  TSys,
->;
 
 pub struct ModuleGraphOptions<'a, TSys: WorkspaceFactorySys> {
   pub entry_points: Vec<ModuleSpecifier>,
   pub test_entry_points: Vec<ModuleSpecifier>,
   pub loader: Rc<dyn Loader>,
-  pub resolver: Rc<DntDenoResolver<TSys>>,
+  pub resolver: DefaultDenoResolverRc<TSys>,
   pub specifier_mappings: &'a HashMap<ModuleSpecifier, MappedSpecifier>,
   pub cjs_tracker:
     Rc<deno_resolver::cjs::CjsTracker<DenoInNpmPackageChecker, TSys>>,
@@ -69,18 +59,13 @@ impl ModuleGraph {
       get_all_specifier_mappers(),
       options.specifier_mappings,
     );
-    let graph_resolver = DenoGraphResolver::new(
-      resolver,
-      Default::default(),
-      Box::new(|_diagnostic, _referrer, _pos| {}),
-    );
     let scoped_jsx_import_source_config =
       ScopedJsxImportSourceConfig::from_workspace_dir(&options.workspace_dir)?;
     let source_parser = ScopeAnalysisParser;
     let capturing_analyzer =
       CapturingModuleAnalyzer::new(Some(Box::new(source_parser)), None);
     let mut graph = deno_graph::ModuleGraph::new(deno_graph::GraphKind::All);
-    let graph_resolver = graph_resolver.as_graph_resolver(
+    let graph_resolver = resolver.as_graph_resolver(
       &options.cjs_tracker,
       &scoped_jsx_import_source_config,
     );

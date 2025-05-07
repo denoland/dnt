@@ -378,6 +378,7 @@ pub async fn transform(
       }),
       bare_node_builtins: true,
       unstable_sloppy_imports: true,
+      on_mapped_resolution_diagnostic: None,
     },
   );
   let deno_resolver = resolver_factory.deno_resolver().await?;
