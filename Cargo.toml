@@ -22,4 +22,4 @@ sys_traits = { version = "0.1.9", features = ["real"] }
 url = { version = "2.5.4", features =["serde"] }
 
 [patch.crates-io]
-deno_resolver = { path = "../deno/resolvers/deno" }
+deno_resolver = { git = "https://github.com/denoland/deno", rev = "59ffc1987c67f570e2081457c898efe51c872945" }

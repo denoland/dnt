@@ -670,6 +670,7 @@ dependencies = [
 [[package]]
 name = "deno_resolver"
 version = "0.35.0"
+source = "git+https://github.com/denoland/deno?rev=59ffc1987c67f570e2081457c898efe51c872945#59ffc1987c67f570e2081457c898efe51c872945"
 dependencies = [
  "anyhow",
  "async-once-cell",
@@ -1556,6 +1557,7 @@ checksum = "650eef8c711430f1a879fdd01d4745a7deea475becfb90269c06775983bbf086"
 [[package]]
 name = "node_resolver"
 version = "0.42.0"
+source = "git+https://github.com/denoland/deno?rev=59ffc1987c67f570e2081457c898efe51c872945#59ffc1987c67f570e2081457c898efe51c872945"
 dependencies = [
  "anyhow",
  "async-trait",
