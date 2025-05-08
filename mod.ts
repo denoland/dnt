@@ -122,6 +122,8 @@ export interface BuildOptions {
   mappings?: SpecifierMappings;
   /** Package.json output. You may override dependencies and dev dependencies in here. */
   package: PackageJson;
+  /** Path or url to a deno.json. */
+  configFile?: string;
   /** Path or url to import map. */
   importMap?: string;
   /** Package manager used to install dependencies and run npm scripts.
@@ -209,6 +211,7 @@ export async function build(options: BuildOptions): Promise<void> {
       ? "inline"
       : options.declaration ?? "inline",
   };
+  const cwd = Deno.cwd();
   const declarationMap = options.declarationMap ??
     (!!options.declaration && !options.skipSourceOutput);
   const packageManager = options.packageManager ?? "npm";
@@ -586,7 +589,9 @@ export async function build(options: BuildOptions): Promise<void> {
       mappings: options.mappings,
       target: scriptTarget,
       importMap: options.importMap,
+      configFile: options.configFile,
       internalWasmUrl: options.internalWasmUrl,
+      cwd: path.toFileUrl(cwd).toString(),
     });
   }
 

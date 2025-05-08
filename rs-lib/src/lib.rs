@@ -20,6 +20,13 @@ use anyhow::bail;
 use deno_ast::apply_text_changes;
 use deno_ast::TextChange;
 use deno_graph::Module;
+use deno_resolver::factory::ConfigDiscoveryOption;
+use deno_resolver::factory::ResolverFactoryOptions;
+use deno_resolver::factory::SpecifiedImportMapProvider;
+use deno_resolver::factory::WorkspaceFactoryOptions;
+use deno_resolver::factory::WorkspaceFactorySys;
+use deno_resolver::workspace::SpecifiedImportMap;
+use deno_resolver::NodeResolverOptions;
 use deno_semver::npm::NpmPackageReqReference;
 use graph::ModuleGraphOptions;
 use mappings::Mappings;
@@ -244,8 +251,43 @@ pub struct TransformOptions {
   /// Version of ECMAScript that the final code will target.
   /// This controls whether certain polyfills should occur.
   pub target: ScriptTarget,
-  /// Optional import map.
+  pub config_file: Option<ModuleSpecifier>,
   pub import_map: Option<ModuleSpecifier>,
+  pub cwd: PathBuf,
+}
+
+#[derive(Debug)]
+struct ImportMapProvider {
+  url: ModuleSpecifier,
+  loader: Rc<dyn Loader>,
+}
+
+#[async_trait::async_trait(?Send)]
+impl SpecifiedImportMapProvider for ImportMapProvider {
+  async fn get(&self) -> Result<Option<SpecifiedImportMap>, anyhow::Error> {
+    let Some(response) = self
+      .loader
+      .load(self.url.clone(), CacheSetting::Use, None)
+      .await?
+    else {
+      return Ok(None);
+    };
+    let Some(value) = jsonc_parser::parse_to_serde_value(
+      &String::from_utf8(response.content)?,
+      &jsonc_parser::ParseOptions {
+        allow_comments: true,
+        allow_loose_object_property_names: true,
+        allow_trailing_commas: true,
+      },
+    )?
+    else {
+      return Ok(None);
+    };
+    Ok(Some(SpecifiedImportMap {
+      base_url: response.specifier,
+      value,
+    }))
+  }
 }
 
 struct EnvironmentContext<'a> {
@@ -258,10 +300,89 @@ struct EnvironmentContext<'a> {
   used_shim: bool,
 }
 
-pub async fn transform(options: TransformOptions) -> Result<TransformOutput> {
+pub async fn transform(
+  sys: impl WorkspaceFactorySys,
+  options: TransformOptions,
+) -> Result<TransformOutput> {
   if options.entry_points.is_empty() {
     anyhow::bail!("at least one entry point must be specified");
   }
+
+  let paths = options
+    .entry_points
+    .iter()
+    .filter_map(|e| {
+      deno_path_util::url_to_file_path(&deno_path_util::url_parent(e)).ok()
+    })
+    .collect::<Vec<_>>();
+  let maybe_config_path = match &options.config_file {
+    Some(config_file) => Some(deno_path_util::url_to_file_path(config_file)?),
+    None => options
+      .import_map
+      .as_ref()
+      .and_then(|import_map| deno_path_util::url_to_file_path(import_map).ok()),
+  };
+  let config_discovery = match maybe_config_path.as_ref() {
+    Some(config_path) => ConfigDiscoveryOption::Path(config_path.clone()),
+    None => {
+      if paths.is_empty() {
+        ConfigDiscoveryOption::DiscoverCwd
+      } else {
+        ConfigDiscoveryOption::Discover { start_paths: paths }
+      }
+    }
+  };
+
+  let factory = deno_resolver::factory::WorkspaceFactory::new(
+    sys,
+    options.cwd,
+    WorkspaceFactoryOptions {
+      additional_config_file_names: &[],
+      config_discovery,
+      deno_dir_path_provider: None,
+      is_package_manager_subcommand: false,
+      node_modules_dir: None,
+      no_npm: false,
+      npm_process_state: None,
+      vendor: None,
+    },
+  );
+
+  let workspace_dir = factory.workspace_directory()?.clone();
+  let loader = options.loader.unwrap_or_else(|| {
+    #[cfg(feature = "tokio-loader")]
+    return Rc::new(crate::loader::DefaultLoader::new());
+    #[cfg(not(feature = "tokio-loader"))]
+    panic!("You must provide a loader or use the 'tokio-loader' feature.")
+  });
+  let resolver_factory = deno_resolver::factory::ResolverFactory::new(
+    Rc::new(factory),
+    ResolverFactoryOptions {
+      is_cjs_resolution_mode:
+        deno_resolver::cjs::IsCjsResolutionMode::ImplicitTypeCommonJs,
+      npm_system_info: Default::default(),
+      node_resolver_options: NodeResolverOptions {
+        conditions_from_resolution_mode: Default::default(),
+        typescript_version: None,
+      },
+      node_resolution_cache: None,
+      package_json_cache: None,
+      package_json_dep_resolution: Some(
+        deno_resolver::workspace::PackageJsonDepResolution::Enabled,
+      ),
+      specified_import_map: options.import_map.map(|url| {
+        Box::new(ImportMapProvider {
+          url,
+          loader: loader.clone(),
+        }) as Box<dyn SpecifiedImportMapProvider>
+      }),
+      bare_node_builtins: true,
+      unstable_sloppy_imports: true,
+      on_mapped_resolution_diagnostic: None,
+    },
+  );
+  let deno_resolver = resolver_factory.deno_resolver().await?;
+  let cjs_tracker = resolver_factory.cjs_tracker()?.clone();
 
   let (module_graph, specifiers) =
     crate::graph::ModuleGraph::build_with_specifiers(ModuleGraphOptions {
@@ -283,8 +404,10 @@ pub async fn transform(options: TransformOptions) -> Result<TransformOutput> {
         )
         .collect(),
       specifier_mappings: &options.specifier_mappings,
-      loader: options.loader,
-      import_map: options.import_map,
+      loader,
+      resolver: deno_resolver.clone(),
+      cjs_tracker,
+      workspace_dir,
     })
     .await?;
 
@@ -356,8 +479,8 @@ pub async fn transform(options: TransformOptions) -> Result<TransformOutput> {
     };
 
     let file_text = match module {
-      Module::Js(_) => {
-        let parsed_source = module_graph.get_parsed_source(specifier);
+      Module::Js(module) => {
+        let parsed_source = module_graph.get_parsed_source(module)?;
         let text_changes = parsed_source
           .with_view(|program| -> Result<Vec<TextChange>> {
             let ignore_line_indexes = get_ignore_line_indexes(

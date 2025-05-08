@@ -41,7 +41,7 @@ pub struct PolyfillVisitContext<'a, 'b> {
   pub top_level_decls: &'a HashSet<String>,
 }
 
-impl<'a, 'b> PolyfillVisitContext<'a, 'b> {
+impl PolyfillVisitContext<'_, '_> {
   pub fn has_global_property_access(
     &self,
     node: Node,

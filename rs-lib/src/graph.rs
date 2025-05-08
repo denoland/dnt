@@ -13,29 +13,33 @@ use crate::specifiers::get_specifiers;
 use crate::specifiers::Specifiers;
 use crate::MappedSpecifier;
 
-use anyhow::anyhow;
 use anyhow::bail;
-use anyhow::Context;
 use anyhow::Result;
 use deno_ast::ModuleSpecifier;
+use deno_ast::ParseDiagnostic;
 use deno_ast::ParsedSource;
-use deno_error::JsErrorBox;
-use deno_graph::source::CacheSetting;
-use deno_graph::source::ResolutionKind;
-use deno_graph::source::ResolveError;
+use deno_config::workspace::WorkspaceDirectory;
 use deno_graph::CapturingModuleAnalyzer;
+use deno_graph::EsParser;
+use deno_graph::JsModule;
 use deno_graph::Module;
+use deno_graph::ParseOptions;
 use deno_graph::ParsedSourceStore;
-use deno_graph::Range;
-use import_map::ImportMapOptions;
+use deno_resolver::factory::WorkspaceFactorySys;
+use deno_resolver::graph::DefaultDenoResolverRc;
+use deno_resolver::npm::DenoInNpmPackageChecker;
+use deno_resolver::workspace::ScopedJsxImportSourceConfig;
 use sys_traits::impls::RealSys;
 
-pub struct ModuleGraphOptions<'a> {
+pub struct ModuleGraphOptions<'a, TSys: WorkspaceFactorySys> {
   pub entry_points: Vec<ModuleSpecifier>,
   pub test_entry_points: Vec<ModuleSpecifier>,
-  pub loader: Option<Rc<dyn Loader>>,
+  pub loader: Rc<dyn Loader>,
+  pub resolver: DefaultDenoResolverRc<TSys>,
   pub specifier_mappings: &'a HashMap<ModuleSpecifier, MappedSpecifier>,
-  pub import_map: Option<ModuleSpecifier>,
+  pub cjs_tracker:
+    Rc<deno_resolver::cjs::CjsTracker<DenoInNpmPackageChecker, TSys>>,
+  pub workspace_dir: Rc<WorkspaceDirectory>,
 }
 
 /// Wrapper around deno_graph::ModuleGraph.
@@ -45,32 +49,26 @@ pub struct ModuleGraph {
 }
 
 impl ModuleGraph {
-  pub async fn build_with_specifiers(
-    options: ModuleGraphOptions<'_>,
+  pub async fn build_with_specifiers<TSys: WorkspaceFactorySys>(
+    options: ModuleGraphOptions<'_, TSys>,
   ) -> Result<(Self, Specifiers)> {
-    let loader = options.loader.unwrap_or_else(|| {
-      #[cfg(feature = "tokio-loader")]
-      return Rc::new(crate::loader::DefaultLoader::new());
-      #[cfg(not(feature = "tokio-loader"))]
-      panic!("You must provide a loader or use the 'tokio-loader' feature.")
-    });
-    let resolver = match options.import_map {
-      Some(import_map_url) => Some(
-        ImportMapResolver::load(&import_map_url, &*loader)
-          .await
-          .context("Error loading import map.")?,
-      ),
-      None => None,
-    };
+    let resolver = options.resolver;
+    let loader = options.loader;
     let loader = SourceLoader::new(
       loader,
       get_all_specifier_mappers(),
       options.specifier_mappings,
     );
+    let scoped_jsx_import_source_config =
+      ScopedJsxImportSourceConfig::from_workspace_dir(&options.workspace_dir)?;
     let source_parser = ScopeAnalysisParser;
     let capturing_analyzer =
       CapturingModuleAnalyzer::new(Some(Box::new(source_parser)), None);
     let mut graph = deno_graph::ModuleGraph::new(deno_graph::GraphKind::All);
+    let graph_resolver = resolver.as_graph_resolver(
+      &options.cjs_tracker,
+      &scoped_jsx_import_source_config,
+    );
     graph
       .build(
         options
@@ -84,7 +82,7 @@ impl ModuleGraph {
           is_dynamic: false,
           skip_dynamic_deps: false,
           imports: Default::default(),
-          resolver: resolver.as_ref().map(|r| r.as_resolver()),
+          resolver: Some(&graph_resolver),
           locker: None,
           module_analyzer: &capturing_analyzer,
           reporter: None,
@@ -181,17 +179,22 @@ impl ModuleGraph {
     })
   }
 
-  pub fn get_parsed_source(&self, specifier: &ModuleSpecifier) -> ParsedSource {
-    let specifier = self.graph.resolve(specifier);
-    self
+  pub fn get_parsed_source(
+    &self,
+    js_module: &JsModule,
+  ) -> Result<ParsedSource, ParseDiagnostic> {
+    match self
       .capturing_analyzer
-      .get_parsed_source(&specifier)
-      .unwrap_or_else(|| {
-        panic!(
-          "dnt bug - Did not find parsed source for specifier: {}",
-          specifier
-        );
-      })
+      .get_parsed_source(&js_module.specifier)
+    {
+      Some(parsed_source) => Ok(parsed_source),
+      None => self.capturing_analyzer.parse_program(ParseOptions {
+        specifier: &js_module.specifier,
+        source: js_module.source.clone(),
+        media_type: js_module.media_type,
+        scope_analysis: false,
+      }),
+    }
   }
 
   pub fn resolve_dependency(
@@ -202,7 +205,7 @@ impl ModuleGraph {
     self
       .graph
       .resolve_dependency(value, referrer, /* prefer_types */ false)
-      .map(|url| url.clone())
+      .cloned()
       .or_else(|| {
         let value_lower = value.to_lowercase();
         if value_lower.starts_with("https://")
@@ -235,59 +238,4 @@ fn format_specifiers_for_message(
     .map(|s| format!("  * {}", s))
     .collect::<Vec<_>>()
     .join("\n")
-}
-
-#[derive(Debug)]
-struct ImportMapResolver(import_map::ImportMap);
-
-impl ImportMapResolver {
-  pub async fn load(
-    import_map_url: &ModuleSpecifier,
-    loader: &dyn Loader,
-  ) -> Result<Self> {
-    let response = loader
-      .load(import_map_url.clone(), CacheSetting::Use, None)
-      .await?
-      .ok_or_else(|| anyhow!("Could not find {}", import_map_url))?;
-    let value = jsonc_parser::parse_to_serde_value(
-      &String::from_utf8(response.content)?,
-      &jsonc_parser::ParseOptions {
-        allow_comments: true,
-        allow_loose_object_property_names: true,
-        allow_trailing_commas: true,
-      },
-    )?
-    .unwrap_or_else(|| serde_json::Value::Object(Default::default()));
-    let result = import_map::parse_from_value_with_options(
-      import_map_url.clone(),
-      value,
-      ImportMapOptions {
-        address_hook: None,
-        expand_imports: true,
-      },
-    )?;
-    // if !result.diagnostics.is_empty() {
-    //   todo: surface diagnostics maybe? It seems like this should not be hard error according to import map spec
-    //   bail!("Import map diagnostics:\n{}", result.diagnostics.into_iter().map(|d| format!("  - {}", d)).collect::<Vec<_>>().join("\n"));
-    //}
-    Ok(ImportMapResolver(result.import_map))
-  }
-
-  pub fn as_resolver(&self) -> &dyn deno_graph::source::Resolver {
-    self
-  }
-}
-
-impl deno_graph::source::Resolver for ImportMapResolver {
-  fn resolve(
-    &self,
-    specifier: &str,
-    referrer_range: &Range,
-    _kind: ResolutionKind,
-  ) -> Result<ModuleSpecifier, ResolveError> {
-    self
-      .0
-      .resolve(specifier, &referrer_range.specifier)
-      .map_err(|err| ResolveError::Other(JsErrorBox::from_err(err)))
-  }
 }

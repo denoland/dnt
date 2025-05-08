@@ -14,6 +14,8 @@ use deno_node_transform::ScriptTarget;
 use deno_node_transform::Shim;
 use deno_node_transform::TransformOptions;
 use deno_node_transform::TransformOutput;
+use sys_traits::impls::InMemorySys;
+use sys_traits::EnvCurrentDir;
 
 use super::InMemoryLoader;
 
@@ -26,14 +28,14 @@ pub struct TestBuilder {
   shims: Vec<Shim>,
   test_shims: Vec<Shim>,
   target: ScriptTarget,
+  config_file: Option<ModuleSpecifier>,
   import_map: Option<ModuleSpecifier>,
 }
 
 impl TestBuilder {
   pub fn new() -> Self {
-    let loader = InMemoryLoader::new();
     Self {
-      loader,
+      loader: InMemoryLoader::new(),
       entry_point: "file:///mod.ts".to_string(),
       additional_entry_points: Vec::new(),
       test_entry_points: Vec::new(),
@@ -41,8 +43,17 @@ impl TestBuilder {
       shims: Default::default(),
       test_shims: Default::default(),
       target: ScriptTarget::ES5,
+      config_file: None,
       import_map: None,
     }
+  }
+
+  pub fn with_sys(
+    &mut self,
+    mut action: impl FnMut(&mut InMemorySys),
+  ) -> &mut Self {
+    action(&mut self.loader.sys);
+    self
   }
 
   pub fn with_loader(
@@ -67,6 +78,11 @@ impl TestBuilder {
 
   pub fn add_test_entry_point(&mut self, value: impl AsRef<str>) -> &mut Self {
     self.test_entry_points.push(value.as_ref().to_string());
+    self
+  }
+
+  pub fn set_config_file(&mut self, url: impl AsRef<str>) -> &mut Self {
+    self.import_map = Some(ModuleSpecifier::parse(url.as_ref()).unwrap());
     self
   }
 
@@ -173,20 +189,25 @@ impl TestBuilder {
         .iter()
         .map(|p| ModuleSpecifier::parse(p).unwrap()),
     );
-    transform(TransformOptions {
-      entry_points,
-      test_entry_points: self
-        .test_entry_points
-        .iter()
-        .map(|p| ModuleSpecifier::parse(p).unwrap())
-        .collect(),
-      shims: self.shims.clone(),
-      test_shims: self.test_shims.clone(),
-      loader: Some(Rc::new(self.loader.clone())),
-      specifier_mappings: self.specifier_mappings.clone(),
-      target: self.target,
-      import_map: self.import_map.clone(),
-    })
+    transform(
+      self.loader.sys.clone(),
+      TransformOptions {
+        entry_points,
+        test_entry_points: self
+          .test_entry_points
+          .iter()
+          .map(|p| ModuleSpecifier::parse(p).unwrap())
+          .collect(),
+        shims: self.shims.clone(),
+        test_shims: self.test_shims.clone(),
+        loader: Some(Rc::new(self.loader.clone())),
+        specifier_mappings: self.specifier_mappings.clone(),
+        target: self.target,
+        config_file: self.config_file.clone(),
+        import_map: self.import_map.clone(),
+        cwd: self.loader.sys.env_current_dir().unwrap(),
+      },
+    )
     .await
   }
 }

@@ -16,6 +16,7 @@ use futures::Future;
 use crate::LoadResponse;
 use crate::Loader;
 
+#[derive(Debug)]
 pub struct DefaultLoader {}
 
 impl DefaultLoader {

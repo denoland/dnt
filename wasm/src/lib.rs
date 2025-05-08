@@ -7,6 +7,7 @@ use std::future::Future;
 use std::rc::Rc;
 use std::sync::Arc;
 
+use anyhow::Context;
 use anyhow::Result;
 use deno_error::JsErrorBox;
 use dnt::LoadError;
@@ -27,6 +28,7 @@ extern "C" {
   ) -> JsValue;
 }
 
+#[derive(Debug)]
 struct JsLoader;
 
 impl dnt::Loader for JsLoader {
@@ -77,43 +79,60 @@ pub struct TransformOptions {
   pub mappings: HashMap<ModuleSpecifier, MappedSpecifier>,
   pub target: ScriptTarget,
   pub import_map: Option<ModuleSpecifier>,
+  pub config_file: Option<ModuleSpecifier>,
+  pub cwd: ModuleSpecifier,
 }
 
 #[wasm_bindgen]
 pub async fn transform(options: JsValue) -> Result<JsValue, JsValue> {
   set_panic_hook();
 
+  transform_inner(options)
+    .await
+    // need to include the anyhow context
+    .map_err(|err| format!("{:#}", err).into())
+}
+
+async fn transform_inner(options: JsValue) -> Result<JsValue, anyhow::Error> {
   #[allow(deprecated)]
-  let options: TransformOptions = options.into_serde().unwrap();
+  let options: TransformOptions = options.into_serde()?;
   // todo(dsherret): try using this again sometime in the future... it errored
   // with "invalid type: unit value, expected a boolean" and didn't say exactly
   // where it errored.
   // let options: TransformOptions = serde_wasm_bindgen::from_value(options)?;
 
-  let result = dnt::transform(dnt::TransformOptions {
-    entry_points: parse_module_specifiers(options.entry_points)?,
-    test_entry_points: parse_module_specifiers(options.test_entry_points)?,
-    shims: options.shims,
-    test_shims: options.test_shims,
-    loader: Some(Rc::new(JsLoader {})),
-    specifier_mappings: options.mappings,
-    target: options.target,
-    import_map: options.import_map,
-  })
-  .await
-  .map_err(|err| format!("{:#}", err))?; // need to include the anyhow context
-
+  let result = dnt::transform(
+    sys_traits::impls::RealSys,
+    dnt::TransformOptions {
+      entry_points: parse_module_specifiers(options.entry_points)?,
+      test_entry_points: parse_module_specifiers(options.test_entry_points)?,
+      shims: options.shims,
+      test_shims: options.test_shims,
+      loader: Some(Rc::new(JsLoader {})),
+      specifier_mappings: options.mappings,
+      target: options.target,
+      import_map: options.import_map,
+      config_file: options.config_file,
+      cwd: deno_path_util::url_to_file_path(&options.cwd)?,
+    },
+  )
+  .await?;
   Ok(serde_wasm_bindgen::to_value(&result).unwrap())
 }
 
 fn parse_module_specifiers(
   values: Vec<String>,
-) -> Result<Vec<ModuleSpecifier>, JsValue> {
-  let mut specifiers = Vec::new();
+) -> Result<Vec<ModuleSpecifier>, anyhow::Error> {
+  let mut specifiers = Vec::with_capacity(values.len());
   for value in values {
-    let entry_point = dnt::ModuleSpecifier::parse(&value)
-      .map_err(|err| format!("Error parsing {}. {}", value, err))?;
-    specifiers.push(entry_point);
+    specifiers.push(parse_module_specifier(&value)?);
   }
   Ok(specifiers)
+}
+
+fn parse_module_specifier(
+  value: &str,
+) -> Result<ModuleSpecifier, anyhow::Error> {
+  ModuleSpecifier::parse(value)
+    .with_context(|| format!("Error parsing {}.", value))
 }

@@ -1132,6 +1132,66 @@ pnpm-lock.yaml
   });
 });
 
+Deno.test("should build workspace project", async () => {
+  for (
+    const configFile of [
+      import.meta.resolve("./workspace_project/deno.json"),
+      undefined,
+    ]
+  ) {
+    await runTest("workspace_project", {
+      entryPoints: ["./add/mod.ts"],
+      outDir: "./npm",
+      typeCheck: "both",
+      shims: {
+        ...getAllShimOptions(false),
+      },
+      configFile,
+      package: {
+        name: "add",
+        version: "1.0.0",
+      },
+      compilerOptions: {
+        lib: ["ESNext", "DOM"],
+        importHelpers: true,
+      },
+    }, (output) => {
+      output.assertNotExists("script/mod.js.map");
+      output.assertNotExists("esm/mod.js.map");
+      assertEquals(output.packageJson, {
+        name: "add",
+        version: "1.0.0",
+        main: "./script/mod.js",
+        module: "./esm/mod.js",
+        exports: {
+          ".": {
+            import: "./esm/mod.js",
+            require: "./script/mod.js",
+          },
+        },
+        scripts: {
+          test: "node test_runner.js",
+        },
+        dependencies: {
+          tslib: versions.tsLib,
+        },
+        devDependencies: {
+          picocolors: versions.picocolors,
+        },
+        _generatedBy: "dnt@dev",
+      });
+      assertEquals(
+        output.npmIgnore,
+        `/src/
+/test_runner.js
+yarn.lock
+pnpm-lock.yaml
+`,
+      );
+    });
+  }
+});
+
 export interface Output {
   packageJson: any;
   npmIgnore: string;
@@ -1157,7 +1217,8 @@ async function runTest(
     | "test_project"
     | "tla_project"
     | "web_socket_project"
-    | "using_decl_project",
+    | "using_decl_project"
+    | "workspace_project",
   options: BuildOptions,
   checkOutput?: (output: Output) => Promise<void> | void,
 ) {

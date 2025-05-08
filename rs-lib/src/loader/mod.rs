@@ -36,7 +36,7 @@ pub struct LoadResponse {
   pub content: Vec<u8>,
 }
 
-pub trait Loader {
+pub trait Loader: std::fmt::Debug {
   fn load(
     &self,
     url: ModuleSpecifier,
@@ -79,7 +79,7 @@ impl<'a> SourceLoader<'a> {
   }
 }
 
-impl<'a> deno_graph::source::Loader for SourceLoader<'a> {
+impl deno_graph::source::Loader for SourceLoader<'_> {
   fn load(
     &self,
     specifier: &ModuleSpecifier,
