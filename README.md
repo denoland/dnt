@@ -608,7 +608,8 @@ await build({
 
 ### deno.json Support
 
-Starting in dnt 0.42, the deno.json is auto-discovered. A config file can be explicitly specified by the `configFile` key:
+Starting in dnt 0.42, the deno.json is auto-discovered. A config file can be
+explicitly specified by the `configFile` key:
 
 ```ts
 await build({

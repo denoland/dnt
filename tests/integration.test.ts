@@ -1133,7 +1133,12 @@ pnpm-lock.yaml
 });
 
 Deno.test("should build workspace project", async () => {
-  for (const configFile of [import.meta.resolve("./workspace_project/deno.json"), undefined]) {
+  for (
+    const configFile of [
+      import.meta.resolve("./workspace_project/deno.json"),
+      undefined,
+    ]
+  ) {
     await runTest("workspace_project", {
       entryPoints: ["./add/mod.ts"],
       outDir: "./npm",
