@@ -108,6 +108,10 @@ Deno.test("should build test project - basic", async () => {
 /esm/deps/deno.land/std@0.181.0/testing/asserts.d.ts
 /script/deps/deno.land/std@0.181.0/testing/asserts.js
 /script/deps/deno.land/std@0.181.0/testing/asserts.d.ts
+/esm/_dnt.test_polyfills.js
+/esm/_dnt.test_polyfills.d.ts
+/script/_dnt.test_polyfills.js
+/script/_dnt.test_polyfills.d.ts
 /esm/_dnt.test_shims.js
 /esm/_dnt.test_shims.d.ts
 /script/_dnt.test_shims.js
@@ -173,6 +177,8 @@ Deno.test("should build test project without esm", async () => {
 /types/deps/deno.land/std@0.181.0/testing/_format.d.ts
 /script/deps/deno.land/std@0.181.0/testing/asserts.js
 /types/deps/deno.land/std@0.181.0/testing/asserts.d.ts
+/script/_dnt.test_polyfills.js
+/types/_dnt.test_polyfills.d.ts
 /script/_dnt.test_shims.js
 /types/_dnt.test_shims.d.ts
 /test_runner.js
@@ -528,6 +534,12 @@ Deno.test("should build with source maps", async () => {
 /script/deps/deno.land/std@0.181.0/testing/asserts.js
 /script/deps/deno.land/std@0.181.0/testing/asserts.js.map
 /script/deps/deno.land/std@0.181.0/testing/asserts.d.ts
+/esm/_dnt.test_polyfills.js
+/esm/_dnt.test_polyfills.js.map
+/esm/_dnt.test_polyfills.d.ts
+/script/_dnt.test_polyfills.js
+/script/_dnt.test_polyfills.js.map
+/script/_dnt.test_polyfills.d.ts
 /esm/_dnt.test_shims.js
 /esm/_dnt.test_shims.js.map
 /esm/_dnt.test_shims.d.ts
@@ -852,6 +864,21 @@ Deno.test("should build and test the array find last polyfill project", async ()
     package: {
       name: "polyfill-package",
       version: "1.0.0",
+    },
+  }, (output) => {
+    output.assertExists("esm/_dnt.polyfills.js");
+  });
+});
+
+Deno.test("should build and test the import meta polyfill project", async () => {
+  await runTest("polyfill_import_meta_project", {
+    test: true,
+    entryPoints: ["mod.ts"],
+    outDir: "./npm",
+    shims: { deno: "dev" },
+    package: {
+      name: "polyfill-import-meta-project",
+      version: "0.0.0",
     },
   }, (output) => {
     output.assertExists("esm/_dnt.polyfills.js");
@@ -1210,6 +1237,7 @@ async function runTest(
     | "polyfill_project"
     | "polyfill_array_from_async_project"
     | "polyfill_array_find_last_project"
+    | "polyfill_import_meta_project"
     | "module_mappings_project"
     | "node_types_project"
     | "undici_project"

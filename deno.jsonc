@@ -40,6 +40,7 @@
     "rs-lib/src/polyfills/scripts/",
     "tests/declaration_import_project/npm",
     "tests/import_map_project/npm",
+    "tests/import_meta_project/npm",
     "tests/json_module_project/npm",
     "tests/module_mappings_project/npm",
     "tests/node_types_project/npm",

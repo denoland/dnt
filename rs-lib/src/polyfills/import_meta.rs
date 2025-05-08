@@ -2,7 +2,6 @@
 
 use deno_ast::view::Expr;
 use deno_ast::view::Node;
-use deno_ast::SourceRanged;
 
 use super::Polyfill;
 use super::PolyfillVisitContext;
@@ -15,13 +14,10 @@ impl Polyfill for ImportMetaPolyfill {
     true
   }
 
-  fn visit_node(&self, node: Node, context: &PolyfillVisitContext) -> bool {
+  fn visit_node(&self, node: Node, _context: &PolyfillVisitContext) -> bool {
     if let Node::MemberExpr(expr) = node {
       if let Expr::MetaProp(_meta) = expr.obj {
-        let text = expr.prop.text_fast(context.program);
-        if text == "main" || text == "resolve" {
-          return true;
-        }
+        return true;
       }
     }
     false
