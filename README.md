@@ -764,3 +764,274 @@ let output_result = transform(TransformOptions {
   specifier_mappings: None,
 }).await?;
 ```
+
+## Publishing Your Deno Project as a Monorepo using dnt
+
+> Before providing theoretical guidance, let's look at how to achieve this in
+> practice. After completion, I will explain the advantages of this project
+> management solution.
+
+### Tools
+
+1. [deno](https://deno.com/)
+2. [pnpm](https://pnpm.io/installation)
+
+### Preparation
+
+1. Create your project:
+   ```shell
+   deno init dnt-mono
+   # cd dnt-mono
+   # code . # open in ide
+   ```
+2. Initialize a git repository
+   ```shell
+   git init
+   echo "npm\nnode_modules" > .gitignore # ignore the npm folder
+   ```
+3. Initialize package.json, and other files typically required by npm/pnpm
+   ```shell
+   npm init --yes --private # create a package.json file
+   echo "MIT" > LICENSE
+   echo "# Hello Dnt ❤️ Monorepo" > README.md
+   echo "packages:\n  - \"npm/*\"" > pnpm-workspace.yaml
+   ```
+4. Prepare the dnt script
+
+   ```shell
+   deno add @deno/dnt
+   ```
+
+   Refer to [Setup](https://github.com/denoland/dnt?tab=readme-ov-file#setup),
+   as we need to build multiple npm packages, create the `scripts/npmBuilder.ts`
+   file:
+
+   ```ts
+   import { build, BuildOptions, emptyDir } from "@deno/dnt";
+   import fs from "node:fs";
+   import path from "node:path";
+   import { fileURLToPath } from "node:url";
+
+   const rootDir = import.meta.resolve("../");
+   const rootResolve = (path: string) => fileURLToPath(new URL(path, rootDir));
+   export const npmBuilder = async (config: {
+     packageDir: string;
+     version?: string;
+     importMap?: string;
+     options?: Partial<BuildOptions>;
+   }) => {
+     const { packageDir, version, importMap, options } = config;
+     const packageResolve = (path: string) =>
+       fileURLToPath(new URL(path, packageDir));
+     const packageJson = JSON.parse(
+       fs.readFileSync(packageResolve("./package.json"), "utf-8"),
+     );
+     // remove some field which dnt will create. if you known how dnt work, you can keep them.
+     delete packageJson.main;
+     delete packageJson.module;
+     delete packageJson.exports;
+
+     console.log(`\nstart dnt: ${packageJson.name}`);
+
+     const npmDir = rootResolve(`./npm/${packageJson.name.split("/").pop()}`);
+     const npmResolve = (p: string) => path.resolve(npmDir, p);
+
+     await emptyDir(npmDir);
+
+     if (version) {
+       Object.assign(packageJson, { version: version });
+     }
+
+     await build({
+       entryPoints: [{ name: ".", path: packageResolve("./index.ts") }],
+       outDir: npmDir,
+       packageManager: "pnpm",
+       shims: {
+         deno: true,
+       },
+       // you should open it in actual
+       test: false,
+       importMap: importMap,
+       package: packageJson,
+       // custom by yourself
+       compilerOptions: {
+         lib: ["DOM", "ES2022"],
+         target: "ES2022",
+         emitDecoratorMetadata: true,
+       },
+       postBuild() {
+         // steps to run after building and before running the tests
+         Deno.copyFileSync(rootResolve("./LICENSE"), npmResolve("./LICENSE"));
+         Deno.copyFileSync(
+           packageResolve("./README.md"),
+           npmResolve("./README.md"),
+         );
+       },
+       ...options,
+     });
+   };
+   ```
+
+### Main Steps
+
+1. Create two subfolders and add some project files
+
+   ```shell
+   # start from root
+   mkdir packages/module-a
+   cd packages/module-a
+   echo "export const a = 1;" > index.ts
+   echo "# @dnt-mono/module-a" > README.md
+   npm init --scope @dnt-mono --yes # name: @dnt-mono/module-a
+   ```
+
+   Repeat the steps to create a `module-b` folder
+
+   ```shell
+   # start from root
+   mkdir packages/module-b
+   cd packages/module-b
+   echo "import { a } from \"@dnt-mono/module-a\";\nexport const b = a + 1;" > index.ts
+   echo "# @dnt-mono/module-b" > README.md
+   npm init --scope @dnt-mono --yes # name: @dnt-mono/module-b
+
+   pnpm add @dnt-mono/module-a --workspace # add module-a as a dependency
+   ```
+
+2. In this example, `module-b` depends on `module-a`, and we used the specifier
+   `@dnt-mono/module-a` in the code, so we need some configurations to make the
+   deno language server work correctly. In the `imports` field of `deno.json`,
+   add these configurations:
+
+   ```jsonc
+   "@dnt-mono/module-a": "./packages/module-a/index.ts", // in imports
+   "@dnt-mono/module-b": "./packages/module-b/index.ts" // in imports
+   ```
+
+3. Next, create the build script and configuration files
+
+   1. `scripts/build_npm.ts`
+
+      ```ts
+      import { npmBuilder } from "./npmBuilder.ts";
+
+      const version = Deno.args[0];
+      await npmBuilder({
+        packageDir: import.meta.resolve("../packages/module-a/"),
+        importMap: import.meta.resolve("./import_map.npm.json"),
+        version,
+      });
+      await npmBuilder({
+        packageDir: import.meta.resolve("../packages/module-b/"),
+        importMap: import.meta.resolve("./import_map.npm.json"),
+        version,
+      });
+      ```
+
+   2. `scripts/import_map.npm.json`
+
+      ```json
+      {
+        "imports": {
+          "@dnt-mono/module-a": "npm:@dnt-mono/module-a",
+          "@dnt-mono/module-b": "npm:@dnt-mono/module-b"
+        }
+      }
+      ```
+
+4. Then, in your `deno.json`, configure the build command:
+
+   ```jsonc
+   "build": "deno run -A ./scripts/build_npm.ts" // in tasks
+   ```
+
+5. Finally, try executing the build command to create the npm directory
+   ```shell
+   deno task build
+   ```
+   Now, you should see the npm directory has been populated with the module-a
+   and module-b folders ready for npm publishing. You can try to publish these
+   npm packages:
+   ```shell
+   pnpm publish -r --no-git-checks --dry-run # you should remove --dry-run for an actual run
+   ```
+
+### How It Works
+
+1. We use deno as the language server, which is quite powerful, vastly improved
+   from tsc itself through customized development.
+2. So here, the package.json is just a "template file" and not a configuration
+   file. The only configuration file that goes into effect during development is
+   deno.json.
+3. Hence, pnpm is just a tool for the final output built by dnt, meaning it only
+   serves the `npm/*` directory. This is also why `pnpm-workspaces.yaml` is
+   configured as it is.
+4. The `import_map.npm.json` used in dnt is essential. We can't use `deno.json`
+   directly as `importMap` because `deno.json` is configured for the deno
+   language server, while `import_map.npm.json` is for dnt/pnpm use. In complex
+   projects, it's advisable to manage it automatically with a script.
+
+### Advanced Tips
+
+In deno development, our philosophy is file-oriented rather than
+module-oriented. Therefore, if needed, you may want to add this kind of
+configuration in `deno.json`:
+
+```jsonc
+{
+  // ...
+  "imports": {
+    // ...
+    "@dnt-mono/module-a": "./packages/module-a/index.ts",
+    "@dnt-mono/module-a/": "./packages/module-a/src/",
+    "@dnt-mono/module-b": "./packages/module-b/index.ts",
+    "@dnt-mono/module-b/": "./packages/module-b/src/"
+    // ...
+  }
+}
+```
+
+I prefer to put files other than `index.ts` into a `src` directory, which aligns
+more with the style of node projects.
+
+> However, remember not to move the `index.ts` file to the `src` directory as
+> well, as it could cause exceptions
+> [#249](https://github.com/denoland/dnt/issues/249).
+
+Then, it's about the dnt configuration, where you need to iterate over all your
+files and configure them in the entryPoints:
+
+```ts
+build({
+  entryPoints: [
+    // default entry
+    { name: ".", path: packageResolve("./index.ts") },
+    // src files
+    ALL_SRC_TS_FILES.map((name) => ({
+      name: `./${name}`,
+      path: `./src/${name}`,
+    })),
+  ],
+  // ...
+});
+```
+
+Now, you can write code like this:
+
+```ts
+import { xxx } from "@dnt-mono/module-a/xxx.ts";
+```
+
+### Points to Note
+
+1. Plan your project structure well to avoid cyclic dependencies. If needed, you
+   should configure peerDependencies yourself.
+2. Don't self-import within a module.
+   > The language server doesn't understand that you intend to publish to npm,
+   > so even if deno works correctly, your goal is to make it work with node as
+   > well.
+   ```ts
+   import { a } from "@dnt-mono/module-a"; // don't import module-a in module-a
+   ```
+   It is advisable to write lint rules to avoid these mistakes in actual
+   projects.
