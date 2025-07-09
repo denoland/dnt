@@ -5,8 +5,8 @@ use deno_ast::parse_program;
 use deno_ast::ParseDiagnostic;
 use deno_ast::ParseParams;
 use deno_ast::ParsedSource;
-use deno_graph::EsParser;
-use deno_graph::ParseOptions;
+use deno_graph::ast::EsParser;
+use deno_graph::ast::ParseOptions;
 
 #[derive(Default, Copy, Clone)]
 pub struct ScopeAnalysisParser;

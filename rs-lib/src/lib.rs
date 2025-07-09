@@ -20,6 +20,7 @@ use anyhow::bail;
 use deno_ast::apply_text_changes;
 use deno_ast::TextChange;
 use deno_graph::Module;
+use deno_resolver::deno_json::CompilerOptionsOverrides;
 use deno_resolver::factory::ConfigDiscoveryOption;
 use deno_resolver::factory::ResolverFactoryOptions;
 use deno_resolver::factory::SpecifiedImportMapProvider;
@@ -32,6 +33,8 @@ use graph::ModuleGraphOptions;
 use mappings::Mappings;
 use mappings::SYNTHETIC_SPECIFIERS;
 use mappings::SYNTHETIC_TEST_SPECIFIERS;
+use node_resolver::analyze::NodeCodeTranslatorMode;
+use node_resolver::NodeConditionOptions;
 use polyfills::build_polyfill_file;
 use polyfills::polyfills_for_target;
 use polyfills::Polyfill;
@@ -339,16 +342,19 @@ pub async fn transform(
     WorkspaceFactoryOptions {
       additional_config_file_names: &[],
       config_discovery,
-      deno_dir_path_provider: None,
       is_package_manager_subcommand: false,
       node_modules_dir: None,
       no_npm: false,
       npm_process_state: None,
       vendor: None,
+      frozen_lockfile: None,
+      lock_arg: None,
+      lockfile_skip_write: true,
+      maybe_custom_deno_dir_root: None,
+      no_lock: false,
     },
   );
 
-  let workspace_dir = factory.workspace_directory()?.clone();
   let loader = options.loader.unwrap_or_else(|| {
     #[cfg(feature = "tokio-loader")]
     return Rc::new(crate::loader::DefaultLoader::new());
@@ -362,8 +368,14 @@ pub async fn transform(
         deno_resolver::cjs::IsCjsResolutionMode::ImplicitTypeCommonJs,
       npm_system_info: Default::default(),
       node_resolver_options: NodeResolverOptions {
-        conditions_from_resolution_mode: Default::default(),
         typescript_version: None,
+        conditions: NodeConditionOptions {
+          conditions: Vec::new(),
+          import_conditions_override: None,
+          require_conditions_override: None,
+        },
+        prefer_browser_field: false,
+        bundle_mode: false,
       },
       node_resolution_cache: None,
       package_json_cache: None,
@@ -379,6 +391,13 @@ pub async fn transform(
       bare_node_builtins: true,
       unstable_sloppy_imports: true,
       on_mapped_resolution_diagnostic: None,
+      compiler_options_overrides: CompilerOptionsOverrides {
+        no_transpile: false,
+        source_map_base: None,
+        preserve_jsx: false,
+      },
+      node_analysis_cache: None,
+      node_code_translator_mode: NodeCodeTranslatorMode::ModuleLoader,
     },
   );
   let deno_resolver = resolver_factory.deno_resolver().await?;
@@ -406,8 +425,10 @@ pub async fn transform(
       specifier_mappings: &options.specifier_mappings,
       loader,
       resolver: deno_resolver.clone(),
+      compiler_options_resolver: resolver_factory
+        .compiler_options_resolver()?
+        .clone(),
       cjs_tracker,
-      workspace_dir,
     })
     .await?;
 
@@ -546,7 +567,7 @@ pub async fn transform(
         apply_text_changes(parsed_source.text(), text_changes)
       }
       Module::Json(module) => {
-        format!("export default {};", strip_bom(&module.source).trim(),)
+        format!("export default {};", strip_bom(&module.source.text).trim(),)
       }
       Module::Node(_)
       | Module::Npm(_)

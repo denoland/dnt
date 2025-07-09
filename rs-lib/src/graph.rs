@@ -18,17 +18,18 @@ use anyhow::Result;
 use deno_ast::ModuleSpecifier;
 use deno_ast::ParseDiagnostic;
 use deno_ast::ParsedSource;
-use deno_config::workspace::WorkspaceDirectory;
-use deno_graph::CapturingModuleAnalyzer;
-use deno_graph::EsParser;
+use deno_graph::ast::CapturingModuleAnalyzer;
+use deno_graph::ast::EsParser;
+use deno_graph::ast::ParseOptions;
+use deno_graph::ast::ParsedSourceStore;
+use deno_graph::source::NullModuleInfoCacher;
 use deno_graph::JsModule;
 use deno_graph::Module;
-use deno_graph::ParseOptions;
-use deno_graph::ParsedSourceStore;
+use deno_resolver::deno_json::CompilerOptionsResolver;
+use deno_resolver::deno_json::JsxImportSourceConfigResolver;
 use deno_resolver::factory::WorkspaceFactorySys;
 use deno_resolver::graph::DefaultDenoResolverRc;
 use deno_resolver::npm::DenoInNpmPackageChecker;
-use deno_resolver::workspace::ScopedJsxImportSourceConfig;
 use sys_traits::impls::RealSys;
 
 pub struct ModuleGraphOptions<'a, TSys: WorkspaceFactorySys> {
@@ -37,9 +38,9 @@ pub struct ModuleGraphOptions<'a, TSys: WorkspaceFactorySys> {
   pub loader: Rc<dyn Loader>,
   pub resolver: DefaultDenoResolverRc<TSys>,
   pub specifier_mappings: &'a HashMap<ModuleSpecifier, MappedSpecifier>,
+  pub compiler_options_resolver: Rc<CompilerOptionsResolver>,
   pub cjs_tracker:
     Rc<deno_resolver::cjs::CjsTracker<DenoInNpmPackageChecker, TSys>>,
-  pub workspace_dir: Rc<WorkspaceDirectory>,
 }
 
 /// Wrapper around deno_graph::ModuleGraph.
@@ -60,7 +61,9 @@ impl ModuleGraph {
       options.specifier_mappings,
     );
     let scoped_jsx_import_source_config =
-      ScopedJsxImportSourceConfig::from_workspace_dir(&options.workspace_dir)?;
+      JsxImportSourceConfigResolver::from_compiler_options_resolver(
+        &options.compiler_options_resolver,
+      )?;
     let source_parser = ScopeAnalysisParser;
     let capturing_analyzer =
       CapturingModuleAnalyzer::new(Some(Box::new(source_parser)), None);
@@ -77,20 +80,23 @@ impl ModuleGraph {
           .chain(options.test_entry_points.iter())
           .map(|s| s.to_owned())
           .collect(),
+        Vec::new(),
         &loader,
         deno_graph::BuildOptions {
           is_dynamic: false,
           skip_dynamic_deps: false,
-          imports: Default::default(),
           resolver: Some(&graph_resolver),
           locker: None,
           module_analyzer: &capturing_analyzer,
+          module_info_cacher: &NullModuleInfoCacher,
           reporter: None,
           npm_resolver: None,
           file_system: &RealSys,
           jsr_url_provider: Default::default(),
           executor: Default::default(),
           passthrough_jsr_specifiers: false,
+          unstable_bytes_imports: false,
+          unstable_text_imports: false,
         },
       )
       .await;
@@ -190,7 +196,7 @@ impl ModuleGraph {
       Some(parsed_source) => Ok(parsed_source),
       None => self.capturing_analyzer.parse_program(ParseOptions {
         specifier: &js_module.specifier,
-        source: js_module.source.clone(),
+        source: js_module.source.text.clone(),
         media_type: js_module.media_type,
         scope_analysis: false,
       }),

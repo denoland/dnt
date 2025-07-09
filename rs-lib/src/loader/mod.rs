@@ -141,6 +141,7 @@ impl deno_graph::source::Loader for SourceLoader<'_> {
             specifier: r.specifier,
             content: r.content.into(),
             maybe_headers: r.headers,
+            mtime: None,
           })
         })
         .map_err(|err| {
@@ -165,6 +166,7 @@ fn get_dummy_module(
       specifier: specifier.clone(),
       content: b"".to_vec().into(),
       maybe_headers: Some(headers),
+      mtime: None,
     },
   ))))
 }

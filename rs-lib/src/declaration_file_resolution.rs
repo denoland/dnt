@@ -106,7 +106,7 @@ fn select_best_types_dep(
           .js()
           .map(|m| &m.source)
         {
-          dep_source.len() > selected_source.len()
+          dep_source.text.len() > selected_source.text.len()
         } else {
           true
         }

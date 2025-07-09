@@ -2,7 +2,7 @@
   "name": "@deno/dnt",
   "tasks": {
     "test": "deno test -A",
-    "build": "deno run -A jsr:@deno/wasmbuild@0.17.2 --out lib/pkg"
+    "build": "deno run -A jsr:@deno/wasmbuild@0.19.2 --out lib/pkg"
   },
   "lint": {
     "rules": {
