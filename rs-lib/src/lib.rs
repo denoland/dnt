@@ -392,9 +392,9 @@ pub async fn transform(
       unstable_sloppy_imports: true,
       on_mapped_resolution_diagnostic: None,
       compiler_options_overrides: CompilerOptionsOverrides {
-        no_transpile: false,
+        no_transpile: true,
         source_map_base: None,
-        preserve_jsx: false,
+        preserve_jsx: true,
       },
       node_analysis_cache: None,
       node_code_translator_mode: NodeCodeTranslatorMode::ModuleLoader,
