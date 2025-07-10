@@ -19,6 +19,8 @@ use integration::TestBuilder;
 use crate::integration::assert_identity_transforms;
 use crate::integration::assert_transforms;
 
+use self::integration::normalize_urls;
+
 #[tokio::test]
 async fn transform_standalone_file() {
   let result = TestBuilder::new()
@@ -211,7 +213,7 @@ async fn transform_shim_custom_shims() {
       }],
     }))
     .add_shim(Shim::Module(ModuleShim {
-      module: "file:///local_shim.ts".to_string(),
+      module: normalize_urls("file:///local_shim.ts"),
       global_names: vec![GlobalName {
         name: "LocalShim".to_string(),
         export_name: None,
@@ -379,7 +381,9 @@ async fn transform_legacy_deno_shim_ignore_warnings() {
     .await
     .unwrap();
 
-  assert_eq!(result.warnings, vec!["deno-shim-ignore has been renamed to dnt-shim-ignore. Please rename it in file:///mod.ts"]);
+  assert_eq!(result.warnings, vec![
+    normalize_urls("deno-shim-ignore has been renamed to dnt-shim-ignore. Please rename it in file:///mod.ts")
+  ]);
   assert_files!(
     result.main.files,
     &[("mod.ts", "// deno-shim-ignore\nDeno.readTextFile();")]
@@ -758,7 +762,9 @@ async fn transform_local_file_not_exists() {
 
   assert_eq!(
     err_message.to_string(),
-    "Module not found \"file:///other.ts\".\n    at file:///mod.ts:1:24"
+    normalize_urls(
+      "Module not found \"file:///other.ts\".\n    at file:///mod.ts:1:24"
+    )
   );
 }
 
@@ -963,18 +969,18 @@ async fn transform_deno_types_and_type_ref_for_different_local_file() {
   assert_eq!(
     result.warnings,
     vec![
-      concat!(
+      normalize_urls(concat!(
         "Duplicate declaration file found for file:///file.js\n",
         "  Specified file:///declarations.d.ts in file:///mod.ts\n",
         "  Selected file:///declarations3.d.ts\n",
         "  Supress this warning by having only one local file specify the declaration file for this module.",
-      ),
-      concat!(
+      )),
+      normalize_urls(concat!(
         "Duplicate declaration file found for file:///file.js\n",
         "  Specified file:///declarations2.d.ts in file:///other.ts\n",
         "  Selected file:///declarations3.d.ts\n",
         "  Supress this warning by having only one local file specify the declaration file for this module.",
-      ),
+      )),
     ]
   );
   assert_files!(
@@ -1893,10 +1899,10 @@ async fn redirect_not_found() {
 
   assert_eq!(
     err_message.to_string(),
-    concat!(
+    normalize_urls(concat!(
       "The following specifiers were indicated to be mapped to a module, but were not found:\n",
       "  * file:///mod.deno.ts",
-    ),
+    )),
   );
 }
 

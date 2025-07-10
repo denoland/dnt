@@ -14,7 +14,6 @@ use deno_node_transform::ScriptTarget;
 use deno_node_transform::Shim;
 use deno_node_transform::TransformOptions;
 use deno_node_transform::TransformOutput;
-use sys_traits::impls::InMemorySys;
 use sys_traits::EnvCurrentDir;
 
 use super::InMemoryLoader;
@@ -36,7 +35,11 @@ impl TestBuilder {
   pub fn new() -> Self {
     Self {
       loader: InMemoryLoader::new(),
-      entry_point: "file:///mod.ts".to_string(),
+      entry_point: if cfg!(windows) {
+        "file:///C:/mod.ts".to_string()
+      } else {
+        "file:///mod.ts".to_string()
+      },
       additional_entry_points: Vec::new(),
       test_entry_points: Vec::new(),
       specifier_mappings: Default::default(),
@@ -48,14 +51,6 @@ impl TestBuilder {
     }
   }
 
-  pub fn with_sys(
-    &mut self,
-    mut action: impl FnMut(&mut InMemorySys),
-  ) -> &mut Self {
-    action(&mut self.loader.sys);
-    self
-  }
-
   pub fn with_loader(
     &mut self,
     mut action: impl FnMut(&mut InMemoryLoader),
@@ -65,29 +60,31 @@ impl TestBuilder {
   }
 
   pub fn entry_point(&mut self, value: impl AsRef<str>) -> &mut Self {
-    self.entry_point = value.as_ref().to_string();
+    self.entry_point = normalize_urls(value.as_ref());
     self
   }
 
   pub fn add_entry_point(&mut self, value: impl AsRef<str>) -> &mut Self {
     self
       .additional_entry_points
-      .push(value.as_ref().to_string());
+      .push(normalize_urls(value.as_ref()));
     self
   }
 
   pub fn add_test_entry_point(&mut self, value: impl AsRef<str>) -> &mut Self {
-    self.test_entry_points.push(value.as_ref().to_string());
+    self.test_entry_points.push(normalize_urls(value.as_ref()));
     self
   }
 
   pub fn set_config_file(&mut self, url: impl AsRef<str>) -> &mut Self {
-    self.import_map = Some(ModuleSpecifier::parse(url.as_ref()).unwrap());
+    self.import_map =
+      Some(ModuleSpecifier::parse(&normalize_urls(url.as_ref())).unwrap());
     self
   }
 
   pub fn set_import_map(&mut self, url: impl AsRef<str>) -> &mut Self {
-    self.import_map = Some(ModuleSpecifier::parse(url.as_ref()).unwrap());
+    self.import_map =
+      Some(ModuleSpecifier::parse(&normalize_urls(url.as_ref())).unwrap());
     self
   }
 
@@ -152,7 +149,7 @@ impl TestBuilder {
     path: Option<&str>,
   ) -> &mut Self {
     self.specifier_mappings.insert(
-      ModuleSpecifier::parse(specifier.as_ref()).unwrap(),
+      ModuleSpecifier::parse(&normalize_urls(specifier.as_ref())).unwrap(),
       MappedSpecifier::Package(PackageMappedSpecifier {
         name: bare_specifier.as_ref().to_string(),
         version: version.map(|v| v.to_string()),
@@ -169,8 +166,10 @@ impl TestBuilder {
     to: impl AsRef<str>,
   ) -> &mut Self {
     self.specifier_mappings.insert(
-      ModuleSpecifier::parse(from.as_ref()).unwrap(),
-      MappedSpecifier::Module(ModuleSpecifier::parse(to.as_ref()).unwrap()),
+      ModuleSpecifier::parse(&normalize_urls(from.as_ref())).unwrap(),
+      MappedSpecifier::Module(
+        ModuleSpecifier::parse(&normalize_urls(to.as_ref())).unwrap(),
+      ),
     );
     self
   }
@@ -209,5 +208,13 @@ impl TestBuilder {
       },
     )
     .await
+  }
+}
+
+pub fn normalize_urls(url: &str) -> String {
+  if cfg!(windows) {
+    url.replace("file:///", "file:///C:/")
+  } else {
+    url.to_string()
   }
 }

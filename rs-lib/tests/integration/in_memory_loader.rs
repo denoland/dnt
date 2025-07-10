@@ -2,7 +2,7 @@
 
 use std::collections::HashMap;
 use std::io::ErrorKind;
-use std::path::Path;
+use std::path::PathBuf;
 use std::pin::Pin;
 use std::sync::Arc;
 
@@ -18,6 +18,7 @@ use deno_node_transform::LoadResponse;
 use deno_node_transform::Loader;
 use deno_node_transform::ModuleSpecifier;
 use sys_traits::impls::InMemorySys;
+use sys_traits::EnvSetCurrentDir;
 use sys_traits::EnvSetVar;
 use sys_traits::FsCreateDirAll;
 use sys_traits::FsRead;
@@ -36,8 +37,12 @@ pub struct InMemoryLoader {
 impl InMemoryLoader {
   pub fn new() -> Self {
     let sys = InMemorySys::default();
-    sys.env_set_var("DENO_DIR", "/.deno");
-    sys.fs_create_dir_all("/.deno").unwrap();
+    let deno_dir_folder = if cfg!(windows) { "C:/.deno" } else { "/.deno" };
+    sys.env_set_var("DENO_DIR", deno_dir_folder);
+    sys.fs_create_dir_all(deno_dir_folder).unwrap();
+    if cfg!(windows) {
+      sys.env_set_current_dir("C:\\").unwrap();
+    }
     Self {
       sys,
       remote_files: HashMap::new(),
@@ -46,10 +51,16 @@ impl InMemoryLoader {
 
   pub fn add_local_file(
     &mut self,
-    path: impl AsRef<Path>,
+    path: impl AsRef<str>,
     text: impl AsRef<str>,
   ) -> &mut Self {
-    let parent_dir = path.as_ref().parent().unwrap();
+    let path = path.as_ref();
+    let path = if cfg!(windows) && path.starts_with("/") {
+      PathBuf::from(format!("C:{}", path))
+    } else {
+      PathBuf::from(path)
+    };
+    let parent_dir = path.parent().unwrap();
     self.sys.fs_create_dir_all(parent_dir).unwrap();
     self.sys.fs_write(path, text.as_ref().as_bytes()).unwrap();
     self
