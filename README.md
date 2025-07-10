@@ -542,7 +542,7 @@ Since the file you're calling is a script, simply add statements before and
 after the `await build({ ... })` statement:
 
 ```ts
-import { build, emptyDir } from "https://deno.land/x/dnt/mod.ts";
+import { build, emptyDir } from "@deno/dnt";
 
 // run pre-build steps here
 await emptyDir("./npm");
@@ -566,7 +566,7 @@ Deno tests run with.
 For example:
 
 ```ts
-import { copy } from "https://deno.land/std@x.x.x/fs/mod.ts";
+import { copy } from "@std/fs";
 
 await Deno.remove("npm", { recursive: true }).catch((_) => {});
 await copy("testdata", "npm/esm/testdata", { overwrite: true });
@@ -734,10 +734,10 @@ For only the Deno to canonical TypeScript transform which may be useful for
 bundlers, use the following:
 
 ```ts
-// docs: https://doc.deno.land/https/deno.land/x/dnt/transform.ts
-import { transform } from "https://deno.land/x/dnt/transform.ts";
+// docs: https://jsr.io/@deno/dnt/doc/transform
+import { transform } from "@deno/dnt/transform";
 
-const outputResult = await transform({
+const outputResult = transform({
   entryPoints: ["./mod.ts"],
   testEntryPoints: ["./mod.test.ts"],
   shims: [],
