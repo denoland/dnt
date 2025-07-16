@@ -13,6 +13,7 @@ Deno.test("should get when all true", () => {
     crypto: true,
     domException: true,
     undici: true,
+		urlPattern: true,
     weakRef: true,
     webSocket: true,
     custom: [{
@@ -31,8 +32,8 @@ Deno.test("should get when all true", () => {
     }],
   });
 
-  assertEquals(result.shims.length, 10);
-  assertEquals(result.testShims.length, 11);
+  assertEquals(result.shims.length, 11);
+  assertEquals(result.testShims.length, 12);
 });
 
 Deno.test("should get when all dev", () => {
@@ -44,12 +45,13 @@ Deno.test("should get when all dev", () => {
     crypto: "dev",
     domException: "dev",
     undici: "dev",
+		urlPattern: "dev",
     weakRef: "dev",
     webSocket: "dev",
   });
 
   assertEquals(result.shims.length, 0);
-  assertEquals(result.testShims.length, 9);
+  assertEquals(result.testShims.length, 10);
 });
 
 Deno.test("should get when all false", () => {
@@ -61,6 +63,7 @@ Deno.test("should get when all false", () => {
     crypto: false,
     domException: false,
     undici: false,
+		urlPattern: false,
     weakRef: false,
     webSocket: false,
   });

@@ -37,6 +37,8 @@ export interface ShimOptions {
    * using the "undici" package (https://www.npmjs.com/package/undici).
    */
   undici?: ShimValue;
+	/** Shim `URLPattern` using the "urlpattern-polyfill" package (https://www.npmjs.com/package/urlpattern-polyfill) */
+	urlPattern?: ShimValue;
   /** Use a sham for the `WeakRef` global, which uses `globalThis.WeakRef` when
    * it exists. The sham will throw at runtime when calling `deref()` and `WeakRef`
    * doesn't globally exist, so this is only intended to help type check code that
@@ -73,6 +75,7 @@ export function shimOptionsToTransformShims(options: ShimOptions) {
   add(options.timers, getTimersShim);
   add(options.domException, getDomExceptionShim);
   add(options.undici, getUndiciShim);
+	add(options.urlPattern, getURLPatternShim);
   add(options.weakRef, getWeakRefShim);
   add(options.webSocket, getWebSocketShim);
 
@@ -216,6 +219,16 @@ function getUndiciShim(): Shim {
       typeOnly("ResponseInit"),
     ],
   };
+}
+
+function getURLPatternShim(): Shim {
+	return {
+		package: {
+			name: "urlpattern-polyfill",
+			version: "~10.0.0",
+		},
+		globalNames: ["URLPattern"],
+	};
 }
 
 function getDomExceptionShim(): Shim {
