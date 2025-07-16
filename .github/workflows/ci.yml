@@ -11,10 +11,10 @@ concurrency:
   cancel-in-progress: true
 jobs:
   test:
-    permissions:
-      contents: read
-      id-token: write
-    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        os: [ubuntu-latest, windows-latest, macos-latest]
+    runs-on: ${{ matrix.os }}
     timeout-minutes: 30
     steps:
       - uses: actions/checkout@v4
@@ -22,17 +22,19 @@ jobs:
       - uses: Swatinem/rust-cache@v2
       - uses: denoland/setup-deno@v2
         with:
-          deno-version: ~2.x
+          deno-version: 2.x
       - uses: actions/setup-node@v4
         with:
           node-version: "20"
           registry-url: "https://registry.npmjs.org"
 
       - name: Format
+        if: matrix.os == 'ubuntu-latest'
         run: |
           cargo fmt --all -- --check
           deno fmt --check
       - name: Lint (Cargo)
+        if: matrix.os == 'ubuntu-latest'
         run: cargo clippy --all-targets --all-features --release
 
       - name: Build
@@ -43,5 +45,22 @@ jobs:
         run: cargo test --all-targets --all-features --release
       - name: Test (Deno)
         run: deno task test
+
+  jsr:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    permissions:
+      contents: read
+      id-token: write
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dsherret/rust-toolchain-file@v1
+      - uses: Swatinem/rust-cache@v2
+      - uses: denoland/setup-deno@v2
+        with:
+          deno-version: 2.x
+
+      - name: Build
+        run: deno task build
       - name: Publish on tag
         run: deno run -A jsr:@david/publish-on-tag@0.2.0

@@ -189,8 +189,6 @@ export interface BuildOptions {
   filterDiagnostic?: (diagnostic: ts.Diagnostic) => boolean;
   /** Action to do after emitting and before running tests. */
   postBuild?: () => void | Promise<void>;
-  /** Custom Wasm URL for the internal Wasm module used by dnt. */
-  internalWasmUrl?: string;
 }
 
 /** Builds the specified Deno module to an npm package using the TypeScript compiler. */
@@ -590,7 +588,6 @@ export async function build(options: BuildOptions): Promise<void> {
       target: scriptTarget,
       importMap: options.importMap,
       configFile: options.configFile,
-      internalWasmUrl: options.internalWasmUrl,
       cwd: path.toFileUrl(cwd).toString(),
     });
   }
