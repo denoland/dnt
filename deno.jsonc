@@ -53,13 +53,12 @@
     "tests/web_socket_project/npm"
   ],
   "imports": {
-    "@deno/cache-dir": "jsr:@deno/cache-dir@^0.20",
     "@std/assert": "jsr:@std/assert@1",
     "@std/fmt": "jsr:@std/fmt@1",
     "@std/fs": "jsr:@std/fs@1",
     "@std/path": "jsr:@std/path@1",
-    "@ts-morph/bootstrap": "jsr:@ts-morph/bootstrap@^0.25.0",
-    "code-block-writer": "jsr:@david/code-block-writer@^13.0.2"
+    "@ts-morph/bootstrap": "jsr:@ts-morph/bootstrap@^0.27.0",
+    "code-block-writer": "jsr:@david/code-block-writer@^13.0.3"
   },
   "exports": {
     ".": "./mod.ts",

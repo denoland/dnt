@@ -6,7 +6,6 @@ use std::fmt::Write;
 use std::rc::Rc;
 
 use crate::loader::get_all_specifier_mappers;
-use crate::loader::Loader;
 use crate::loader::SourceLoader;
 use crate::parser::ScopeAnalysisParser;
 use crate::specifiers::get_specifiers;
@@ -35,7 +34,7 @@ use sys_traits::impls::RealSys;
 pub struct ModuleGraphOptions<'a, TSys: WorkspaceFactorySys> {
   pub entry_points: Vec<ModuleSpecifier>,
   pub test_entry_points: Vec<ModuleSpecifier>,
-  pub loader: Rc<dyn Loader>,
+  pub loader: Rc<dyn deno_graph::source::Loader>,
   pub resolver: DefaultDenoResolverRc<TSys>,
   pub specifier_mappings: &'a HashMap<ModuleSpecifier, MappedSpecifier>,
   pub compiler_options_resolver: Rc<CompilerOptionsResolver>,

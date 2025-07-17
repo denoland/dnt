@@ -3,49 +3,17 @@
 use std::cell::RefCell;
 use std::collections::BTreeMap;
 use std::collections::HashMap;
-use std::pin::Pin;
 use std::rc::Rc;
-use std::sync::Arc;
 
-use anyhow::Result;
 use deno_ast::ModuleSpecifier;
-use deno_error::JsErrorBox;
-use deno_graph::source::CacheSetting;
-use deno_graph::source::LoadError;
-use deno_graph::source::LoaderChecksum;
 use futures::future;
-use futures::Future;
 
-#[cfg(feature = "tokio-loader")]
-mod default_loader;
 mod specifier_mappers;
 
-#[cfg(feature = "tokio-loader")]
-pub use default_loader::*;
 pub use specifier_mappers::*;
 
 use crate::MappedSpecifier;
 use crate::PackageMappedSpecifier;
-
-#[cfg_attr(feature = "serialization", derive(serde::Deserialize))]
-#[cfg_attr(feature = "serialization", serde(rename_all = "camelCase"))]
-pub struct LoadResponse {
-  /// The resolved specifier after re-directs.
-  pub specifier: ModuleSpecifier,
-  pub headers: Option<HashMap<String, String>>,
-  pub content: Vec<u8>,
-}
-
-pub trait Loader: std::fmt::Debug {
-  fn load(
-    &self,
-    url: ModuleSpecifier,
-    cache_setting: CacheSetting,
-    maybe_checksum: Option<LoaderChecksum>,
-  ) -> Pin<
-    Box<dyn Future<Output = Result<Option<LoadResponse>, LoadError>> + 'static>,
-  >;
-}
 
 #[derive(Debug, Default, Clone)]
 pub struct LoaderSpecifiers {
@@ -54,7 +22,7 @@ pub struct LoaderSpecifiers {
 }
 
 pub struct SourceLoader<'a> {
-  loader: Rc<dyn Loader>,
+  loader: Rc<dyn deno_graph::source::Loader>,
   specifiers: RefCell<LoaderSpecifiers>,
   specifier_mappers: Vec<Box<dyn SpecifierMapper>>,
   specifier_mappings: &'a HashMap<ModuleSpecifier, MappedSpecifier>,
@@ -62,7 +30,7 @@ pub struct SourceLoader<'a> {
 
 impl<'a> SourceLoader<'a> {
   pub fn new(
-    loader: Rc<dyn Loader>,
+    loader: Rc<dyn deno_graph::source::Loader>,
     specifier_mappers: Vec<Box<dyn SpecifierMapper>>,
     specifier_mappings: &'a HashMap<ModuleSpecifier, MappedSpecifier>,
   ) -> Self {
@@ -128,27 +96,7 @@ impl deno_graph::source::Loader for SourceLoader<'_> {
           specifier,
         }));
       }
-      let resp = loader
-        .load(
-          specifier.clone(),
-          load_options.cache_setting,
-          load_options.maybe_checksum,
-        )
-        .await;
-      resp
-        .map(|r| {
-          r.map(|r| deno_graph::source::LoadResponse::Module {
-            specifier: r.specifier,
-            content: r.content.into(),
-            maybe_headers: r.headers,
-            mtime: None,
-          })
-        })
-        .map_err(|err| {
-          deno_graph::source::LoadError::Other(Arc::new(JsErrorBox::from_err(
-            err,
-          )))
-        })
+      loader.load(&specifier, load_options).await
     })
   }
 }

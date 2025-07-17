@@ -1,27 +1,19 @@
 // Copyright 2018-2024 the Deno authors. MIT license.
 
 use std::collections::HashMap;
-use std::io::ErrorKind;
 use std::path::PathBuf;
-use std::pin::Pin;
-use std::sync::Arc;
 
 use anyhow::Result;
-use deno_error::JsErrorBox;
-use deno_graph::source::CacheSetting;
-use deno_graph::source::LoaderChecksum;
-use deno_node_transform::LoadError;
-use deno_path_util::url_to_file_path;
-use futures::Future;
+use deno_cache_dir::file_fetcher::HeaderMap;
+use deno_cache_dir::file_fetcher::HeaderName;
+use deno_cache_dir::file_fetcher::SendError;
+use deno_cache_dir::file_fetcher::SendResponse;
 
-use deno_node_transform::LoadResponse;
-use deno_node_transform::Loader;
 use deno_node_transform::ModuleSpecifier;
 use sys_traits::impls::InMemorySys;
 use sys_traits::EnvSetCurrentDir;
 use sys_traits::EnvSetVar;
 use sys_traits::FsCreateDirAll;
-use sys_traits::FsRead;
 use sys_traits::FsWrite;
 
 type RemoteFileText = String;
@@ -108,51 +100,37 @@ impl InMemoryLoader {
   }
 }
 
-impl Loader for InMemoryLoader {
-  fn load(
+fn to_headers(src: HashMap<String, String>) -> HeaderMap {
+  let mut h = HeaderMap::with_capacity(src.len());
+  for (k, v) in src {
+    let name = HeaderName::try_from(k.as_str()).unwrap();
+    let value =
+      deno_cache_dir::file_fetcher::HeaderValue::from_str(&v).unwrap();
+    h.insert(name, value);
+  }
+  h
+}
+
+#[async_trait::async_trait(?Send)]
+impl deno_cache_dir::file_fetcher::HttpClient for InMemoryLoader {
+  async fn send_no_follow(
     &self,
-    specifier: ModuleSpecifier,
-    _cache_setting: CacheSetting,
-    _maybe_checksum: Option<LoaderChecksum>,
-  ) -> Pin<
-    Box<dyn Future<Output = Result<Option<LoadResponse>, LoadError>> + 'static>,
-  > {
-    if specifier.scheme() == "file" {
-      let file_path = url_to_file_path(&specifier).unwrap();
-      let result = self.sys.fs_read_to_string(&file_path);
-      return Box::pin(async move {
-        let maybe_data = match result {
-          Ok(data) => Some(data),
-          Err(err) if err.kind() == ErrorKind::NotFound => None,
-          Err(err) => {
-            return Err(LoadError::Other(Arc::new(JsErrorBox::from_err(err))))
-          }
-        };
-        Ok(maybe_data.map(|result| LoadResponse {
-          content: result.into_owned().into_bytes(),
-          headers: None,
-          specifier,
-        }))
-      });
-    }
+    specifier: &ModuleSpecifier,
+    _headers: HeaderMap,
+  ) -> Result<SendResponse, SendError> {
     let result = self
       .remote_files
       .get(&specifier)
       .map(|result| match result {
-        Ok(result) => Ok(LoadResponse {
-          specifier, // todo: test a re-direct
-          content: result.0.clone().into(),
-          headers: result.1.clone(),
-        }),
-        Err(err) => Err(err),
+        Ok(result) => Ok(SendResponse::Success(
+          to_headers(result.1.clone().unwrap_or_default()),
+          result.0.clone().into_bytes().into(),
+        )),
+        Err(err) => Err(SendError::Failed(err.clone().into())),
       });
-    let result = match result {
-      Some(Ok(result)) => Ok(Some(result)),
-      Some(Err(err)) => Err(LoadError::Other(Arc::new(JsErrorBox::generic(
-        format!("{}", err),
-      )))),
-      None => Ok(None),
-    };
-    Box::pin(futures::future::ready(result))
+    match result {
+      Some(result) => result,
+      None => Err(SendError::NotFound),
+    }
   }
 }

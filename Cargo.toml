@@ -13,8 +13,10 @@ members = [
 
 [workspace.dependencies]
 async-trait = "0.1.88"
+deno_cache_dir = "0.23.0"
 deno_config = "0.61.0"
 deno_error = { version = "0.6.1", features = ["serde", "serde_json", "url"] }
+deno_graph = { version = "0.96.2", features = ["swc"], default-features = false }
 deno_path_util = "0.4.0"
 deno_resolver = { version = "0.42.0", features = ["graph"] }
 serde_json = { version = "1.0.140", features = ["preserve_order"] }

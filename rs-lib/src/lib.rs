@@ -19,6 +19,7 @@ use analyze::get_ignore_line_indexes;
 use anyhow::bail;
 use deno_ast::apply_text_changes;
 use deno_ast::TextChange;
+use deno_cache_dir::file_fetcher::NullBlobStore;
 use deno_graph::Module;
 use deno_resolver::deno_json::CompilerOptionsOverrides;
 use deno_resolver::factory::ConfigDiscoveryOption;
@@ -26,6 +27,10 @@ use deno_resolver::factory::ResolverFactoryOptions;
 use deno_resolver::factory::SpecifiedImportMapProvider;
 use deno_resolver::factory::WorkspaceFactoryOptions;
 use deno_resolver::factory::WorkspaceFactorySys;
+use deno_resolver::file_fetcher::DenoGraphLoader;
+use deno_resolver::file_fetcher::DenoGraphLoaderOptions;
+use deno_resolver::file_fetcher::PermissionedFileFetcher;
+use deno_resolver::file_fetcher::PermissionedFileFetcherOptions;
 use deno_resolver::workspace::SpecifiedImportMap;
 use deno_resolver::NodeResolverOptions;
 use deno_semver::npm::NpmPackageReqReference;
@@ -53,8 +58,6 @@ pub use deno_ast::ModuleSpecifier;
 pub use deno_graph::source::CacheSetting;
 pub use deno_graph::source::LoadError;
 pub use deno_graph::source::LoaderChecksum;
-pub use loader::LoadResponse;
-pub use loader::Loader;
 
 use crate::declaration_file_resolution::TypesDependency;
 use crate::utils::strip_bom;
@@ -248,7 +251,6 @@ pub struct TransformOptions {
   pub test_entry_points: Vec<ModuleSpecifier>,
   pub shims: Vec<Shim>,
   pub test_shims: Vec<Shim>,
-  pub loader: Option<Rc<dyn Loader>>,
   /// Maps specifiers to an npm package or module.
   pub specifier_mappings: HashMap<ModuleSpecifier, MappedSpecifier>,
   /// Version of ECMAScript that the final code will target.
@@ -260,23 +262,13 @@ pub struct TransformOptions {
 }
 
 #[derive(Debug)]
-struct ImportMapProvider {
-  url: ModuleSpecifier,
-  loader: Rc<dyn Loader>,
-}
+struct ImportMapProvider(deno_cache_dir::file_fetcher::File);
 
 #[async_trait::async_trait(?Send)]
 impl SpecifiedImportMapProvider for ImportMapProvider {
   async fn get(&self) -> Result<Option<SpecifiedImportMap>, anyhow::Error> {
-    let Some(response) = self
-      .loader
-      .load(self.url.clone(), CacheSetting::Use, None)
-      .await?
-    else {
-      return Ok(None);
-    };
     let Some(value) = jsonc_parser::parse_to_serde_value(
-      &String::from_utf8(response.content)?,
+      &String::from_utf8_lossy(&self.0.source),
       &jsonc_parser::ParseOptions {
         allow_comments: true,
         allow_loose_object_property_names: true,
@@ -287,7 +279,7 @@ impl SpecifiedImportMapProvider for ImportMapProvider {
       return Ok(None);
     };
     Ok(Some(SpecifiedImportMap {
-      base_url: response.specifier,
+      base_url: self.0.url.clone(),
       value,
     }))
   }
@@ -305,6 +297,7 @@ struct EnvironmentContext<'a> {
 
 pub async fn transform(
   sys: impl WorkspaceFactorySys,
+  http_client: impl deno_cache_dir::file_fetcher::HttpClient + Clone + 'static,
   options: TransformOptions,
 ) -> Result<TransformOutput> {
   if options.entry_points.is_empty() {
@@ -354,13 +347,21 @@ pub async fn transform(
       no_lock: false,
     },
   );
+  let file_fetcher = PermissionedFileFetcher::new(
+    NullBlobStore,
+    Rc::new(factory.http_cache()?.clone()),
+    http_client,
+    factory.sys().clone(),
+    PermissionedFileFetcherOptions {
+      allow_remote: true,
+      cache_setting: deno_cache_dir::file_fetcher::CacheSetting::Use,
+    },
+  );
+  let maybe_import_map_file = match options.import_map {
+    Some(url) => Some(file_fetcher.fetch_bypass_permissions(&url).await?),
+    None => None,
+  };
 
-  let loader = options.loader.unwrap_or_else(|| {
-    #[cfg(feature = "tokio-loader")]
-    return Rc::new(crate::loader::DefaultLoader::new());
-    #[cfg(not(feature = "tokio-loader"))]
-    panic!("You must provide a loader or use the 'tokio-loader' feature.")
-  });
   let resolver_factory = deno_resolver::factory::ResolverFactory::new(
     Rc::new(factory),
     ResolverFactoryOptions {
@@ -382,11 +383,8 @@ pub async fn transform(
       package_json_dep_resolution: Some(
         deno_resolver::workspace::PackageJsonDepResolution::Enabled,
       ),
-      specified_import_map: options.import_map.map(|url| {
-        Box::new(ImportMapProvider {
-          url,
-          loader: loader.clone(),
-        }) as Box<dyn SpecifiedImportMapProvider>
+      specified_import_map: maybe_import_map_file.map(|file| {
+        Box::new(ImportMapProvider(file)) as Box<dyn SpecifiedImportMapProvider>
       }),
       bare_node_builtins: true,
       unstable_sloppy_imports: true,
@@ -402,6 +400,20 @@ pub async fn transform(
   );
   let deno_resolver = resolver_factory.deno_resolver().await?;
   let cjs_tracker = resolver_factory.cjs_tracker()?.clone();
+
+  let loader = Rc::new(DenoGraphLoader::new(
+    Rc::new(file_fetcher),
+    resolver_factory
+      .workspace_factory()
+      .global_http_cache()?
+      .clone(),
+    resolver_factory.in_npm_package_checker()?.clone(),
+    resolver_factory.workspace_factory().sys().clone(),
+    DenoGraphLoaderOptions {
+      file_header_overrides: Default::default(),
+      permissions: None,
+    },
+  ));
 
   let (module_graph, specifiers) =
     crate::graph::ModuleGraph::build_with_specifiers(ModuleGraphOptions {

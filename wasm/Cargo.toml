@@ -12,7 +12,10 @@ default = ["console_error_panic_hook"]
 
 [dependencies]
 anyhow = "1.0.51"
+async-trait.workspace = true
+deno_cache_dir.workspace = true
 deno_config.workspace = true
+deno_graph.workspace = true
 deno_error.workspace = true
 deno_path_util.workspace = true
 dnt = { path = "../rs-lib", default-features = false, features = ["serialization"], package="deno_node_transform" }
@@ -20,6 +23,7 @@ getrandom = { version = "*", features = ["js"] }
 js-sys = "=0.3.77"
 wasm-bindgen = { version = "=0.2.100", features = ["serde-serialize"] }
 wasm-bindgen-futures = "=0.4.50"
+url.workspace = true
 
 # The `console_error_panic_hook` crate provides better debugging of panics by
 # logging them with `console.error`. This is great for development, but requires

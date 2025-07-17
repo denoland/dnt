@@ -1,7 +1,6 @@
 // Copyright 2018-2024 the Deno authors. MIT license.
 
 use std::collections::HashMap;
-use std::rc::Rc;
 
 use anyhow::Result;
 use deno_node_transform::transform;
@@ -190,6 +189,7 @@ impl TestBuilder {
     );
     transform(
       self.loader.sys.clone(),
+      self.loader.clone(),
       TransformOptions {
         entry_points,
         test_entry_points: self
@@ -199,7 +199,6 @@ impl TestBuilder {
           .collect(),
         shims: self.shims.clone(),
         test_shims: self.test_shims.clone(),
-        loader: Some(Rc::new(self.loader.clone())),
         specifier_mappings: self.specifier_mappings.clone(),
         target: self.target,
         config_file: self.config_file.clone(),
