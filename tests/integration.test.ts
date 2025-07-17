@@ -394,6 +394,50 @@ Deno.test("should build bin project", async () => {
   });
 });
 
+Deno.test("should build bin project with a shebang", async () => {
+  await runTest("bin_shebang_project", {
+    entryPoints: [{
+      kind: "bin",
+      name: "hello",
+      path: "./main.ts",
+    }],
+    shims: getAllShimOptions(false),
+    outDir: "./npm",
+    package: {
+      name: "hello",
+      version: "1.0.0",
+    },
+    compilerOptions: {
+      lib: ["ESNext", "DOM"],
+    },
+  }, (output) => {
+    assertEquals(output.packageJson, {
+      name: "hello",
+      version: "1.0.0",
+      bin: {
+        hello: "./esm/main.js",
+      },
+      scripts: {
+        test: "node test_runner.js",
+      },
+      devDependencies: {
+        picocolors: versions.picocolors,
+      },
+      _generatedBy: "dnt@dev",
+    });
+    const expectedText =
+      '#!/usr/bin/env node\n"use strict";\nconsole.log("Hello!");\n';
+    assertEquals(
+      output.getFileText("script/main.js"),
+      expectedText,
+    );
+    assertEquals(
+      output.getFileText("esm/main.js"),
+      expectedText,
+    );
+  });
+});
+
 Deno.test("should run tests when using @deno/shim-deno-test shim", async () => {
   await runTest("test_project", {
     entryPoints: ["mod.ts"],
@@ -1229,6 +1273,7 @@ export interface Output {
 
 async function runTest(
   project:
+    | "bin_shebang_project"
     | "declaration_import_project"
     | "import_map_project"
     | "json_module_project"

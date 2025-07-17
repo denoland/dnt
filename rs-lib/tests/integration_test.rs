@@ -806,7 +806,7 @@ async fn transform_remote_file_error() {
 
   assert_eq!(
     err_message.to_string(),
-    "Some error loading. (http://localhost/mod.ts)"
+    "Import 'http://localhost/mod.ts' failed."
   );
 }
 
