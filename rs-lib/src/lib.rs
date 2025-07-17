@@ -336,7 +336,8 @@ pub async fn transform(
       additional_config_file_names: &[],
       config_discovery,
       is_package_manager_subcommand: false,
-      node_modules_dir: None,
+      // force no node_modules directory so that we resolve package.json deps as npm specifiers
+      node_modules_dir: Some(deno_config::deno_json::NodeModulesDirMode::None),
       no_npm: false,
       npm_process_state: None,
       vendor: None,
