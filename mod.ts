@@ -332,7 +332,9 @@ export async function build(options: BuildOptions): Promise<void> {
       outputFile.filePath,
     );
     const outputFileText = binaryEntryPointPaths.has(outputFile.filePath)
-      ? `#!/usr/bin/env node\n${outputFile.fileText.replace(/^#![^\n\r]*\r?\n?/, "")}`
+      ? `#!/usr/bin/env node\n${
+        outputFile.fileText.replace(/^#![^\n\r]*\r?\n?/, "")
+      }`
       : outputFile.fileText;
     const sourceFile = project.createSourceFile(
       outputFilePath,

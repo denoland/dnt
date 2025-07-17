@@ -425,7 +425,8 @@ Deno.test("should build bin project with a shebang", async () => {
       },
       _generatedBy: "dnt@dev",
     });
-    const expectedText = "#!/usr/bin/env node\n\"use strict\";\nconsole.log(\"Hello!\");\n";
+    const expectedText =
+      '#!/usr/bin/env node\n"use strict";\nconsole.log("Hello!");\n';
     assertEquals(
       output.getFileText("script/main.js"),
       expectedText,
@@ -1272,7 +1273,7 @@ export interface Output {
 
 async function runTest(
   project:
-  | "bin_shebang_project"
+    | "bin_shebang_project"
     | "declaration_import_project"
     | "import_map_project"
     | "json_module_project"
