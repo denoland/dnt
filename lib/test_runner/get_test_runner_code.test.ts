@@ -16,7 +16,10 @@ Deno.test("gets code when no shim used", () => {
   });
   assertEquals(
     code,
-    `const pc = require("picocolors");
+    `import { createRequire } from 'module';
+const require = createRequire(import.meta.url);
+const __dirname = new URL(".", import.meta.url).pathname;
+const pc = require("picocolors");
 const process = require("process");
 
 const filePaths = [
@@ -60,7 +63,10 @@ Deno.test("gets code when shim used", () => {
   });
   assertEquals(
     code,
-    `const pc = require("picocolors");
+    `import { createRequire } from 'module';
+const require = createRequire(import.meta.url);
+const __dirname = new URL(".", import.meta.url).pathname;
+const pc = require("picocolors");
 const process = require("process");
 const { pathToFileURL } = require("url");
 const { testDefinitions } = require("test-shim-package/test-internals");
@@ -123,7 +129,10 @@ Deno.test("gets code when cjs is not used", () => {
   });
   assertEquals(
     code,
-    `const pc = require("picocolors");
+    `import { createRequire } from 'module';
+const require = createRequire(import.meta.url);
+const __dirname = new URL(".", import.meta.url).pathname;
+const pc = require("picocolors");
 const process = require("process");
 
 const filePaths = [

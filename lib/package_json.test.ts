@@ -54,6 +54,7 @@ Deno.test("single entrypoint", () => {
   assertEquals(getPackageJson(props), {
     name: "package",
     version: "0.1.0",
+    type: "module",
     main: "./script/mod.js",
     module: "./esm/mod.js",
     types: "./types/mod.d.ts",
@@ -93,6 +94,7 @@ Deno.test("single entrypoint", () => {
     {
       name: "package",
       version: "0.1.0",
+      type: "module",
       main: "./script/mod.js",
       module: "./esm/mod.js",
       types: "./types/mod.d.ts",
@@ -128,6 +130,7 @@ Deno.test("single entrypoint", () => {
     {
       name: "package",
       version: "0.1.0",
+      type: "module",
       main: undefined,
       module: "./esm/mod.js",
       types: "./types/mod.d.ts",
@@ -184,6 +187,7 @@ Deno.test("single entrypoint", () => {
     {
       name: "package",
       version: "0.1.0",
+      type: "module",
       main: undefined,
       module: "./esm/mod.js",
       types: undefined,
@@ -216,6 +220,7 @@ Deno.test("single entrypoint", () => {
     {
       name: "package",
       version: "0.1.0",
+      type: "module",
       main: undefined,
       module: "./esm/mod.js",
       types: undefined,
@@ -324,6 +329,7 @@ Deno.test("multiple entrypoints", () => {
     version: "0.1.0",
     main: "./script/mod.js",
     module: "./esm/mod.js",
+    type: "module",
     types: "./types/mod.d.ts",
     dependencies: {
       "@deno/shim-deno": "~0.1.0",
@@ -401,6 +407,7 @@ Deno.test("binary entrypoints", () => {
     version: "0.1.0",
     main: "./script/mod.js",
     module: "./esm/mod.js",
+    type: "module",
     types: "./types/mod.d.ts",
     bin: {
       my_bin: "./esm/bin.js",
@@ -501,6 +508,7 @@ Deno.test("peer dependencies", () => {
         scripts: {
           test: "node test_runner.js",
         },
+        type: "module",
         dependencies: {
           dep: "^1.0.0",
         },

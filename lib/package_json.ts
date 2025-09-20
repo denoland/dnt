@@ -35,6 +35,14 @@ export function getPackageJson({
       path: e.replace(/\.tsx?$/i, ".js"),
       types: e.replace(/\.tsx?$/i, ".d.ts"),
     }));
+  // include "type" field if we are including esm
+  const type = {
+    ...(includeEsModule
+      ? {
+        type: "module",
+      }
+      : {}),
+  };
   const exports = finalEntryPoints.filter((e) => e.kind === "export");
   const binaries = finalEntryPoints.filter((e) => e.kind === "bin");
   const dependencies = {
@@ -111,6 +119,7 @@ export function getPackageJson({
   const final: Record<string, unknown> = {
     ...mainExport,
     ...binaryExport,
+    ...type,
     ...packageJsonObj,
     scripts: {},
     ...deleteEmptyKeys({

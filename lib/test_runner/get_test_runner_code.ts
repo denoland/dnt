@@ -11,6 +11,16 @@ export function getTestRunnerCode(options: {
 }) {
   const usesDenoTest = options.denoTestShimPackageName != null;
   const writer = createWriter();
+
+  if (options.includeEsModule) {
+    // ensure compatibility with esm ("type": "module")
+    writer.writeLine(`import { createRequire } from 'module';`);
+    writer.writeLine(`const require = createRequire(import.meta.url);`);
+    writer.writeLine(
+      `const __dirname = new URL(".", import.meta.url).pathname;`,
+    );
+  }
+
   writer.writeLine(`const pc = require("picocolors");`)
     .writeLine(`const process = require("process");`);
   if (usesDenoTest) {

@@ -1,6 +1,6 @@
 // Copyright 2018-2024 the Deno authors. MIT license.
 
-import { parse } from "jsr:@std/csv/parse";
+import { parse } from "jsr:@std/csv@1.0.6/parse";
 import { assertEquals } from "jsr:@std/assert@0.221/assert-equals";
 import * as fs from "node:fs";
 

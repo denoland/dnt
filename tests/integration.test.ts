@@ -63,6 +63,7 @@ Deno.test("should build test project - basic", async () => {
     assertEquals(output.packageJson, {
       name: "add",
       version: "1.0.0",
+      type: "module",
       main: "./script/mod.js",
       module: "./esm/mod.js",
       exports: {
@@ -211,6 +212,7 @@ Deno.test("should build with all options off", async () => {
     assertEquals(output.packageJson, {
       name: "add",
       version: "1.0.0",
+      type: "module",
       module: "./esm/mod.js",
       exports: {
         ".": {
@@ -288,6 +290,7 @@ Deno.test("should build test project with declarations inline by default", async
       assertEquals(output.packageJson, {
         name: "add",
         version: "1.0.0",
+        type: "module",
         main: "./script/mod.js",
         module: "./esm/mod.js",
         exports: {
@@ -369,6 +372,7 @@ Deno.test("should build bin project", async () => {
     assertEquals(output.packageJson, {
       name: "add",
       version: "1.0.0",
+      type: "module",
       bin: {
         add: "./esm/mod.js",
       },
@@ -414,6 +418,7 @@ Deno.test("should build bin project with a shebang", async () => {
     assertEquals(output.packageJson, {
       name: "hello",
       version: "1.0.0",
+      type: "module",
       bin: {
         hello: "./esm/main.js",
       },
@@ -505,6 +510,7 @@ Deno.test("not error for TLA when not using CommonJS", async () => {
     assertEquals(output.packageJson, {
       name: "add",
       version: "1.0.0",
+      type: "module",
       module: "./esm/mod.js",
       exports: {
         ".": {
@@ -621,6 +627,7 @@ Deno.test("should build with package mappings", async () => {
     assertEquals(output.packageJson, {
       name: "mappings",
       version: "1.2.3",
+      type: "module",
       main: "./script/mod.js",
       module: "./esm/mod.js",
       exports: {
@@ -690,6 +697,7 @@ Deno.test("should build with peer dependencies in mappings", async () => {
     assertEquals(output.packageJson, {
       name: "mappings",
       version: "1.2.3",
+      type: "module",
       main: "./script/mod.js",
       module: "./esm/mod.js",
       exports: {
@@ -1162,6 +1170,7 @@ Deno.test("should build jsr project", async () => {
     assertEquals(output.packageJson, {
       name: "add",
       version: "1.0.0",
+      type: "module",
       main: "./script/mod.js",
       module: "./esm/mod.js",
       exports: {
@@ -1232,6 +1241,7 @@ Deno.test("should build workspace project", async () => {
       assertEquals(output.packageJson, {
         name: "add",
         version: "1.0.0",
+        type: "module",
         main: "./script/mod.js",
         module: "./esm/mod.js",
         exports: {
