@@ -182,6 +182,22 @@ export interface BuildOptions {
      */
     experimentalDecorators?: boolean;
     useUnknownInCatchVariables?: boolean;
+
+    /**
+     * Controls how JSX constructs are emitted in JavaScript files.
+     *
+     * See more: https://www.typescriptlang.org/tsconfig/#jsx
+     * @default ts.JsxEmit.React
+     */
+    jsx: ts.JsxEmit;
+    /**
+     * @default "React.createElement"
+     */
+    jsxFactory: string;
+    /**
+     * @default "React.Fragment"
+     */
+    jsxFragmentFactory: string;
   };
   /** Filter out diagnostics that you want to ignore during type checking and emitting.
    * @returns `true` to surface the diagnostic or `false` to ignore it.
@@ -293,9 +309,10 @@ export async function build(options: BuildOptions): Promise<void> {
         false,
       emitDecoratorMetadata: options.compilerOptions?.emitDecoratorMetadata ??
         false,
-      jsx: ts.JsxEmit.React,
-      jsxFactory: "React.createElement",
-      jsxFragmentFactory: "React.Fragment",
+      jsx: options.compilerOptions?.jsx ?? ts.JsxEmit.React,
+      jsxFactory: options.compilerOptions?.jsxFactory ?? "React.createElement",
+      jsxFragmentFactory: options.compilerOptions?.jsxFragmentFactory ??
+        "React.Fragment",
       importsNotUsedAsValues: ts.ImportsNotUsedAsValues.Remove,
       module: ts.ModuleKind.ESNext,
       moduleResolution: ts.ModuleResolutionKind.Bundler,
