@@ -7,7 +7,6 @@ import type { PackageShim } from "../transform.ts";
 Deno.test("should get when all true", () => {
   const result = shimOptionsToTransformShims({
     deno: true,
-    timers: true,
     prompts: true,
     blob: true,
     crypto: true,
@@ -31,14 +30,13 @@ Deno.test("should get when all true", () => {
     }],
   });
 
-  assertEquals(result.shims.length, 10);
-  assertEquals(result.testShims.length, 11);
+  assertEquals(result.shims.length, 9);
+  assertEquals(result.testShims.length, 10);
 });
 
 Deno.test("should get when all dev", () => {
   const result = shimOptionsToTransformShims({
     deno: "dev",
-    timers: "dev",
     prompts: "dev",
     blob: "dev",
     crypto: "dev",
@@ -49,13 +47,12 @@ Deno.test("should get when all dev", () => {
   });
 
   assertEquals(result.shims.length, 0);
-  assertEquals(result.testShims.length, 9);
+  assertEquals(result.testShims.length, 8);
 });
 
 Deno.test("should get when all false", () => {
   const result = shimOptionsToTransformShims({
     deno: false,
-    timers: false,
     prompts: false,
     blob: false,
     crypto: false,

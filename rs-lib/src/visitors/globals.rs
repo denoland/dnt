@@ -198,7 +198,11 @@ fn should_ignore_global_this(ident: &Ident, context: &Context) -> bool {
         }
         MemberProp::Computed(computed) => {
           if let Expr::Lit(Lit::Str(str)) = computed.expr {
-            if !context.shim_global_names.contains(str.value().as_ref()) {
+            let is_shim = str
+              .value()
+              .as_str()
+              .is_some_and(|s| context.shim_global_names.contains(s));
+            if !is_shim {
               return true;
             }
           }

@@ -834,10 +834,11 @@ async fn transform_parse_error() {
   assert_eq!(
     err_message.to_string(),
     concat!(
-      "The module's source code could not be parsed: Expected ';', '}' or <eof> at http://localhost/declarations.d.ts:1:6\n",
-      "\n",
-      "  test test test\n",
-      "       ~~~~",
+      "SyntaxError: Expected ';', '}' or <eof>\n",
+      "  |\n",
+      "1 | test test test\n",
+      "  |      ~~~~\n",
+      "    at http://localhost/declarations.d.ts:1:6",
     ),
   );
 }

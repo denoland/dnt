@@ -70,6 +70,8 @@ impl ModuleGraph {
     let graph_resolver = resolver.as_graph_resolver(
       &options.cjs_tracker,
       &scoped_jsx_import_source_config,
+      None,
+      deno_resolver::graph::NpmTypesResolutionMode::FallbackToExecution,
     );
     graph
       .build(
@@ -92,10 +94,13 @@ impl ModuleGraph {
           npm_resolver: None,
           file_system: &RealSys,
           jsr_url_provider: Default::default(),
+          jsr_version_resolver: Default::default(),
+          jsr_metadata_store: None,
           executor: Default::default(),
           passthrough_jsr_specifiers: false,
           unstable_bytes_imports: false,
           unstable_text_imports: false,
+          unstable_css_imports: false,
         },
       )
       .await;
