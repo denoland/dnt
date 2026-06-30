@@ -40,6 +40,9 @@ pub struct ModuleGraphOptions<'a, TSys: WorkspaceFactorySys> {
   pub compiler_options_resolver: Rc<CompilerOptionsResolver>,
   pub cjs_tracker:
     Rc<deno_resolver::cjs::CjsTracker<DenoInNpmPackageChecker, TSys>>,
+  /// The project's deno lockfile, used to lock module versions and verify
+  /// remote module checksums while building the graph.
+  pub maybe_lockfile: Option<deno_resolver::lockfile::LockfileLockRc<TSys>>,
 }
 
 /// Wrapper around deno_graph::ModuleGraph.
@@ -67,6 +70,15 @@ impl ModuleGraph {
     let capturing_analyzer =
       CapturingModuleAnalyzer::new(Some(Box::new(source_parser)), None);
     let mut graph = deno_graph::ModuleGraph::new(deno_graph::GraphKind::All);
+    // seed the graph with the locked module versions and redirects so the
+    // same versions Deno resolved for the project are used
+    if let Some(lockfile) = &options.maybe_lockfile {
+      lockfile.fill_graph(&mut graph);
+    }
+    let mut locker = options
+      .maybe_lockfile
+      .as_ref()
+      .map(|lockfile| lockfile.as_deno_graph_locker());
     let graph_resolver = resolver.as_graph_resolver(
       &options.cjs_tracker,
       &scoped_jsx_import_source_config,
@@ -87,7 +99,9 @@ impl ModuleGraph {
           is_dynamic: false,
           skip_dynamic_deps: false,
           resolver: Some(&graph_resolver),
-          locker: None,
+          locker: locker
+            .as_mut()
+            .map(|l| l as &mut dyn deno_graph::source::Locker),
           module_analyzer: &capturing_analyzer,
           module_info_cacher: &NullModuleInfoCacher,
           reporter: None,

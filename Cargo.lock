@@ -560,6 +560,7 @@ dependencies = [
  "deno_config",
  "deno_error",
  "deno_graph",
+ "deno_lockfile",
  "deno_path_util",
  "deno_resolver",
  "deno_semver",

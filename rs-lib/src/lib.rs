@@ -409,6 +409,11 @@ pub async fn transform(
   );
   let deno_resolver = resolver_factory.deno_resolver().await?;
   let cjs_tracker = resolver_factory.cjs_tracker()?.clone();
+  let maybe_lockfile = resolver_factory
+    .workspace_factory()
+    .maybe_lockfile(&NullNpmPackageInfoProvider)
+    .await?
+    .cloned();
 
   let loader = Rc::new(DenoGraphLoader::new(
     Rc::new(file_fetcher),
@@ -452,6 +457,7 @@ pub async fn transform(
         .compiler_options_resolver()?
         .clone(),
       cjs_tracker,
+      maybe_lockfile,
     })
     .await?;
 
@@ -645,6 +651,27 @@ pub async fn transform(
     test: test_env_context.environment,
     warnings,
   })
+}
+
+/// Provides npm package info when reading the lockfile.
+///
+/// dnt resolves npm specifiers via the specifier mappers rather than through
+/// the module graph, and never writes the lockfile back, so the only time this
+/// is consulted is when an older lockfile is migrated to the latest version in
+/// memory. Returning default info for each requested package is sufficient.
+struct NullNpmPackageInfoProvider;
+
+#[async_trait::async_trait(?Send)]
+impl deno_lockfile::NpmPackageInfoProvider for NullNpmPackageInfoProvider {
+  async fn get_npm_package_info(
+    &self,
+    values: &[deno_semver::package::PackageNv],
+  ) -> Result<
+    Vec<deno_lockfile::Lockfile5NpmInfo>,
+    Box<dyn std::error::Error + Send + Sync>,
+  > {
+    Ok(vec![Default::default(); values.len()])
+  }
 }
 
 fn add_shim_types_packages_to_test_environment<'a>(

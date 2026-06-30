@@ -2147,6 +2147,77 @@ async fn npm_specifier() {
   );
 }
 
+#[tokio::test]
+async fn transform_uses_lockfile_remote_checksum() {
+  // a deno.lock with a non-matching remote checksum should cause an
+  // integrity error, proving the lockfile is being used
+  let result = TestBuilder::new()
+    .with_loader(|loader| {
+      loader
+        .add_local_file("/deno.json", "{}")
+        .add_local_file(
+          "/deno.lock",
+          concat!(
+            "{\n",
+            "  \"version\": \"5\",\n",
+            "  \"remote\": {\n",
+            "    \"https://localhost/mod.ts\": \"0000000000000000000000000000000000000000000000000000000000000000\"\n",
+            "  }\n",
+            "}\n"
+          ),
+        )
+        .add_local_file("/mod.ts", "import 'https://localhost/mod.ts';")
+        .add_remote_file("https://localhost/mod.ts", "console.log(1);");
+    })
+    .transform()
+    .await
+    .err()
+    .unwrap();
+
+  assert!(
+    result
+      .to_string()
+      .to_lowercase()
+      .contains("integrity check failed"),
+    "unexpected error: {:#}",
+    result
+  );
+}
+
+#[tokio::test]
+async fn transform_uses_lockfile_matching_remote_checksum() {
+  // a deno.lock with a matching remote checksum should transform successfully
+  let result = TestBuilder::new()
+    .with_loader(|loader| {
+      loader
+        .add_local_file("/deno.json", "{}")
+        .add_local_file(
+          "/deno.lock",
+          concat!(
+            "{\n",
+            "  \"version\": \"5\",\n",
+            "  \"remote\": {\n",
+            "    \"https://localhost/mod.ts\": \"35c146f76e129477c64061bc84511e1090f3d4d8059713e6663dd4b35b1f7642\"\n",
+            "  }\n",
+            "}\n"
+          ),
+        )
+        .add_local_file("/mod.ts", "import 'https://localhost/mod.ts';")
+        .add_remote_file("https://localhost/mod.ts", "console.log(1);");
+    })
+    .transform()
+    .await
+    .unwrap();
+
+  assert_files!(
+    result.main.files,
+    &[
+      ("mod.ts", "import './deps/localhost/mod.js';"),
+      ("deps/localhost/mod.ts", "console.log(1);"),
+    ]
+  );
+}
+
 fn get_shim_file_text(mut text: String) -> String {
   text.push('\n');
   text.push_str(

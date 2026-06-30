@@ -17,6 +17,7 @@ deno_cache_dir = "0.44.0"
 deno_config = "0.102.0"
 deno_error = { version = "0.7.1", features = ["serde", "serde_json", "url"] }
 deno_graph = { version = "0.109.0", features = ["swc"], default-features = false }
+deno_lockfile = "0.54.0"
 deno_path_util = "0.6.4"
 deno_resolver = { version = "0.83.0", features = ["graph"] }
 serde_json = { version = "1.0.140", features = ["preserve_order"] }
