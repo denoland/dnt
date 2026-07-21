@@ -46,27 +46,67 @@ impl Mappings {
   pub fn new(
     module_graph: &ModuleGraph,
     specifiers: &Specifiers,
+    main_entry_points: &[ModuleSpecifier],
+    test_entry_points: &[ModuleSpecifier],
   ) -> Result<Self> {
     let mut mappings = HashMap::new();
     let mut mapped_filepaths_no_ext = HashSet::new();
-    let base_dir = get_base_dir(&specifiers.local)?;
+    let local_main_entry_points = local_entry_points(main_entry_points);
+    let local_test_entry_points = local_entry_points(test_entry_points);
+    let main_base_dir = if local_main_entry_points.is_empty() {
+      get_base_dir(&specifiers.local)?
+    } else {
+      get_base_dir(&local_main_entry_points)?
+    };
+    let mut test_base_dir_candidates = vec![main_base_dir.clone()];
+    for specifier in &local_test_entry_points {
+      let file_path = url_to_file_path(specifier)?;
+      test_base_dir_candidates.push(file_path.parent().unwrap().to_path_buf());
+    }
+    let test_base_dir = get_common_dir(test_base_dir_candidates);
+    ensure_nonempty_base_dir(&test_base_dir)?;
+    let mut external_base_dir_candidates =
+      vec![main_base_dir.clone(), test_base_dir.clone()];
+    for specifier in &specifiers.local {
+      let file_path = url_to_file_path(specifier)?;
+      let base_dir = if specifiers.test_modules.contains(specifier) {
+        &test_base_dir
+      } else {
+        &main_base_dir
+      };
+      if !file_path.starts_with(base_dir) {
+        external_base_dir_candidates
+          .push(file_path.parent().unwrap().to_path_buf());
+      }
+    }
+    let external_base_dir = get_common_dir(external_base_dir_candidates);
+    ensure_nonempty_base_dir(&external_base_dir)?;
     let mut root_local_dirs = HashSet::new();
 
     for specifier in specifiers.local.iter() {
       let file_path = url_to_file_path(specifier)?;
-      let relative_file_path =
-        file_path.strip_prefix(&base_dir).map_err(|_| {
-          anyhow::anyhow!(
-            "Error stripping prefix of {} with base {}",
-            file_path.display(),
-            base_dir.display()
-          )
-        })?;
+      let base_dir = if specifiers.test_modules.contains(specifier) {
+        &test_base_dir
+      } else {
+        &main_base_dir
+      };
+      let relative_file_path = match file_path.strip_prefix(base_dir) {
+        Ok(path) => path.to_path_buf(),
+        Err(_) => PathBuf::from("deps").join(
+          file_path.strip_prefix(&external_base_dir).map_err(|_| {
+            anyhow::anyhow!(
+              "Error stripping prefix of {} with base {}",
+              file_path.display(),
+              external_base_dir.display()
+            )
+          })?,
+        ),
+      };
       mappings.insert(
         specifier.clone(),
         get_mapped_file_path(
-          MediaType::from_path(relative_file_path),
-          relative_file_path,
+          MediaType::from_path(&relative_file_path),
+          &relative_file_path,
           &mut mapped_filepaths_no_ext,
         ),
       );
@@ -185,6 +225,16 @@ impl Mappings {
       panic!("Could not find file path for specifier: {}", specifier,);
     })
   }
+}
+
+fn local_entry_points(
+  entry_points: &[ModuleSpecifier],
+) -> Vec<ModuleSpecifier> {
+  entry_points
+    .iter()
+    .filter(|specifier| specifier.scheme() == "file")
+    .cloned()
+    .collect()
 }
 
 /// Takes a group of remote specifiers for the provided base directory
@@ -499,20 +549,37 @@ fn get_base_dir(specifiers: &[ModuleSpecifier]) -> Result<PathBuf> {
   if specifiers.is_empty() {
     bail!("Did not find any local files. Specifying only remote files is not currently supported.");
   }
+  let base_dir = get_common_dir(
+    specifiers
+      .iter()
+      .map(|specifier| {
+        Ok(url_to_file_path(specifier)?.parent().unwrap().into())
+      })
+      .collect::<Result<Vec<PathBuf>>>()?,
+  );
+  ensure_nonempty_base_dir(&base_dir)?;
+  Ok(base_dir)
+}
+
+fn ensure_nonempty_base_dir(base_dir: &Path) -> Result<()> {
+  if base_dir.as_os_str().is_empty() {
+    bail!("Local files span different filesystem roots.");
+  }
+  Ok(())
+}
+
+fn get_common_dir(dirs: impl IntoIterator<Item = PathBuf>) -> PathBuf {
   // todo(dsherret): should maybe error on windows when the files
   // span different drives...
-  let mut base_dir = url_to_file_path(&specifiers[0])?
-    .parent()
-    .unwrap()
-    .to_path_buf();
-  for specifier in specifiers {
-    let file_path = url_to_file_path(specifier)?;
-    let parent_dir = file_path.parent().unwrap();
+  let mut dirs = dirs.into_iter();
+  let Some(mut base_dir) = dirs.next() else {
+    return PathBuf::new();
+  };
+  for parent_dir in dirs {
     if base_dir != parent_dir {
-      if base_dir.starts_with(parent_dir) {
-        base_dir = parent_dir.to_path_buf();
-      } else if base_dir.components().count() == parent_dir.components().count()
-      {
+      if base_dir.starts_with(&parent_dir) {
+        base_dir = parent_dir;
+      } else {
         let mut final_path = PathBuf::new();
         for (a, b) in base_dir.components().zip(parent_dir.components()) {
           if a == b {
@@ -525,7 +592,7 @@ fn get_base_dir(specifiers: &[ModuleSpecifier]) -> Result<PathBuf> {
       }
     }
   }
-  Ok(base_dir)
+  base_dir
 }
 
 #[cfg(test)]
@@ -552,6 +619,13 @@ mod test {
     run_test(
       vec!["file:///project/b/other.ts", "file:///project/a/other.ts"],
       "/project",
+    );
+    run_test(
+      vec![
+        "file:///project-one/mod.ts",
+        "file:///project-two/deeper/mod.ts",
+      ],
+      "/",
     );
 
     fn run_test(urls: Vec<&str>, expected: &str) {

@@ -1450,6 +1450,146 @@ async fn transform_import_map() {
 }
 
 #[tokio::test]
+async fn transform_import_map_places_uneven_siblings_in_deps() {
+  let result = TestBuilder::new()
+    .entry_point("file:///project-one/mod.ts")
+    .with_loader(|loader| {
+      loader
+        .add_local_file(
+          "/project-one/mod.ts",
+          "import value from 'project-two/deeper/mod.ts';",
+        )
+        .add_local_file(
+          "/project-one/deno.json",
+          r#"{
+  "imports": {
+    "project-two/": "../project-two/"
+  }
+}"#,
+        )
+        .add_local_file(
+          "/project-two/deeper/mod.ts",
+          "export default 'hello world';",
+        );
+    })
+    .set_import_map("file:///project-one/deno.json")
+    .transform()
+    .await
+    .unwrap();
+
+  assert_files!(
+    result.main.files,
+    &[
+      (
+        "mod.ts",
+        "import value from './deps/project-two/deeper/mod.js';",
+      ),
+      (
+        "deps/project-two/deeper/mod.ts",
+        "export default 'hello world';",
+      ),
+    ]
+  );
+}
+
+#[tokio::test]
+async fn transform_import_map_keeps_entry_point_root_for_local_siblings() {
+  let result = TestBuilder::new()
+    .entry_point("file:///example-project/mod.ts")
+    .with_loader(|loader| {
+      loader
+        .add_local_file(
+          "/example-project/mod.ts",
+          "export * from './src/mod.ts';",
+        )
+        .add_local_file(
+          "/example-project/src/mod.ts",
+          "export * from 'example-shared/mod.ts';\nexport * from 'https://example.com/mod.ts';",
+        )
+        .add_local_file(
+          "/example-project/deno.json",
+          r#"{
+  "imports": {
+    "example-shared/": "../example-shared/"
+  }
+}"#,
+        )
+        .add_local_file("/example-shared/mod.ts", "export const shared = 'shared';")
+        .add_remote_file("https://example.com/mod.ts", "export const remote = 'remote';");
+    })
+    .set_import_map("file:///example-project/deno.json")
+    .transform()
+    .await
+    .unwrap();
+
+  assert_files!(
+    result.main.files,
+    &[
+      ("mod.ts", "export * from './src/mod.js';"),
+      (
+        "src/mod.ts",
+        "export * from '../deps/example-shared/mod.js';\nexport * from '../deps_2/example.com/mod.js';",
+      ),
+      ("deps/example-shared/mod.ts", "export const shared = 'shared';"),
+      (
+        "deps_2/example.com/mod.ts",
+        "export const remote = 'remote';",
+      ),
+    ]
+  );
+  assert_eq!(result.main.entry_points, &[PathBuf::from("mod.ts")]);
+}
+
+#[tokio::test]
+async fn transform_test_entry_point_uses_test_root_without_moving_main() {
+  let result = TestBuilder::new()
+    .entry_point("file:///example-project/src/mod.ts")
+    .with_loader(|loader| {
+      loader
+        .add_local_file(
+          "/example-project/src/mod.ts",
+          "export * from 'example-shared/mod.ts';",
+        )
+        .add_local_file(
+          "/example-project/tests/integration/functions/mod.test.ts",
+          "import '../../../src/mod.ts';",
+        )
+        .add_local_file(
+          "/example-project/deno.json",
+          r#"{
+  "imports": {
+    "example-shared/": "../example-shared/"
+  }
+}"#,
+        )
+        .add_local_file(
+          "/example-shared/mod.ts",
+          "export const shared = 'shared';",
+        );
+    })
+    .add_test_entry_point(
+      "file:///example-project/tests/integration/functions/mod.test.ts",
+    )
+    .set_import_map("file:///example-project/deno.json")
+    .transform()
+    .await
+    .unwrap();
+
+  assert_eq!(result.main.entry_points, &[PathBuf::from("mod.ts")]);
+  assert_eq!(
+    result.test.entry_points,
+    &[PathBuf::from("tests/integration/functions/mod.test.ts")]
+  );
+  assert_files!(
+    result.test.files,
+    &[(
+      "tests/integration/functions/mod.test.ts",
+      "import '../../../mod.js';",
+    )]
+  );
+}
+
+#[tokio::test]
 async fn transform_config_file() {
   let result = TestBuilder::new()
     .with_loader(|loader| {
