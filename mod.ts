@@ -4,10 +4,12 @@ import * as colors from "@std/fmt/colors";
 import * as path from "@std/path";
 import { createProjectSync, ts } from "@ts-morph/bootstrap";
 import {
+  getCompilerJsxEmit,
   getCompilerLibOption,
   getCompilerScriptTarget,
   getCompilerSourceMapOptions,
   getTopLevelAwaitLocation,
+  type JsxEmit,
   type LibName,
   libNamesToCompilerOption,
   outputDiagnostics,
@@ -29,7 +31,7 @@ import { getTestRunnerCode } from "./lib/test_runner/get_test_runner_code.ts";
 
 export { emptyDir } from "@std/fs/empty-dir";
 export type { PackageJson } from "./lib/types.ts";
-export type { LibName, SourceMapOptions } from "./lib/compiler.ts";
+export type { JsxEmit, LibName, SourceMapOptions } from "./lib/compiler.ts";
 export type { ShimOptions } from "./lib/shims.ts";
 
 export interface EntryPoint {
@@ -187,17 +189,25 @@ export interface BuildOptions {
      * Controls how JSX constructs are emitted in JavaScript files.
      *
      * See more: https://www.typescriptlang.org/tsconfig/#jsx
-     * @default ts.JsxEmit.React
+     * @default "react"
      */
-    jsx: ts.JsxEmit;
+    jsx?: JsxEmit;
     /**
      * @default "React.createElement"
      */
-    jsxFactory: string;
+    jsxFactory?: string;
     /**
      * @default "React.Fragment"
      */
-    jsxFragmentFactory: string;
+    jsxFragmentFactory?: string;
+    /**
+     * Module specifier to import the JSX factory functions from when using
+     * the automatic runtime (`jsx: "react-jsx"` or `"react-jsxdev"`).
+     *
+     * See more: https://www.typescriptlang.org/tsconfig/#jsxImportSource
+     * @default "react"
+     */
+    jsxImportSource?: string;
   };
   /** Filter out diagnostics that you want to ignore during type checking and emitting.
    * @returns `true` to surface the diagnostic or `false` to ignore it.
@@ -319,10 +329,11 @@ export async function build(options: BuildOptions): Promise<void> {
         false,
       emitDecoratorMetadata: options.compilerOptions?.emitDecoratorMetadata ??
         false,
-      jsx: options.compilerOptions?.jsx ?? ts.JsxEmit.React,
+      jsx: getCompilerJsxEmit(options.compilerOptions?.jsx ?? "react"),
       jsxFactory: options.compilerOptions?.jsxFactory ?? "React.createElement",
       jsxFragmentFactory: options.compilerOptions?.jsxFragmentFactory ??
         "React.Fragment",
+      jsxImportSource: options.compilerOptions?.jsxImportSource,
       importsNotUsedAsValues: ts.ImportsNotUsedAsValues.Remove,
       module: ts.ModuleKind.ESNext,
       moduleResolution: ts.ModuleResolutionKind.Bundler,

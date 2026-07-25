@@ -47,6 +47,31 @@ export function getCompilerScriptTarget(target: ScriptTarget) {
   }
 }
 
+/** How JSX constructs are emitted. See https://www.typescriptlang.org/tsconfig/#jsx */
+export type JsxEmit =
+  | "preserve"
+  | "react"
+  | "react-native"
+  | "react-jsx"
+  | "react-jsxdev";
+
+export function getCompilerJsxEmit(jsx: JsxEmit) {
+  switch (jsx) {
+    case "preserve":
+      return ts.JsxEmit.Preserve;
+    case "react":
+      return ts.JsxEmit.React;
+    case "react-native":
+      return ts.JsxEmit.ReactNative;
+    case "react-jsx":
+      return ts.JsxEmit.ReactJSX;
+    case "react-jsxdev":
+      return ts.JsxEmit.ReactJSXDev;
+    default:
+      throw new Error(`Unknown jsx compiler option: ${jsx}`);
+  }
+}
+
 // Created from https://github.com/microsoft/TypeScript/blob/v5.2.2/src/compiler/commandLineParser.ts
 // then aligned with tsconfig.json's casing
 export type LibName =
