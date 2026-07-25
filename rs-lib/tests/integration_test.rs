@@ -2257,6 +2257,34 @@ async fn transform_uses_lockfile_matching_remote_checksum() {
   );
 }
 
+#[tokio::test]
+async fn transform_ignores_unrelated_lockfile_redirects() {
+  // the lockfile is for the whole project, so it may have redirects for
+  // modules that aren't reachable from the entry points being transformed
+  let result = TestBuilder::new()
+    .with_loader(|loader| {
+      loader
+        .add_local_file("/deno.json", "{}")
+        .add_local_file(
+          "/deno.lock",
+          concat!(
+            "{\n",
+            "  \"version\": \"5\",\n",
+            "  \"redirects\": {\n",
+            "    \"https://localhost/unrelated.ts\": \"https://localhost/unrelated/mod.ts\"\n",
+            "  }\n",
+            "}\n"
+          ),
+        )
+        .add_local_file("/mod.ts", "console.log(1);");
+    })
+    .transform()
+    .await
+    .unwrap();
+
+  assert_files!(result.main.files, &[("mod.ts", "console.log(1);")]);
+}
+
 fn get_shim_file_text(mut text: String) -> String {
   text.push('\n');
   text.push_str(

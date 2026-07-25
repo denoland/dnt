@@ -198,9 +198,13 @@ impl ModuleGraph {
   }
 
   pub fn get(&self, specifier: &ModuleSpecifier) -> &Module {
-    self.graph.get(specifier).unwrap_or_else(|| {
+    self.try_get(specifier).unwrap_or_else(|| {
       panic!("dnt bug - Did not find specifier: {}", specifier);
     })
+  }
+
+  pub fn try_get(&self, specifier: &ModuleSpecifier) -> Option<&Module> {
+    self.graph.get(specifier)
   }
 
   pub fn get_parsed_source(
