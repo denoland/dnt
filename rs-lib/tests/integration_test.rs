@@ -1169,6 +1169,45 @@ async fn transform_specifier_mappings() {
 }
 
 #[tokio::test]
+async fn transform_specifier_mapping_of_redirected_specifier() {
+  let result = TestBuilder::new()
+    .with_loader(|loader| {
+      loader
+        .add_local_file(
+          "/mod.ts",
+          "import * as remote from 'http://localhost/mod.ts';",
+        )
+        .add_remote_redirect(
+          "http://localhost/mod.ts",
+          "http://localhost/redirected/mod.ts",
+        )
+        .add_remote_file("http://localhost/redirected/mod.ts", "");
+    })
+    .add_package_specifier_mapping(
+      "http://localhost/redirected/mod.ts",
+      "remote-module",
+      Some("1.0.0"),
+      None,
+    )
+    .transform()
+    .await
+    .unwrap();
+
+  assert_files!(
+    result.main.files,
+    &[("mod.ts", "import * as remote from 'remote-module';")]
+  );
+  assert_eq!(
+    result.main.dependencies,
+    &[Dependency {
+      name: "remote-module".to_string(),
+      version: "1.0.0".to_string(),
+      peer_dependency: false,
+    }]
+  );
+}
+
+#[tokio::test]
 async fn transform_not_found_mappings() {
   let error_message = TestBuilder::new()
     .with_loader(|loader| {

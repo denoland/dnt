@@ -125,7 +125,8 @@ impl Mappings {
       if !mappings.contains_key(key) {
         if let Some(path) = mappings.get(value).map(ToOwned::to_owned) {
           mappings.insert(key.clone(), path);
-        } else {
+        } else if !specifiers.has_mapped(value) {
+          // specifiers mapped to a package have no file in the output
           panic!("dnt bug - Could not find the mapping for {}", value);
         }
       }
