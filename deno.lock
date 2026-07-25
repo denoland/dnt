@@ -2,6 +2,7 @@
   "version": "5",
   "specifiers": {
     "jsr:@david/code-block-writer@^13.0.3": "13.0.3",
+    "jsr:@david/publish-on-tag@0.2": "0.2.0",
     "jsr:@std/assert@0.221": "0.221.0",
     "jsr:@std/assert@1": "1.0.19",
     "jsr:@std/bytes@^1.0.4": "1.0.4",
@@ -14,6 +15,7 @@
     "jsr:@std/internal@^1.0.14": "1.0.14",
     "jsr:@std/path@1": "1.1.5",
     "jsr:@std/path@^1.1.5": "1.1.5",
+    "jsr:@std/semver@1": "1.0.8",
     "jsr:@ts-morph/bootstrap@0.29": "0.29.0",
     "jsr:@ts-morph/common@0.29": "0.29.0",
     "npm:@types/node@*": "18.16.19",
@@ -25,6 +27,12 @@
     },
     "@david/code-block-writer@13.0.3": {
       "integrity": "f98c77d320f5957899a61bfb7a9bead7c6d83ad1515daee92dbacc861e13bb7f"
+    },
+    "@david/publish-on-tag@0.2.0": {
+      "integrity": "6a4abcc352141e46e705041ca73836176d64cebc1080b6d915de630df9853dea",
+      "dependencies": [
+        "jsr:@std/semver"
+      ]
     },
     "@std/assert@0.221.0": {
       "integrity": "a5f1aa6e7909dbea271754fd4ab3f4e687aeff4873b4cef9a320af813adb489a",
@@ -99,6 +107,9 @@
         "jsr:@std/internal@^1.0.14"
       ]
     },
+    "@std/semver@1.0.8": {
+      "integrity": "dc830e8b8b6a380c895d53fbfd1258dc253704ca57bbe1629ac65fd7830179b7"
+    },
     "@ts-morph/bootstrap@0.29.0": {
       "integrity": "69f9b1b42b03423308a9f623f924174181ef20f6f2a8771799f216f561b9b7a6",
       "dependencies": [
@@ -145,6 +156,7 @@
   "workspace": {
     "dependencies": [
       "jsr:@david/code-block-writer@^13.0.3",
+      "jsr:@david/publish-on-tag@0.2",
       "jsr:@std/assert@1",
       "jsr:@std/fmt@1",
       "jsr:@std/fs@1",
