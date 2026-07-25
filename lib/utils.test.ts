@@ -38,5 +38,6 @@ Deno.test("getDntVersion", () => {
     getDntVersion("https://deno.land/x/dnt@20.21.22/mod.ts"),
     "20.21.22",
   );
+  assertEquals(getDntVersion("https://jsr.io/@deno/dnt/1.2.3/mod.ts"), "1.2.3");
   assertEquals(getDntVersion("file:///test/mod.ts"), "dev");
 });
