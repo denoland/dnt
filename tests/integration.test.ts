@@ -12,7 +12,6 @@ const versions = {
   domExceptionShim: "^4.0.0",
   domExceptionShimTypes: "^4.0.0",
   promptsShim: "~0.1.0",
-  timersShim: "~0.1.0",
   weakRefSham: "~0.1.0",
   undici: "^6.0.0",
   picocolors: "^1.0.0",
@@ -781,7 +780,6 @@ Deno.test("should build shim project with everything enabled", async () => {
       "@deno/shim-crypto": versions.cryptoShim,
       "@deno/shim-deno": versions.denoShim,
       "@deno/shim-prompts": versions.promptsShim,
-      "@deno/shim-timers": versions.timersShim,
       "domexception": versions.domExceptionShim,
       "undici": versions.undici,
     });
@@ -841,7 +839,6 @@ Deno.test("should build shim project when using node-fetch", async () => {
       "@deno/shim-crypto": versions.cryptoShim,
       "@deno/shim-deno": versions.denoShim,
       "@deno/shim-prompts": versions.promptsShim,
-      "@deno/shim-timers": versions.timersShim,
       "domexception": versions.domExceptionShim,
       "undici": versions.undici,
       "node-fetch": "~3.1.0",
@@ -854,8 +851,6 @@ import { crypto } from "@deno/shim-crypto";
 export { crypto, type Crypto, type SubtleCrypto, type AlgorithmIdentifier, type Algorithm, type RsaOaepParams, type BufferSource, type AesCtrParams, type AesCbcParams, type AesGcmParams, type CryptoKey, type KeyAlgorithm, type KeyType, type KeyUsage, type EcdhKeyDeriveParams, type HkdfParams, type HashAlgorithmIdentifier, type Pbkdf2Params, type AesDerivedKeyParams, type HmacImportParams, type JsonWebKey, type RsaOtherPrimesInfo, type KeyFormat, type RsaHashedKeyGenParams, type RsaKeyGenParams, type BigInteger, type EcKeyGenParams, type NamedCurve, type CryptoKeyPair, type AesKeyGenParams, type HmacKeyGenParams, type RsaHashedImportParams, type EcKeyImportParams, type AesKeyAlgorithm, type RsaPssParams, type EcdsaParams } from "@deno/shim-crypto";
 import { alert, confirm, prompt } from "@deno/shim-prompts";
 export { alert, confirm, prompt } from "@deno/shim-prompts";
-import { setInterval, setTimeout } from "@deno/shim-timers";
-export { setInterval, setTimeout } from "@deno/shim-timers";
 import { default as DOMException } from "domexception";
 export { default as DOMException } from "domexception";
 import { File, FormData, Headers, Request, Response } from "undici";
@@ -872,8 +867,6 @@ const dntGlobals = {
   alert,
   confirm,
   prompt,
-  setInterval,
-  setTimeout,
   DOMException,
   File,
   FormData,
@@ -1388,7 +1381,6 @@ async function runTest(
 function getAllShimOptions(value: ShimValue): ShimOptions {
   return {
     deno: value,
-    timers: value,
     prompts: value,
     blob: value,
     crypto: value,
