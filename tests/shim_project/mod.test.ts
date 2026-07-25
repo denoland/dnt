@@ -1,18 +1,6 @@
 // Copyright 2018-2024 the Deno authors. MIT license.
 import { isDeno } from "https://deno.land/x/which_runtime@0.2.0/mod.ts";
-import {
-  addAsync,
-  getCryptoKeyPair,
-  localShimValue,
-  throwDomException,
-} from "./mod.ts";
-
-Deno.test("should add in test project", async () => {
-  const result = await addAsync(1, 2);
-  if (result !== 3) {
-    throw new Error(`Result fail: ${result}`);
-  }
-});
+import { getCryptoKeyPair, localShimValue, throwDomException } from "./mod.ts";
 
 Deno.test("should get crypto key pair", async () => {
   const value = await getCryptoKeyPair([

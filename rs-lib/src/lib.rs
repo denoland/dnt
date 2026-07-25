@@ -338,8 +338,11 @@ pub async fn transform(
       is_package_manager_subcommand: false,
       // force no node_modules directory so that we resolve package.json deps as npm specifiers
       node_modules_dir: Some(deno_config::deno_json::NodeModulesDirMode::None),
+      node_modules_linker: None,
       no_npm: false,
+      import_npm_lockfile: false,
       npm_process_state: None,
+      root_node_modules_dir_override: None,
       vendor: None,
       frozen_lockfile: None,
       lock_arg: None,
@@ -352,6 +355,7 @@ pub async fn transform(
     NullBlobStore,
     Rc::new(factory.http_cache()?.clone()),
     http_client,
+    Rc::new(deno_resolver::loader::MemoryFiles::default()),
     factory.sys().clone(),
     PermissionedFileFetcherOptions {
       allow_remote: true,
@@ -376,7 +380,7 @@ pub async fn transform(
           import_conditions_override: None,
           require_conditions_override: None,
         },
-        prefer_browser_field: false,
+        is_browser_platform: false,
         bundle_mode: false,
       },
       node_resolution_cache: None,
@@ -387,20 +391,29 @@ pub async fn transform(
       specified_import_map: maybe_import_map_file.map(|file| {
         Box::new(ImportMapProvider(file)) as Box<dyn SpecifiedImportMapProvider>
       }),
-      bare_node_builtins: true,
       unstable_sloppy_imports: true,
       on_mapped_resolution_diagnostic: None,
       compiler_options_overrides: CompilerOptionsOverrides {
         no_transpile: true,
+        force_check_js: false,
         source_map_base: None,
         preserve_jsx: true,
+        force_disable_verbatim_module_syntax: false,
       },
+      newest_dependency_date: None,
+      allow_json_imports: deno_resolver::loader::AllowJsonImports::Always,
+      require_modules: Vec::new(),
       node_analysis_cache: None,
       node_code_translator_mode: NodeCodeTranslatorMode::ModuleLoader,
     },
   );
   let deno_resolver = resolver_factory.deno_resolver().await?;
   let cjs_tracker = resolver_factory.cjs_tracker()?.clone();
+  let maybe_lockfile = resolver_factory
+    .workspace_factory()
+    .maybe_lockfile(&NullNpmPackageInfoProvider)
+    .await?
+    .cloned();
 
   let loader = Rc::new(DenoGraphLoader::new(
     Rc::new(file_fetcher),
@@ -412,7 +425,9 @@ pub async fn transform(
     resolver_factory.workspace_factory().sys().clone(),
     DenoGraphLoaderOptions {
       file_header_overrides: Default::default(),
+      include_npm_sources: false,
       permissions: None,
+      reporter: None,
     },
   ));
 
@@ -442,6 +457,7 @@ pub async fn transform(
         .compiler_options_resolver()?
         .clone(),
       cjs_tracker,
+      maybe_lockfile,
     })
     .await?;
 
@@ -635,6 +651,27 @@ pub async fn transform(
     test: test_env_context.environment,
     warnings,
   })
+}
+
+/// Provides npm package info when reading the lockfile.
+///
+/// dnt resolves npm specifiers via the specifier mappers rather than through
+/// the module graph, and never writes the lockfile back, so the only time this
+/// is consulted is when an older lockfile is migrated to the latest version in
+/// memory. Returning default info for each requested package is sufficient.
+struct NullNpmPackageInfoProvider;
+
+#[async_trait::async_trait(?Send)]
+impl deno_lockfile::NpmPackageInfoProvider for NullNpmPackageInfoProvider {
+  async fn get_npm_package_info(
+    &self,
+    values: &[deno_semver::package::PackageNv],
+  ) -> Result<
+    Vec<deno_lockfile::Lockfile5NpmInfo>,
+    Box<dyn std::error::Error + Send + Sync>,
+  > {
+    Ok(vec![Default::default(); values.len()])
+  }
 }
 
 fn add_shim_types_packages_to_test_environment<'a>(

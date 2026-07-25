@@ -40,6 +40,9 @@ pub struct ModuleGraphOptions<'a, TSys: WorkspaceFactorySys> {
   pub compiler_options_resolver: Rc<CompilerOptionsResolver>,
   pub cjs_tracker:
     Rc<deno_resolver::cjs::CjsTracker<DenoInNpmPackageChecker, TSys>>,
+  /// The project's deno lockfile, used to lock module versions and verify
+  /// remote module checksums while building the graph.
+  pub maybe_lockfile: Option<deno_resolver::lockfile::LockfileLockRc<TSys>>,
 }
 
 /// Wrapper around deno_graph::ModuleGraph.
@@ -67,9 +70,20 @@ impl ModuleGraph {
     let capturing_analyzer =
       CapturingModuleAnalyzer::new(Some(Box::new(source_parser)), None);
     let mut graph = deno_graph::ModuleGraph::new(deno_graph::GraphKind::All);
+    // seed the graph with the locked module versions and redirects so the
+    // same versions Deno resolved for the project are used
+    if let Some(lockfile) = &options.maybe_lockfile {
+      lockfile.fill_graph(&mut graph);
+    }
+    let mut locker = options
+      .maybe_lockfile
+      .as_ref()
+      .map(|lockfile| lockfile.as_deno_graph_locker());
     let graph_resolver = resolver.as_graph_resolver(
       &options.cjs_tracker,
       &scoped_jsx_import_source_config,
+      None,
+      deno_resolver::graph::NpmTypesResolutionMode::FallbackToExecution,
     );
     graph
       .build(
@@ -85,17 +99,22 @@ impl ModuleGraph {
           is_dynamic: false,
           skip_dynamic_deps: false,
           resolver: Some(&graph_resolver),
-          locker: None,
+          locker: locker
+            .as_mut()
+            .map(|l| l as &mut dyn deno_graph::source::Locker),
           module_analyzer: &capturing_analyzer,
           module_info_cacher: &NullModuleInfoCacher,
           reporter: None,
           npm_resolver: None,
           file_system: &RealSys,
           jsr_url_provider: Default::default(),
+          jsr_version_resolver: Default::default(),
+          jsr_metadata_store: None,
           executor: Default::default(),
           passthrough_jsr_specifiers: false,
           unstable_bytes_imports: false,
           unstable_text_imports: false,
+          unstable_css_imports: false,
         },
       )
       .await;
@@ -179,9 +198,13 @@ impl ModuleGraph {
   }
 
   pub fn get(&self, specifier: &ModuleSpecifier) -> &Module {
-    self.graph.get(specifier).unwrap_or_else(|| {
+    self.try_get(specifier).unwrap_or_else(|| {
       panic!("dnt bug - Did not find specifier: {}", specifier);
     })
+  }
+
+  pub fn try_get(&self, specifier: &ModuleSpecifier) -> Option<&Module> {
+    self.graph.get(specifier)
   }
 
   pub fn get_parsed_source(

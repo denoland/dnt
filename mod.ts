@@ -280,6 +280,12 @@ export async function build(options: BuildOptions): Promise<void> {
   const scriptOutDir = path.join(options.outDir, "script");
   const typesOutDir = path.join(options.outDir, "types");
   const compilerScriptTarget = getCompilerScriptTarget(scriptTarget);
+  // TypeScript 6.0 no longer automatically discovers the `@types` packages
+  // installed in the output's node_modules, so resolve and include them
+  // explicitly here.
+  const ambientTypeNames = getInstalledAmbientTypeNames(
+    path.join(options.outDir, "node_modules", "@types"),
+  );
   const project = createProjectSync({
     compilerOptions: {
       outDir: typesOutDir,
@@ -303,6 +309,10 @@ export async function build(options: BuildOptions): Promise<void> {
       declaration: !!options.declaration,
       declarationMap,
       esModuleInterop: false,
+      // silence deprecation errors for the options below (ex. esModuleInterop:
+      // false, importsNotUsedAsValues) that still function in TypeScript 6.0
+      ignoreDeprecations: "6.0",
+      types: ambientTypeNames,
       isolatedModules: true,
       useDefineForClassFields: true,
       experimentalDecorators: options.compilerOptions?.experimentalDecorators ??
@@ -651,5 +661,20 @@ export async function build(options: BuildOptions): Promise<void> {
     // * or ending with `_test.{ts, mts, tsx, js, mjs, jsx}`
     return options.testPattern ??
       "**/{test.{ts,mts,tsx,js,mjs,jsx},*.test.{ts,mts,tsx,js,mjs,jsx},*_test.{ts,mts,tsx,js,mjs,jsx}}";
+  }
+}
+
+/** Gets the names of the `@types` packages installed in the provided directory
+ * (ex. `["node"]`), or `undefined` when none are installed. */
+function getInstalledAmbientTypeNames(typesDir: string): string[] | undefined {
+  try {
+    return Array.from(Deno.readDirSync(typesDir))
+      .filter((entry) =>
+        (entry.isDirectory || entry.isSymlink) && !entry.name.startsWith(".")
+      )
+      .map((entry) => entry.name);
+  } catch {
+    // no `@types` directory exists, so fall back to the default behaviour
+    return undefined;
   }
 }
