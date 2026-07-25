@@ -411,6 +411,29 @@ The version requirement is ignored when matching, so this maps
 `import ... from "jsr:@scope/name@^1.0.0"` as well as an import of a bare
 specifier that an import map points at `jsr:@scope/name@^1.0.0`.
 
+Leaving out `version` will use the version requirement of the specifier being
+mapped, which is useful when it's already specified in an import map:
+
+```json
+{
+  "imports": {
+    "@scope/name": "jsr:@scope/name@^1.0.0"
+  }
+}
+```
+
+```ts
+await build({
+  // ...etc...
+  mappings: {
+    // adds a dependency on "scope-name": "^1.0.0"
+    "jsr:@scope/name": {
+      name: "scope-name",
+    },
+  },
+});
+```
+
 Sub paths are matched exactly though, so `jsr:@scope/name/sub` requires its own
 mapping.
 

@@ -1176,12 +1176,13 @@ async fn transform_jsr_specifier_mappings() {
         "/mod.ts",
         concat!(
           "import * as pkg from 'jsr:@scope/name@^1.0.0';\n",
-          "import * as sub from 'jsr:@scope/name/sub';\n",
+          "import * as sub from 'jsr:@scope/name@^1.0.0/sub';\n",
+          "import * as inherited from 'jsr:@scope/inherited@~2.0.0';\n",
           "import * as other from 'jsr:@scope/other';\n",
         ),
       );
     })
-    // no version requirement on the mapping, so it should match any
+    // the mapping's version requirement doesn't need to match the specifier's
     .add_package_specifier_mapping(
       "jsr:@scope/name",
       "scope-name",
@@ -1194,7 +1195,14 @@ async fn transform_jsr_specifier_mappings() {
       Some("^1.0.0"),
       Some("sub"),
     )
-    // a mapping without a version shouldn't add a dependency
+    // no version on the mapping, so the specifier's is used
+    .add_package_specifier_mapping(
+      "jsr:@scope/inherited",
+      "scope-inherited",
+      None,
+      None,
+    )
+    // no version anywhere, so no dependency is added
     .add_package_specifier_mapping(
       "jsr:@scope/other",
       "scope-other",
@@ -1212,17 +1220,25 @@ async fn transform_jsr_specifier_mappings() {
       concat!(
         "import * as pkg from 'scope-name';\n",
         "import * as sub from 'scope-name/sub';\n",
+        "import * as inherited from 'scope-inherited';\n",
         "import * as other from 'scope-other';\n",
       )
     )]
   );
   assert_eq!(
     result.main.dependencies,
-    &[Dependency {
-      name: "scope-name".to_string(),
-      version: "^1.0.0".to_string(),
-      peer_dependency: false,
-    }]
+    &[
+      Dependency {
+        name: "scope-inherited".to_string(),
+        version: "~2.0.0".to_string(),
+        peer_dependency: false,
+      },
+      Dependency {
+        name: "scope-name".to_string(),
+        version: "^1.0.0".to_string(),
+        peer_dependency: false,
+      }
+    ]
   );
 }
 
@@ -1242,12 +1258,8 @@ async fn transform_jsr_specifier_mapping_via_import_map() {
         );
     })
     .set_config_file("file:///deno.json")
-    .add_package_specifier_mapping(
-      "jsr:@scope/name",
-      "scope-name",
-      Some("^1.0.0"),
-      None,
-    )
+    // the version requirement comes from the import map
+    .add_package_specifier_mapping("jsr:@scope/name", "scope-name", None, None)
     .transform()
     .await
     .unwrap();
