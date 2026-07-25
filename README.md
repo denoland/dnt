@@ -92,7 +92,7 @@ There are several steps done in a pipeline:
 [dnt] Running tests...
 
 > test
-> node test_runner.js
+> node test_runner.cjs
 
 Running tests in ./script/mod.test.js...
 

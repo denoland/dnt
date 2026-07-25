@@ -90,7 +90,7 @@ export function getPackageJson({
   };
   const scripts = testEnabled
     ? ({
-      test: "node test_runner.js",
+      test: "node test_runner.cjs",
       // override with specified scripts
       ...(packageJsonObj.scripts ?? {}),
     })

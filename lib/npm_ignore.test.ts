@@ -195,7 +195,7 @@ function runTest(options: {
     }
 
     return startText +
-      `/test_runner.js
+      `/test_runner.cjs
 yarn.lock
 pnpm-lock.yaml
 `;

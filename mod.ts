@@ -617,7 +617,7 @@ export async function build(options: BuildOptions): Promise<void> {
     const denoTestShimPackage = getDependencyByName("@deno/shim-deno-test") ??
       getDependencyByName("@deno/shim-deno");
     writeFile(
-      path.join(options.outDir, "test_runner.js"),
+      path.join(options.outDir, "test_runner.cjs"),
       transformCodeToTarget(
         getTestRunnerCode({
           denoTestShimPackageName: denoTestShimPackage == null

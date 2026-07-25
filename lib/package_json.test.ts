@@ -79,7 +79,7 @@ Deno.test("single entrypoint", () => {
       },
     },
     scripts: {
-      test: "node test_runner.js",
+      test: "node test_runner.cjs",
     },
     _generatedBy: "dnt@dev",
   });
@@ -499,7 +499,7 @@ Deno.test("peer dependencies", () => {
           },
         },
         scripts: {
-          test: "node test_runner.js",
+          test: "node test_runner.cjs",
         },
         dependencies: {
           dep: "^1.0.0",

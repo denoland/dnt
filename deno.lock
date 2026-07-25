@@ -11,6 +11,7 @@
     "jsr:@std/bytes@^1.0.4": "1.0.4",
     "jsr:@std/cli@^1.0.11": "1.0.32",
     "jsr:@std/csv@*": "1.0.6",
+    "jsr:@std/csv@1.0.6": "1.0.6",
     "jsr:@std/encoding@^1.0.6": "1.0.11",
     "jsr:@std/fmt@0.221": "0.221.0",
     "jsr:@std/fmt@1": "1.0.8",

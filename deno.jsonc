@@ -13,7 +13,8 @@
     "rules": {
       "exclude": [
         "no-explicit-any",
-        "camelcase"
+        "camelcase",
+        "no-import-prefix"
       ]
     }
   },
