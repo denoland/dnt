@@ -97,11 +97,52 @@ Deno.test("should include src directory when the source files are not necessary"
   });
 });
 
+Deno.test("should include declaration maps of test files", () => {
+  runTest({
+    sourceMaps: undefined,
+    inlineSources: undefined,
+    expectHasSrcFolder: true,
+    includeScriptModule: true,
+    includeEsModule: true,
+    declaration: "inline",
+    declarationMap: true,
+  });
+  runTest({
+    sourceMaps: true,
+    inlineSources: undefined,
+    expectHasSrcFolder: false,
+    includeScriptModule: true,
+    includeEsModule: true,
+    declaration: "inline",
+    declarationMap: true,
+  });
+  runTest({
+    sourceMaps: undefined,
+    inlineSources: undefined,
+    expectHasSrcFolder: true,
+    includeScriptModule: true,
+    includeEsModule: true,
+    declaration: "separate",
+    declarationMap: true,
+  });
+  // no declaration files, so no declaration maps
+  runTest({
+    sourceMaps: undefined,
+    inlineSources: undefined,
+    expectHasSrcFolder: true,
+    includeScriptModule: true,
+    includeEsModule: true,
+    declaration: false,
+    declarationMap: true,
+  });
+});
+
 function runTest(options: {
   sourceMaps: SourceMapOptions | undefined;
   inlineSources: boolean | undefined;
   expectHasSrcFolder: boolean;
   declaration: "separate" | "inline" | false;
+  declarationMap?: boolean;
   includeScriptModule: boolean | undefined;
   includeEsModule: boolean | undefined;
 }) {
@@ -115,6 +156,7 @@ function runTest(options: {
     includeScriptModule: options.includeScriptModule,
     includeEsModule: options.includeEsModule,
     declaration: options.declaration,
+    declarationMap: options.declarationMap,
   });
 
   assertEquals(fileText, getExpectedText());
@@ -128,6 +170,9 @@ function runTest(options: {
       }
       if (options.declaration === "inline") {
         startText += "/esm/mod.test.d.ts\n";
+        if (options.declarationMap) {
+          startText += "/esm/mod.test.d.ts.map\n";
+        }
       }
     }
     if (options.includeScriptModule !== false) {
@@ -137,10 +182,16 @@ function runTest(options: {
       }
       if (options.declaration === "inline") {
         startText += "/script/mod.test.d.ts\n";
+        if (options.declarationMap) {
+          startText += "/script/mod.test.d.ts.map\n";
+        }
       }
     }
     if (options.declaration === "separate") {
       startText += "/types/mod.test.d.ts\n";
+      if (options.declarationMap) {
+        startText += "/types/mod.test.d.ts.map\n";
+      }
     }
 
     return startText +
