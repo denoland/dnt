@@ -21,10 +21,6 @@ export interface ShimOptions {
   deno?: ShimValue | {
     test: ShimValue;
   };
-  /** Shim the global `setTimeout` and `setInterval` functions with
-   * Deno and browser compatible versions.
-   */
-  timers?: ShimValue;
   /** Shim the global `confirm`, `alert`, and `prompt` functions. */
   prompts?: ShimValue;
   /** Shim the `Blob` global with the one from the `"buffer"` module. */
@@ -80,7 +76,6 @@ export function shimOptionsToTransformShims(options: ShimOptions): {
   add(options.blob, getBlobShim);
   add(options.crypto, getCryptoShim);
   add(options.prompts, getPromptsShim);
-  add(options.timers, getTimersShim);
   add(options.domException, getDomExceptionShim);
   add(options.undici, getUndiciShim);
   add(options.weakRef, getWeakRefShim);
@@ -193,16 +188,6 @@ function getPromptsShim(): Shim {
       version: "~0.1.0",
     },
     globalNames: ["alert", "confirm", "prompt"],
-  };
-}
-
-function getTimersShim(): Shim {
-  return {
-    package: {
-      name: "@deno/shim-timers",
-      version: "~0.1.0",
-    },
-    globalNames: ["setInterval", "setTimeout"],
   };
 }
 

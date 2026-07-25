@@ -118,7 +118,7 @@ fn visit_children(node: Node, context: &mut Context) -> Result<()> {
 }
 
 fn visit_module_specifier(str: &Str, context: &mut Context) {
-  let value = str.value().to_string();
+  let value = str.value().to_string_lossy().into_owned();
   let specifier = context
     .module_graph
     .resolve_dependency(&value, context.specifier);
