@@ -391,6 +391,29 @@ Note that dnt will error if you specify a mapping and it is not found in the
 code. This is done to prevent the scenario where a remote specifier's version is
 bumped and the mapping isn't updated.
 
+#### Mapping a JSR package to an npm package
+
+A `jsr:` specifier may be mapped the same way:
+
+```ts
+await build({
+  // ...etc...
+  mappings: {
+    "jsr:@scope/name": {
+      name: "scope-name",
+      version: "^1.0.0",
+    },
+  },
+});
+```
+
+The version requirement is ignored when matching, so this maps
+`import ... from "jsr:@scope/name@^1.0.0"` as well as an import of a bare
+specifier that an import map points at `jsr:@scope/name@^1.0.0`.
+
+Sub paths are matched exactly though, so `jsr:@scope/name/sub` requires its own
+mapping.
+
 #### Mapping specifier to npm package subpath
 
 Say an npm package called `example` had a subpath at `sub_path.js` and you

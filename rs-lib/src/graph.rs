@@ -22,13 +22,18 @@ use deno_graph::ast::EsParser;
 use deno_graph::ast::ParseOptions;
 use deno_graph::ast::ParsedSourceStore;
 use deno_graph::source::NullModuleInfoCacher;
+use deno_graph::source::ResolutionKind;
+use deno_graph::source::ResolveError;
+use deno_graph::source::Resolver;
 use deno_graph::JsModule;
 use deno_graph::Module;
+use deno_graph::Range;
 use deno_resolver::deno_json::CompilerOptionsResolver;
 use deno_resolver::deno_json::JsxImportSourceConfigResolver;
 use deno_resolver::factory::WorkspaceFactorySys;
 use deno_resolver::graph::DefaultDenoResolverRc;
 use deno_resolver::npm::DenoInNpmPackageChecker;
+use deno_semver::jsr::JsrPackageReqReference;
 use sys_traits::impls::RealSys;
 
 pub struct ModuleGraphOptions<'a, TSys: WorkspaceFactorySys> {
@@ -57,10 +62,17 @@ impl ModuleGraph {
   ) -> Result<(Self, Specifiers)> {
     let resolver = options.resolver;
     let loader = options.loader;
+    // mapped jsr specifiers don't keep their scheme in the graph, so the
+    // loader needs to look them up by the specifier they're resolved to
+    let graph_specifier_mappings = options
+      .specifier_mappings
+      .iter()
+      .map(|(k, v)| (mapped_specifier_key(k), v.clone()))
+      .collect::<HashMap<_, _>>();
     let loader = SourceLoader::new(
       loader,
       get_all_specifier_mappers(),
-      options.specifier_mappings,
+      &graph_specifier_mappings,
     );
     let scoped_jsx_import_source_config =
       JsxImportSourceConfigResolver::from_compiler_options_resolver(
@@ -85,6 +97,12 @@ impl ModuleGraph {
       None,
       deno_resolver::graph::NpmTypesResolutionMode::FallbackToExecution,
     );
+    let jsr_specifier_mappings =
+      JsrSpecifierMappings::new(options.specifier_mappings);
+    let graph_resolver = MappedJsrSpecifierResolver {
+      inner: &graph_resolver,
+      mappings: &jsr_specifier_mappings,
+    };
     graph
       .build(
         options
@@ -151,7 +169,11 @@ impl ModuleGraph {
         MappedSpecifier::Package(_) => None,
         MappedSpecifier::Module(_) => Some(k),
       })
-      .filter(|s| !loader_specifiers.mapped_modules.contains_key(s))
+      .filter(|s| {
+        !loader_specifiers
+          .mapped_modules
+          .contains_key(&mapped_specifier_key(s))
+      })
       .collect::<Vec<_>>();
     if !not_found_module_mappings.is_empty() {
       bail!(
@@ -174,7 +196,7 @@ impl ModuleGraph {
         MappedSpecifier::Package(_) => Some(k),
         MappedSpecifier::Module(_) => None,
       })
-      .filter(|s| !specifiers.has_mapped(s))
+      .filter(|s| !specifiers.has_mapped(&mapped_specifier_key(s)))
       .collect::<Vec<_>>();
     if !not_found_package_specifiers.is_empty() {
       bail!(
@@ -257,6 +279,111 @@ impl ModuleGraph {
   }
 }
 
+/// Resolves `jsr:` specifiers that the user has provided a mapping for to
+/// [`MAPPED_JSR_SCHEME`] so that they make it to the loader.
+///
+/// deno_graph resolves `jsr:` specifiers against the registry itself, so
+/// without this the loader never sees the specifier the mapping is keyed on
+/// and the package ends up vendored instead of mapped.
+#[derive(Debug)]
+struct MappedJsrSpecifierResolver<'a> {
+  inner: &'a dyn Resolver,
+  mappings: &'a JsrSpecifierMappings,
+}
+
+impl Resolver for MappedJsrSpecifierResolver<'_> {
+  fn default_jsx_import_source(
+    &self,
+    referrer: &ModuleSpecifier,
+  ) -> Option<String> {
+    self.inner.default_jsx_import_source(referrer)
+  }
+
+  fn default_jsx_import_source_types(
+    &self,
+    referrer: &ModuleSpecifier,
+  ) -> Option<String> {
+    self.inner.default_jsx_import_source_types(referrer)
+  }
+
+  fn jsx_import_source_module(&self, referrer: &ModuleSpecifier) -> &str {
+    self.inner.jsx_import_source_module(referrer)
+  }
+
+  fn resolve(
+    &self,
+    specifier_text: &str,
+    referrer_range: &Range,
+    kind: ResolutionKind,
+  ) -> Result<ModuleSpecifier, ResolveError> {
+    let specifier = self.inner.resolve(specifier_text, referrer_range, kind)?;
+    Ok(match self.mappings.get(&specifier) {
+      Some(mapped) => mapped.clone(),
+      None => specifier,
+    })
+  }
+
+  fn resolve_types(
+    &self,
+    specifier: &ModuleSpecifier,
+  ) -> Result<Option<(ModuleSpecifier, Option<Range>)>, ResolveError> {
+    self.inner.resolve_types(specifier)
+  }
+}
+
+/// The user's `jsr:` specifier mappings stored by package name and sub path
+/// so that a mapping is found no matter what version requirement the
+/// specifier being resolved has.
+#[derive(Debug, Default)]
+struct JsrSpecifierMappings {
+  by_name_and_sub_path: HashMap<(String, Option<String>), ModuleSpecifier>,
+}
+
+impl JsrSpecifierMappings {
+  pub fn new(mappings: &HashMap<ModuleSpecifier, MappedSpecifier>) -> Self {
+    let mut by_name_and_sub_path = HashMap::new();
+    for specifier in mappings.keys() {
+      if let Some(key) = jsr_name_and_sub_path(specifier) {
+        by_name_and_sub_path.insert(key, mapped_specifier_key(specifier));
+      }
+    }
+    Self {
+      by_name_and_sub_path,
+    }
+  }
+
+  pub fn get(&self, specifier: &ModuleSpecifier) -> Option<&ModuleSpecifier> {
+    self
+      .by_name_and_sub_path
+      .get(&jsr_name_and_sub_path(specifier)?)
+  }
+}
+
+/// Scheme mapped `jsr:` specifiers are resolved to within the module graph.
+const MAPPED_JSR_SCHEME: &str = "dnt-jsr";
+
+/// Gets the specifier a mapping key has within the module graph.
+fn mapped_specifier_key(specifier: &ModuleSpecifier) -> ModuleSpecifier {
+  if specifier.scheme() != "jsr" {
+    return specifier.clone();
+  }
+  ModuleSpecifier::parse(&format!("{}:{}", MAPPED_JSR_SCHEME, specifier.path()))
+    .unwrap_or_else(|_| specifier.clone())
+}
+
+fn jsr_name_and_sub_path(
+  specifier: &ModuleSpecifier,
+) -> Option<(String, Option<String>)> {
+  if specifier.scheme() != "jsr" {
+    return None;
+  }
+  let req_ref = JsrPackageReqReference::from_specifier(specifier).ok()?;
+  Some((
+    req_ref.req().name.to_string(),
+    req_ref.sub_path().map(ToOwned::to_owned),
+  ))
+}
+
 fn format_specifiers_for_message(
   mut specifiers: Vec<&ModuleSpecifier>,
 ) -> String {
@@ -266,4 +393,79 @@ fn format_specifiers_for_message(
     .map(|s| format!("  * {}", s))
     .collect::<Vec<_>>()
     .join("\n")
+}
+
+#[cfg(test)]
+mod test {
+  use super::*;
+  use crate::PackageMappedSpecifier;
+
+  #[test]
+  fn test_mapped_specifier_key() {
+    // non-jsr specifiers keep their scheme
+    run_test("https://localhost/mod.ts", "https://localhost/mod.ts");
+    run_test("npm:package@^1.0.0", "npm:package@^1.0.0");
+    // jsr specifiers get a scheme deno_graph won't resolve itself
+    run_test("jsr:@scope/name", "dnt-jsr:@scope/name");
+    run_test(
+      "jsr:@scope/name@^1.0.0/sub",
+      "dnt-jsr:@scope/name@^1.0.0/sub",
+    );
+
+    fn run_test(specifier: &str, expected: &str) {
+      assert_eq!(
+        mapped_specifier_key(&ModuleSpecifier::parse(specifier).unwrap())
+          .as_str(),
+        expected
+      );
+    }
+  }
+
+  #[test]
+  fn test_jsr_specifier_mappings() {
+    let mappings = JsrSpecifierMappings::new(&HashMap::from([
+      (parse("jsr:@scope/name"), mapping()),
+      (parse("jsr:@scope/other@^1.0.0/sub"), mapping()),
+      (parse("https://localhost/mod.ts"), mapping()),
+    ]));
+
+    // the version requirement is ignored when matching
+    assert_eq!(
+      get(&mappings, "jsr:@scope/name"),
+      Some("dnt-jsr:@scope/name")
+    );
+    assert_eq!(
+      get(&mappings, "jsr:@scope/name@^1.0.0"),
+      Some("dnt-jsr:@scope/name")
+    );
+    assert_eq!(
+      get(&mappings, "jsr:@scope/other/sub"),
+      Some("dnt-jsr:@scope/other@^1.0.0/sub")
+    );
+    // ...but the sub path is not
+    assert_eq!(get(&mappings, "jsr:@scope/name/sub"), None);
+    assert_eq!(get(&mappings, "jsr:@scope/other"), None);
+    assert_eq!(get(&mappings, "jsr:@scope/not-mapped"), None);
+    assert_eq!(get(&mappings, "https://localhost/mod.ts"), None);
+
+    fn get<'a>(
+      mappings: &'a JsrSpecifierMappings,
+      specifier: &str,
+    ) -> Option<&'a str> {
+      mappings.get(&parse(specifier)).map(ModuleSpecifier::as_str)
+    }
+
+    fn parse(specifier: &str) -> ModuleSpecifier {
+      ModuleSpecifier::parse(specifier).unwrap()
+    }
+
+    fn mapping() -> MappedSpecifier {
+      MappedSpecifier::Package(PackageMappedSpecifier {
+        name: "package".to_string(),
+        version: None,
+        sub_path: None,
+        peer_dependency: false,
+      })
+    }
+  }
 }
