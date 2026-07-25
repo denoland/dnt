@@ -122,12 +122,20 @@ impl Mappings {
 
     // add the redirects in the graph to the mappings
     for (key, value) in module_graph.redirects() {
-      if !mappings.contains_key(key) {
-        if let Some(path) = mappings.get(value).map(ToOwned::to_owned) {
-          mappings.insert(key.clone(), path);
-        } else {
-          panic!("dnt bug - Could not find the mapping for {}", value);
-        }
+      if mappings.contains_key(key) {
+        continue;
+      }
+      if let Some(path) = mappings.get(value).map(ToOwned::to_owned) {
+        mappings.insert(key.clone(), path);
+        continue;
+      }
+      // the graph is seeded with the lockfile's redirects, so it may contain
+      // redirects for modules that aren't part of this build, and specifiers
+      // mapped to a package have no file in the output
+      let has_output_file =
+        module_graph.try_get(value).is_some() && !specifiers.has_mapped(value);
+      if has_output_file {
+        panic!("dnt bug - Could not find the mapping for {}", value);
       }
     }
 

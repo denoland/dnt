@@ -12,7 +12,6 @@ const versions = {
   domExceptionShim: "^4.0.0",
   domExceptionShimTypes: "^4.0.0",
   promptsShim: "~0.1.0",
-  timersShim: "~0.1.0",
   weakRefSham: "~0.1.0",
   undici: "^6.0.0",
   picocolors: "^1.0.0",
@@ -90,32 +89,46 @@ Deno.test("should build test project - basic", async () => {
       `/src/
 /esm/mod.test.js
 /esm/mod.test.d.ts
+/esm/mod.test.d.ts.map
 /script/mod.test.js
 /script/mod.test.d.ts
+/script/mod.test.d.ts.map
 /esm/deps/deno.land/std@0.181.0/fmt/colors.js
 /esm/deps/deno.land/std@0.181.0/fmt/colors.d.ts
+/esm/deps/deno.land/std@0.181.0/fmt/colors.d.ts.map
 /script/deps/deno.land/std@0.181.0/fmt/colors.js
 /script/deps/deno.land/std@0.181.0/fmt/colors.d.ts
+/script/deps/deno.land/std@0.181.0/fmt/colors.d.ts.map
 /esm/deps/deno.land/std@0.181.0/testing/_diff.js
 /esm/deps/deno.land/std@0.181.0/testing/_diff.d.ts
+/esm/deps/deno.land/std@0.181.0/testing/_diff.d.ts.map
 /script/deps/deno.land/std@0.181.0/testing/_diff.js
 /script/deps/deno.land/std@0.181.0/testing/_diff.d.ts
+/script/deps/deno.land/std@0.181.0/testing/_diff.d.ts.map
 /esm/deps/deno.land/std@0.181.0/testing/_format.js
 /esm/deps/deno.land/std@0.181.0/testing/_format.d.ts
+/esm/deps/deno.land/std@0.181.0/testing/_format.d.ts.map
 /script/deps/deno.land/std@0.181.0/testing/_format.js
 /script/deps/deno.land/std@0.181.0/testing/_format.d.ts
+/script/deps/deno.land/std@0.181.0/testing/_format.d.ts.map
 /esm/deps/deno.land/std@0.181.0/testing/asserts.js
 /esm/deps/deno.land/std@0.181.0/testing/asserts.d.ts
+/esm/deps/deno.land/std@0.181.0/testing/asserts.d.ts.map
 /script/deps/deno.land/std@0.181.0/testing/asserts.js
 /script/deps/deno.land/std@0.181.0/testing/asserts.d.ts
+/script/deps/deno.land/std@0.181.0/testing/asserts.d.ts.map
 /esm/_dnt.test_polyfills.js
 /esm/_dnt.test_polyfills.d.ts
+/esm/_dnt.test_polyfills.d.ts.map
 /script/_dnt.test_polyfills.js
 /script/_dnt.test_polyfills.d.ts
+/script/_dnt.test_polyfills.d.ts.map
 /esm/_dnt.test_shims.js
 /esm/_dnt.test_shims.d.ts
+/esm/_dnt.test_shims.d.ts.map
 /script/_dnt.test_shims.js
 /script/_dnt.test_shims.d.ts
+/script/_dnt.test_shims.d.ts.map
 /test_runner.cjs
 yarn.lock
 pnpm-lock.yaml
@@ -169,18 +182,25 @@ Deno.test("should build test project without esm", async () => {
       `/src/
 /script/mod.test.js
 /types/mod.test.d.ts
+/types/mod.test.d.ts.map
 /script/deps/deno.land/std@0.181.0/fmt/colors.js
 /types/deps/deno.land/std@0.181.0/fmt/colors.d.ts
+/types/deps/deno.land/std@0.181.0/fmt/colors.d.ts.map
 /script/deps/deno.land/std@0.181.0/testing/_diff.js
 /types/deps/deno.land/std@0.181.0/testing/_diff.d.ts
+/types/deps/deno.land/std@0.181.0/testing/_diff.d.ts.map
 /script/deps/deno.land/std@0.181.0/testing/_format.js
 /types/deps/deno.land/std@0.181.0/testing/_format.d.ts
+/types/deps/deno.land/std@0.181.0/testing/_format.d.ts.map
 /script/deps/deno.land/std@0.181.0/testing/asserts.js
 /types/deps/deno.land/std@0.181.0/testing/asserts.d.ts
+/types/deps/deno.land/std@0.181.0/testing/asserts.d.ts.map
 /script/_dnt.test_polyfills.js
 /types/_dnt.test_polyfills.d.ts
+/types/_dnt.test_polyfills.d.ts.map
 /script/_dnt.test_shims.js
 /types/_dnt.test_shims.d.ts
+/types/_dnt.test_shims.d.ts.map
 /test_runner.cjs
 yarn.lock
 pnpm-lock.yaml
@@ -551,45 +571,59 @@ Deno.test("should build with source maps", async () => {
       `/esm/mod.test.js
 /esm/mod.test.js.map
 /esm/mod.test.d.ts
+/esm/mod.test.d.ts.map
 /script/mod.test.js
 /script/mod.test.js.map
 /script/mod.test.d.ts
+/script/mod.test.d.ts.map
 /esm/deps/deno.land/std@0.181.0/fmt/colors.js
 /esm/deps/deno.land/std@0.181.0/fmt/colors.js.map
 /esm/deps/deno.land/std@0.181.0/fmt/colors.d.ts
+/esm/deps/deno.land/std@0.181.0/fmt/colors.d.ts.map
 /script/deps/deno.land/std@0.181.0/fmt/colors.js
 /script/deps/deno.land/std@0.181.0/fmt/colors.js.map
 /script/deps/deno.land/std@0.181.0/fmt/colors.d.ts
+/script/deps/deno.land/std@0.181.0/fmt/colors.d.ts.map
 /esm/deps/deno.land/std@0.181.0/testing/_diff.js
 /esm/deps/deno.land/std@0.181.0/testing/_diff.js.map
 /esm/deps/deno.land/std@0.181.0/testing/_diff.d.ts
+/esm/deps/deno.land/std@0.181.0/testing/_diff.d.ts.map
 /script/deps/deno.land/std@0.181.0/testing/_diff.js
 /script/deps/deno.land/std@0.181.0/testing/_diff.js.map
 /script/deps/deno.land/std@0.181.0/testing/_diff.d.ts
+/script/deps/deno.land/std@0.181.0/testing/_diff.d.ts.map
 /esm/deps/deno.land/std@0.181.0/testing/_format.js
 /esm/deps/deno.land/std@0.181.0/testing/_format.js.map
 /esm/deps/deno.land/std@0.181.0/testing/_format.d.ts
+/esm/deps/deno.land/std@0.181.0/testing/_format.d.ts.map
 /script/deps/deno.land/std@0.181.0/testing/_format.js
 /script/deps/deno.land/std@0.181.0/testing/_format.js.map
 /script/deps/deno.land/std@0.181.0/testing/_format.d.ts
+/script/deps/deno.land/std@0.181.0/testing/_format.d.ts.map
 /esm/deps/deno.land/std@0.181.0/testing/asserts.js
 /esm/deps/deno.land/std@0.181.0/testing/asserts.js.map
 /esm/deps/deno.land/std@0.181.0/testing/asserts.d.ts
+/esm/deps/deno.land/std@0.181.0/testing/asserts.d.ts.map
 /script/deps/deno.land/std@0.181.0/testing/asserts.js
 /script/deps/deno.land/std@0.181.0/testing/asserts.js.map
 /script/deps/deno.land/std@0.181.0/testing/asserts.d.ts
+/script/deps/deno.land/std@0.181.0/testing/asserts.d.ts.map
 /esm/_dnt.test_polyfills.js
 /esm/_dnt.test_polyfills.js.map
 /esm/_dnt.test_polyfills.d.ts
+/esm/_dnt.test_polyfills.d.ts.map
 /script/_dnt.test_polyfills.js
 /script/_dnt.test_polyfills.js.map
 /script/_dnt.test_polyfills.d.ts
+/script/_dnt.test_polyfills.d.ts.map
 /esm/_dnt.test_shims.js
 /esm/_dnt.test_shims.js.map
 /esm/_dnt.test_shims.d.ts
+/esm/_dnt.test_shims.d.ts.map
 /script/_dnt.test_shims.js
 /script/_dnt.test_shims.js.map
 /script/_dnt.test_shims.d.ts
+/script/_dnt.test_shims.d.ts.map
 /test_runner.cjs
 yarn.lock
 pnpm-lock.yaml
@@ -656,9 +690,11 @@ Deno.test("should build with package mappings", async () => {
 /esm/mod.test.js
 /script/mod.test.js
 /types/mod.test.d.ts
+/types/mod.test.d.ts.map
 /esm/_dnt.test_shims.js
 /script/_dnt.test_shims.js
 /types/_dnt.test_shims.d.ts
+/types/_dnt.test_shims.d.ts.map
 /test_runner.cjs
 yarn.lock
 pnpm-lock.yaml
@@ -744,7 +780,6 @@ Deno.test("should build shim project with everything enabled", async () => {
       "@deno/shim-crypto": versions.cryptoShim,
       "@deno/shim-deno": versions.denoShim,
       "@deno/shim-prompts": versions.promptsShim,
-      "@deno/shim-timers": versions.timersShim,
       "domexception": versions.domExceptionShim,
       "undici": versions.undici,
     });
@@ -804,7 +839,6 @@ Deno.test("should build shim project when using node-fetch", async () => {
       "@deno/shim-crypto": versions.cryptoShim,
       "@deno/shim-deno": versions.denoShim,
       "@deno/shim-prompts": versions.promptsShim,
-      "@deno/shim-timers": versions.timersShim,
       "domexception": versions.domExceptionShim,
       "undici": versions.undici,
       "node-fetch": "~3.1.0",
@@ -817,8 +851,6 @@ import { crypto } from "@deno/shim-crypto";
 export { crypto, type Crypto, type SubtleCrypto, type AlgorithmIdentifier, type Algorithm, type RsaOaepParams, type BufferSource, type AesCtrParams, type AesCbcParams, type AesGcmParams, type CryptoKey, type KeyAlgorithm, type KeyType, type KeyUsage, type EcdhKeyDeriveParams, type HkdfParams, type HashAlgorithmIdentifier, type Pbkdf2Params, type AesDerivedKeyParams, type HmacImportParams, type JsonWebKey, type RsaOtherPrimesInfo, type KeyFormat, type RsaHashedKeyGenParams, type RsaKeyGenParams, type BigInteger, type EcKeyGenParams, type NamedCurve, type CryptoKeyPair, type AesKeyGenParams, type HmacKeyGenParams, type RsaHashedImportParams, type EcKeyImportParams, type AesKeyAlgorithm, type RsaPssParams, type EcdsaParams } from "@deno/shim-crypto";
 import { alert, confirm, prompt } from "@deno/shim-prompts";
 export { alert, confirm, prompt } from "@deno/shim-prompts";
-import { setInterval, setTimeout } from "@deno/shim-timers";
-export { setInterval, setTimeout } from "@deno/shim-timers";
 import { default as DOMException } from "domexception";
 export { default as DOMException } from "domexception";
 import { File, FormData, Headers, Request, Response } from "undici";
@@ -835,8 +867,6 @@ const dntGlobals = {
   alert,
   confirm,
   prompt,
-  setInterval,
-  setTimeout,
   DOMException,
   File,
   FormData,
@@ -1189,12 +1219,16 @@ Deno.test("should build jsr project", async () => {
       `/src/
 /esm/mod.test.js
 /esm/mod.test.d.ts
+/esm/mod.test.d.ts.map
 /script/mod.test.js
 /script/mod.test.d.ts
+/script/mod.test.d.ts.map
 /esm/_dnt.test_shims.js
 /esm/_dnt.test_shims.d.ts
+/esm/_dnt.test_shims.d.ts.map
 /script/_dnt.test_shims.js
 /script/_dnt.test_shims.d.ts
+/script/_dnt.test_shims.d.ts.map
 /test_runner.cjs
 yarn.lock
 pnpm-lock.yaml
@@ -1347,7 +1381,6 @@ async function runTest(
 function getAllShimOptions(value: ShimValue): ShimOptions {
   return {
     deno: value,
-    timers: value,
     prompts: value,
     blob: value,
     crypto: value,

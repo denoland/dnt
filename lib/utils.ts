@@ -106,5 +106,6 @@ export function valueToUrl(value: string) {
 }
 
 export function getDntVersion(url = import.meta.url) {
-  return /\/dnt@([0-9]+\.[0-9]+\.[0-9]+)\//.exec(url)?.[1] ?? "dev";
+  return /\/(?:dnt@|@deno\/dnt\/)([0-9]+\.[0-9]+\.[0-9]+)\//.exec(url)?.[1] ??
+    "dev";
 }

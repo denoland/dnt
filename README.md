@@ -208,16 +208,15 @@ dntShim.Deno.readTextFileSync(...);
 If you want a shim to only be used in your test code as a dev dependency, then
 specify `"dev"` for the option.
 
-For example, to use the `Deno` namespace only for development and the
-`setTimeout` and `setInterval` browser/Deno compatible shims in the distributed
-code, you would do:
+For example, to use the `Deno` namespace only for development and the `crypto`
+shim in the distributed code, you would do:
 
 ```ts
 await build({
   // ...etc...
   shims: {
     deno: "dev",
-    timers: true,
+    crypto: true,
   },
 });
 ```
@@ -239,8 +238,6 @@ Set any of these properties to `true` (distribution and test) or `"dev"` (test
 only) to use them.
 
 - `deno` - Shim the `Deno` namespace.
-- `timers` - Shim the global `setTimeout` and `setInterval` functions with Deno
-  and browser compatible versions.
 - `prompts` - Shim the global `confirm`, `alert`, and `prompt` functions.
 - `blob` - Shim the `Blob` global with the one from the `"buffer"` module.
 - `crypto` - Shim the `crypto` global.
@@ -321,7 +318,7 @@ await build({
     }],
     // shims to only use in the tests
     customDev: [{
-      // this is what `timers: "dev"` does internally
+      // for example, shim `setTimeout` and `setInterval` in the tests only
       package: {
         name: "@deno/shim-timers",
         version: "~0.1.0",

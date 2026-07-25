@@ -834,10 +834,11 @@ async fn transform_parse_error() {
   assert_eq!(
     err_message.to_string(),
     concat!(
-      "The module's source code could not be parsed: Expected ';', '}' or <eof> at http://localhost/declarations.d.ts:1:6\n",
-      "\n",
-      "  test test test\n",
-      "       ~~~~",
+      "SyntaxError: Expected ';', '}' or <eof>\n",
+      "  |\n",
+      "1 | test test test\n",
+      "  |      ~~~~\n",
+      "    at http://localhost/declarations.d.ts:1:6",
     ),
   );
 }
@@ -1164,6 +1165,45 @@ async fn transform_specifier_mappings() {
         peer_dependency: false,
       }
     ]
+  );
+}
+
+#[tokio::test]
+async fn transform_specifier_mapping_of_redirected_specifier() {
+  let result = TestBuilder::new()
+    .with_loader(|loader| {
+      loader
+        .add_local_file(
+          "/mod.ts",
+          "import * as remote from 'http://localhost/mod.ts';",
+        )
+        .add_remote_redirect(
+          "http://localhost/mod.ts",
+          "http://localhost/redirected/mod.ts",
+        )
+        .add_remote_file("http://localhost/redirected/mod.ts", "");
+    })
+    .add_package_specifier_mapping(
+      "http://localhost/redirected/mod.ts",
+      "remote-module",
+      Some("1.0.0"),
+      None,
+    )
+    .transform()
+    .await
+    .unwrap();
+
+  assert_files!(
+    result.main.files,
+    &[("mod.ts", "import * as remote from 'remote-module';")]
+  );
+  assert_eq!(
+    result.main.dependencies,
+    &[Dependency {
+      name: "remote-module".to_string(),
+      version: "1.0.0".to_string(),
+      peer_dependency: false,
+    }]
   );
 }
 
@@ -2144,6 +2184,105 @@ async fn npm_specifier() {
       "import * as pkg from 'using-statement'; console.log(pkg);"
     )]
   );
+}
+
+#[tokio::test]
+async fn transform_uses_lockfile_remote_checksum() {
+  // a deno.lock with a non-matching remote checksum should cause an
+  // integrity error, proving the lockfile is being used
+  let result = TestBuilder::new()
+    .with_loader(|loader| {
+      loader
+        .add_local_file("/deno.json", "{}")
+        .add_local_file(
+          "/deno.lock",
+          concat!(
+            "{\n",
+            "  \"version\": \"5\",\n",
+            "  \"remote\": {\n",
+            "    \"https://localhost/mod.ts\": \"0000000000000000000000000000000000000000000000000000000000000000\"\n",
+            "  }\n",
+            "}\n"
+          ),
+        )
+        .add_local_file("/mod.ts", "import 'https://localhost/mod.ts';")
+        .add_remote_file("https://localhost/mod.ts", "console.log(1);");
+    })
+    .transform()
+    .await
+    .err()
+    .unwrap();
+
+  assert!(
+    result
+      .to_string()
+      .to_lowercase()
+      .contains("integrity check failed"),
+    "unexpected error: {:#}",
+    result
+  );
+}
+
+#[tokio::test]
+async fn transform_uses_lockfile_matching_remote_checksum() {
+  // a deno.lock with a matching remote checksum should transform successfully
+  let result = TestBuilder::new()
+    .with_loader(|loader| {
+      loader
+        .add_local_file("/deno.json", "{}")
+        .add_local_file(
+          "/deno.lock",
+          concat!(
+            "{\n",
+            "  \"version\": \"5\",\n",
+            "  \"remote\": {\n",
+            "    \"https://localhost/mod.ts\": \"35c146f76e129477c64061bc84511e1090f3d4d8059713e6663dd4b35b1f7642\"\n",
+            "  }\n",
+            "}\n"
+          ),
+        )
+        .add_local_file("/mod.ts", "import 'https://localhost/mod.ts';")
+        .add_remote_file("https://localhost/mod.ts", "console.log(1);");
+    })
+    .transform()
+    .await
+    .unwrap();
+
+  assert_files!(
+    result.main.files,
+    &[
+      ("mod.ts", "import './deps/localhost/mod.js';"),
+      ("deps/localhost/mod.ts", "console.log(1);"),
+    ]
+  );
+}
+
+#[tokio::test]
+async fn transform_ignores_unrelated_lockfile_redirects() {
+  // the lockfile is for the whole project, so it may have redirects for
+  // modules that aren't reachable from the entry points being transformed
+  let result = TestBuilder::new()
+    .with_loader(|loader| {
+      loader
+        .add_local_file("/deno.json", "{}")
+        .add_local_file(
+          "/deno.lock",
+          concat!(
+            "{\n",
+            "  \"version\": \"5\",\n",
+            "  \"redirects\": {\n",
+            "    \"https://localhost/unrelated.ts\": \"https://localhost/unrelated/mod.ts\"\n",
+            "  }\n",
+            "}\n"
+          ),
+        )
+        .add_local_file("/mod.ts", "console.log(1);");
+    })
+    .transform()
+    .await
+    .unwrap();
+
+  assert_files!(result.main.files, &[("mod.ts", "console.log(1);")]);
 }
 
 fn get_shim_file_text(mut text: String) -> String {

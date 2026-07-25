@@ -8,6 +8,7 @@ export function getNpmIgnoreText(options: {
   inlineSources?: boolean;
   testFiles: OutputFile[];
   declaration: "separate" | "inline" | false;
+  declarationMap: boolean | undefined;
   includeScriptModule: boolean | undefined;
   includeEsModule: boolean | undefined;
 }) {
@@ -35,6 +36,9 @@ export function getNpmIgnoreText(options: {
         }
         if (options.declaration === "inline") {
           yield `/esm/${dtsFilePath}`;
+          if (options.declarationMap) {
+            yield `/esm/${dtsFilePath}.map`;
+          }
         }
       }
       if (options.includeScriptModule) {
@@ -45,10 +49,16 @@ export function getNpmIgnoreText(options: {
         }
         if (options.declaration === "inline") {
           yield `/script/${dtsFilePath}`;
+          if (options.declarationMap) {
+            yield `/script/${dtsFilePath}.map`;
+          }
         }
       }
       if (options.declaration === "separate") {
         yield `/types/${dtsFilePath}`;
+        if (options.declarationMap) {
+          yield `/types/${dtsFilePath}.map`;
+        }
       }
     }
     yield "/test_runner.cjs";
