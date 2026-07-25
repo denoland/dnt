@@ -76,7 +76,6 @@ export interface TransformOptions {
   importMap?: string;
   configFile?: string;
   cwd: string;
-  useGlobalThisShim?: boolean;
 }
 
 /** Dependency in a package.json file. */

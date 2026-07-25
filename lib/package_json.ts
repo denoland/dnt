@@ -15,8 +15,6 @@ export interface GetPackageJsonOptions {
   includeTsLib: boolean | undefined;
   testEnabled: boolean | undefined;
   shims: ShimOptions;
-  testColor?: boolean;
-  testRunner?: boolean;
 }
 
 export function getPackageJson({
@@ -29,8 +27,6 @@ export function getPackageJson({
   includeTsLib,
   testEnabled,
   shims,
-  testColor = true,
-  testRunner = true,
 }: GetPackageJsonOptions): Record<string, unknown> {
   const finalEntryPoints = transformOutput
     .main.entryPoints.map((e, i) => ({
@@ -69,7 +65,7 @@ export function getPackageJson({
   };
   const testDevDependencies = testEnabled
     ? ({
-      ...(testColor && !Object.keys(dependencies).includes("picocolors")
+      ...(!Object.keys(dependencies).includes("picocolors")
         ? {
           "picocolors": "^1.0.0",
         }
@@ -92,7 +88,7 @@ export function getPackageJson({
     // override with specified dependencies
     ...(packageJsonObj.devDependencies ?? {}),
   };
-  const scripts = testEnabled && testRunner
+  const scripts = testEnabled
     ? ({
       test: "node test_runner.js",
       // override with specified scripts

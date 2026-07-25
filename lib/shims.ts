@@ -41,12 +41,6 @@ export interface ShimOptions {
   weakRef?: ShimValue;
   /** Shim `WebSocket` with the `ws` package (https://www.npmjs.com/package/ws). */
   webSocket?: boolean | "dev";
-  /** Shim `globalThis` with a proxy that provides Deno globals. */
-  globalThis?: ShimValue;
-  /** Enable colored test output using picocolors. */
-  testColor?: boolean;
-  /** Enable test runner script in package.json. */
-  testRunner?: boolean;
   /** Custom shims to use. */
   custom?: Shim[];
   /** Custom shims to use only for the test code. */
@@ -60,11 +54,7 @@ export interface DenoShimOptions {
   test: boolean | "dev";
 }
 
-export function shimOptionsToTransformShims(options: ShimOptions): {
-  shims: Shim[];
-  testShims: Shim[];
-  useGlobalThisShim: boolean;
-} {
+export function shimOptionsToTransformShims(options: ShimOptions) {
   const shims: Shim[] = [];
   const testShims: Shim[] = [];
 
@@ -89,12 +79,9 @@ export function shimOptionsToTransformShims(options: ShimOptions): {
     testShims.push(...options.customDev);
   }
 
-  const useGlobalThisShim = options.globalThis !== false;
-
   return {
     shims,
     testShims,
-    useGlobalThisShim,
   };
 
   function add(option: boolean | "dev" | undefined, getShim: () => Shim) {
