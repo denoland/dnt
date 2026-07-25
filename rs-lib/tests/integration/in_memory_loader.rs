@@ -24,6 +24,7 @@ type RemoteFileResult = Result<(RemoteFileText, RemoteFileHeaders), String>;
 pub struct InMemoryLoader {
   pub sys: InMemorySys,
   remote_files: HashMap<ModuleSpecifier, RemoteFileResult>,
+  remote_redirects: HashMap<ModuleSpecifier, String>,
 }
 
 impl InMemoryLoader {
@@ -38,6 +39,7 @@ impl InMemoryLoader {
     Self {
       sys,
       remote_files: HashMap::new(),
+      remote_redirects: HashMap::new(),
     }
   }
 
@@ -87,6 +89,18 @@ impl InMemoryLoader {
     self
   }
 
+  pub fn add_remote_redirect(
+    &mut self,
+    specifier: impl AsRef<str>,
+    location: impl AsRef<str>,
+  ) -> &mut Self {
+    self.remote_redirects.insert(
+      ModuleSpecifier::parse(specifier.as_ref()).unwrap(),
+      location.as_ref().to_string(),
+    );
+    self
+  }
+
   pub fn add_remote_file_with_error(
     &mut self,
     specifier: impl AsRef<str>,
@@ -118,6 +132,12 @@ impl deno_cache_dir::file_fetcher::HttpClient for InMemoryLoader {
     specifier: &ModuleSpecifier,
     _headers: HeaderMap,
   ) -> Result<SendResponse, SendError> {
+    if let Some(location) = self.remote_redirects.get(specifier) {
+      return Ok(SendResponse::Redirect(to_headers(HashMap::from([(
+        "location".to_string(),
+        location.clone(),
+      )]))));
+    }
     let result = self
       .remote_files
       .get(&specifier)
