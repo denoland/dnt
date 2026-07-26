@@ -425,6 +425,47 @@ export function fetch(/* etc... */) {
 
 This is useful in situations where you want to implement your own shim.
 
+### Type Declarations from a CDN
+
+When a remote module is mapped to an npm package and the cdn serving it
+specifies its type declarations with an `X-TypeScript-Types` header (esm.sh and
+skypack do this), the package providing those declarations is added to the dev
+dependencies.
+
+For example, this import:
+
+```ts
+import { parseSVG } from "https://esm.sh/svg-path-parser@1.1.0";
+```
+
+...outputs a package.json with:
+
+```jsonc
+{
+  "dependencies": {
+    "svg-path-parser": "1.1.0"
+  },
+  "devDependencies": {
+    "@types/svg-path-parser": "~1.1.6"
+  }
+}
+```
+
+If the declarations show up in your package's public api, move the types package
+to the dependencies by specifying it in the build options:
+
+```ts
+await build({
+  // ...etc...
+  package: {
+    // ...etc...
+    dependencies: {
+      "@types/svg-path-parser": "~1.1.6",
+    },
+  },
+});
+```
+
 ### Specifier to npm Package Mappings
 
 In most cases, dnt won't know about an npm package being available for one of

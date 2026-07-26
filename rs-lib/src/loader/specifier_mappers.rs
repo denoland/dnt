@@ -8,6 +8,25 @@ use crate::PackageMappedSpecifier;
 
 pub trait SpecifierMapper {
   fn map(&self, specifier: &ModuleSpecifier) -> Option<PackageMappedSpecifier>;
+
+  /// Maps a declaration file specifier to the npm package that provides it
+  /// (ex. an `@types/` package served by a cdn).
+  fn map_types(
+    &self,
+    _specifier: &ModuleSpecifier,
+  ) -> Option<PackageMappedSpecifier> {
+    None
+  }
+}
+
+/// Gets the npm package that provides the declaration file at the specifier.
+pub fn get_types_package_for_specifier(
+  mappers: &[Box<dyn SpecifierMapper>],
+  specifier: &ModuleSpecifier,
+) -> Option<PackageMappedSpecifier> {
+  mappers
+    .iter()
+    .find_map(|mapper| mapper.map_types(specifier))
 }
 
 pub fn get_all_specifier_mappers() -> Vec<Box<dyn SpecifierMapper>> {
@@ -95,6 +114,14 @@ impl SpecifierMapper for SkypackMapper {
       peer_dependency: false,
     })
   }
+
+  fn map_types(
+    &self,
+    specifier: &ModuleSpecifier,
+  ) -> Option<PackageMappedSpecifier> {
+    let captures = SKYPACK_MAPPING_RE.captures(specifier.as_str())?;
+    to_types_package(&captures)
+  }
 }
 
 struct EsmShMapper;
@@ -134,6 +161,43 @@ impl SpecifierMapper for EsmShMapper {
       peer_dependency: false,
     })
   }
+
+  fn map_types(
+    &self,
+    specifier: &ModuleSpecifier,
+  ) -> Option<PackageMappedSpecifier> {
+    if specifier.path().starts_with("/gh/")
+      || specifier.path().starts_with("/jsr/")
+    {
+      return None;
+    }
+    let captures = ESMSH_MAPPING_RE.captures(specifier.as_str())?;
+    to_types_package(&captures)
+  }
+}
+
+/// Creates a package for a declaration file url captured by one of the
+/// cdn regexes (ex. `https://esm.sh/@types/node@22.0.0/index.d.ts`).
+fn to_types_package(
+  captures: &regex::Captures,
+) -> Option<PackageMappedSpecifier> {
+  let sub_path = captures.get(4)?.as_str().to_lowercase();
+  if !sub_path.ends_with(".d.ts") && !sub_path.ends_with(".d.mts") {
+    return None;
+  }
+  Some(PackageMappedSpecifier {
+    name: captures.get(2).unwrap().as_str().to_string(),
+    version: Some(
+      captures
+        .get(3)
+        .unwrap()
+        .as_str()
+        .trim_start_matches('v')
+        .to_string(),
+    ),
+    sub_path: None,
+    peer_dependency: false,
+  })
 }
 
 struct DenoStdNodeSpecifierMapper {

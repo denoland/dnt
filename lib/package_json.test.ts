@@ -32,6 +32,7 @@ Deno.test("single entrypoint", () => {
         }],
       },
       warnings: [],
+      typesDependencies: [],
     },
     entryPoints: [{
       name: ".",
@@ -252,6 +253,7 @@ Deno.test("exports have default last", () => {
         dependencies: [],
       },
       warnings: [],
+      typesDependencies: [],
     },
     entryPoints: [
       {
@@ -299,6 +301,7 @@ Deno.test("multiple entrypoints", () => {
         dependencies: [],
       },
       warnings: [],
+      typesDependencies: [],
     },
     entryPoints: [{
       name: ".",
@@ -375,6 +378,7 @@ Deno.test("binary entrypoints", () => {
         dependencies: [],
       },
       warnings: [],
+      typesDependencies: [],
     },
     entryPoints: [{
       name: ".",
@@ -457,6 +461,7 @@ Deno.test("peer dependencies", () => {
         }],
       },
       warnings: [],
+      typesDependencies: [],
     },
     entryPoints: [{
       name: ".",
@@ -519,4 +524,59 @@ Deno.test("peer dependencies", () => {
       2,
     ),
   );
+});
+
+Deno.test("types dependencies", () => {
+  const props: GetPackageJsonOptions = {
+    transformOutput: {
+      main: {
+        files: [],
+        dependencies: [{
+          name: "svg-path-parser",
+          version: "1.1.0",
+        }, {
+          name: "other",
+          version: "^1.0.0",
+        }],
+        entryPoints: ["mod.ts"],
+      },
+      test: {
+        entryPoints: [],
+        files: [],
+        dependencies: [],
+      },
+      warnings: [],
+      typesDependencies: [{
+        name: "@types/svg-path-parser",
+        version: "~1.1.6",
+      }, {
+        // a types package that's already a dependency is not duplicated
+        name: "other",
+        version: "^1.0.0",
+      }],
+    },
+    entryPoints: [{
+      name: ".",
+      path: "./mod.ts",
+    }],
+    package: {
+      name: "package",
+      version: "0.1.0",
+    },
+    testEnabled: false,
+    includeEsModule: true,
+    includeScriptModule: true,
+    includeDeclarations: true,
+    includeTsLib: false,
+    shims: {},
+  };
+
+  const packageJson = getPackageJson(props);
+  assertEquals(packageJson.dependencies, {
+    "svg-path-parser": "1.1.0",
+    "other": "^1.0.0",
+  });
+  assertEquals(packageJson.devDependencies, {
+    "@types/svg-path-parser": "~1.1.6",
+  });
 });

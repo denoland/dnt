@@ -879,6 +879,116 @@ async fn transform_typescript_types_in_headers() {
 }
 
 #[tokio::test]
+async fn transform_types_package_from_types_header_of_mapped_module() {
+  let result = TestBuilder::new()
+    .with_loader(|loader| {
+      loader
+        .add_local_file(
+          "/mod.ts",
+          "export * from 'https://esm.sh/svg-path-parser@1.1.0';",
+        )
+        .add_remote_file_with_headers(
+          "https://esm.sh/svg-path-parser@1.1.0",
+          "export function parseSVG() {}",
+          &[(
+            "x-typescript-types",
+            "https://esm.sh/@types/svg-path-parser@~1.1.6/index.d.ts",
+          )],
+        );
+    })
+    .transform()
+    .await
+    .unwrap();
+
+  assert_files!(
+    result.main.files,
+    &[("mod.ts", "export * from 'svg-path-parser';")]
+  );
+  assert_eq!(
+    result.main.dependencies,
+    &[Dependency {
+      name: "svg-path-parser".to_string(),
+      version: "1.1.0".to_string(),
+      peer_dependency: false,
+    }]
+  );
+  // the declaration files are provided by an npm package, so it's
+  // added to the dev dependencies instead of being downloaded
+  assert_eq!(
+    result.types_dependencies,
+    &[Dependency {
+      name: "@types/svg-path-parser".to_string(),
+      version: "~1.1.6".to_string(),
+      peer_dependency: false,
+    }]
+  );
+}
+
+#[tokio::test]
+async fn transform_types_package_from_deno_types_of_mapped_module() {
+  let result = TestBuilder::new()
+    .with_loader(|loader| {
+      loader
+        .add_local_file(
+          "/mod.ts",
+          "// @deno-types='https://esm.sh/@types/svg-path-parser@1.1.3/index.d.ts'
+export * from 'https://esm.sh/svg-path-parser@1.1.0';",
+        )
+        .add_remote_file(
+          "https://esm.sh/svg-path-parser@1.1.0",
+          "export function parseSVG() {}",
+        )
+        .add_remote_file(
+          "https://esm.sh/@types/svg-path-parser@1.1.3/index.d.ts",
+          "export declare function parseSVG(): void;",
+        );
+    })
+    .transform()
+    .await
+    .unwrap();
+
+  // the declaration file is provided by the types package, so it's
+  // not included in the output
+  assert_files!(
+    result.main.files,
+    &[(
+      "mod.ts",
+      "
+export * from 'svg-path-parser';"
+    )]
+  );
+  assert_eq!(
+    result.types_dependencies,
+    &[Dependency {
+      name: "@types/svg-path-parser".to_string(),
+      version: "1.1.3".to_string(),
+      peer_dependency: false,
+    }]
+  );
+}
+
+#[tokio::test]
+async fn transform_no_types_package_for_mapped_module_without_types() {
+  let result = TestBuilder::new()
+    .with_loader(|loader| {
+      loader
+        .add_local_file(
+          "/mod.ts",
+          "export * from 'https://esm.sh/svg-path-parser@1.1.0';",
+        )
+        .add_remote_file(
+          "https://esm.sh/svg-path-parser@1.1.0",
+          "export function parseSVG() {}",
+        );
+    })
+    .transform()
+    .await
+    .unwrap();
+
+  assert_eq!(result.types_dependencies, &[]);
+}
+
+#[tokio::test]
 async fn transform_typescript_types_in_deno_types() {
   let result = TestBuilder::new()
     .with_loader(|loader| {

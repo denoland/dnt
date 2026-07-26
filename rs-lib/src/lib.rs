@@ -15,6 +15,8 @@ use analyze::get_top_level_decls;
 use anyhow::Context;
 use anyhow::Result;
 
+use crate::loader::get_all_specifier_mappers;
+use crate::loader::get_types_package_for_specifier;
 use analyze::get_ignore_line_indexes;
 use anyhow::bail;
 use deno_ast::apply_text_changes;
@@ -106,6 +108,9 @@ pub struct TransformOutput {
   /// This is `None` when no config file was found, when one was explicitly
   /// provided, or when auto-discovery is disabled.
   pub discovered_config_file: Option<PathBuf>,
+  /// Packages that provide the type declarations of a mapped dependency
+  /// (ex. an `@types/` package specified by an `X-TypeScript-Types` header).
+  pub types_dependencies: Vec<Dependency>,
 }
 
 #[cfg_attr(feature = "serialization", derive(serde::Serialize))]
@@ -448,8 +453,9 @@ pub async fn transform(
     .await?
     .cloned();
 
+  let file_fetcher = Rc::new(file_fetcher);
   let loader = Rc::new(DenoGraphLoader::new(
-    Rc::new(file_fetcher),
+    file_fetcher.clone(),
     resolver_factory
       .workspace_factory()
       .global_http_cache()?
@@ -505,6 +511,8 @@ pub async fn transform(
       .collect();
 
   let mut warnings = get_declaration_warnings(&specifiers);
+  let types_dependencies =
+    get_types_dependencies(&specifiers, &file_fetcher).await;
   let mut main_env_context = EnvironmentContext {
     environment: TransformOutputEnvironment {
       entry_points: options
@@ -690,6 +698,7 @@ pub async fn transform(
     test: test_env_context.environment,
     warnings,
     discovered_config_file,
+    types_dependencies,
   })
 }
 
@@ -892,6 +901,70 @@ fn check_add_shim_file_to_environment(
 
     text
   }
+}
+
+/// Gets the packages that provide the type declarations of the mapped
+/// dependencies, which are added to the dev dependencies.
+///
+/// A mapped module isn't part of the module graph, so the `X-TypeScript-Types`
+/// header of each is resolved here. Failures are ignored because a mapped
+/// module isn't required to be fetchable.
+async fn get_types_dependencies<TSys: WorkspaceFactorySys>(
+  specifiers: &Specifiers,
+  file_fetcher: &PermissionedFileFetcher<
+    NullBlobStore,
+    TSys,
+    impl deno_cache_dir::file_fetcher::HttpClient,
+  >,
+) -> Vec<Dependency> {
+  let mappers = get_all_specifier_mappers();
+  let mut types_packages = specifiers.types_packages.clone();
+  let header_packages = futures::future::join_all(
+    specifiers
+      .main
+      .mapped
+      .keys()
+      .chain(specifiers.test.mapped.keys())
+      .filter(|s| matches!(s.scheme(), "http" | "https"))
+      .map(|specifier| async {
+        let types_specifier =
+          get_types_header_specifier(file_fetcher, specifier).await?;
+        get_types_package_for_specifier(&mappers, &types_specifier)
+      }),
+  )
+  .await;
+  for package in header_packages.into_iter().flatten() {
+    types_packages.insert(package.name.clone(), package);
+  }
+
+  types_packages
+    .into_values()
+    .filter_map(|p| {
+      Some(Dependency {
+        name: p.name,
+        version: p.version?,
+        peer_dependency: false,
+      })
+    })
+    .collect()
+}
+
+/// Gets the specifier of the declaration file in a module's
+/// `X-TypeScript-Types` header.
+async fn get_types_header_specifier<TSys: WorkspaceFactorySys>(
+  file_fetcher: &PermissionedFileFetcher<
+    NullBlobStore,
+    TSys,
+    impl deno_cache_dir::file_fetcher::HttpClient,
+  >,
+  specifier: &ModuleSpecifier,
+) -> Option<ModuleSpecifier> {
+  let file = file_fetcher
+    .fetch_bypass_permissions(specifier)
+    .await
+    .ok()?;
+  let types_header = file.maybe_headers?.remove("x-typescript-types")?;
+  deno_path_util::resolve_url_or_path(&types_header, Path::new("")).ok()
 }
 
 fn get_dependencies(

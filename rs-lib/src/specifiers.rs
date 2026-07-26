@@ -21,6 +21,9 @@ pub struct Specifiers {
   pub local: Vec<ModuleSpecifier>,
   pub remote: Vec<ModuleSpecifier>,
   pub types: BTreeMap<ModuleSpecifier, DeclarationFileResolution>,
+  /// Packages that provide the declaration files of a mapped package,
+  /// keyed by package name (ex. an `@types/` package served by a cdn).
+  pub types_packages: BTreeMap<String, PackageMappedSpecifier>,
   pub test_modules: HashSet<ModuleSpecifier>,
   pub main: EnvironmentSpecifiers,
   pub test: EnvironmentSpecifiers,
@@ -153,16 +156,17 @@ pub fn get_specifiers<'a>(
     }
   }
 
-  let types = resolve_declaration_file_mappings(
+  let declaration_files = resolve_declaration_file_mappings(
     module_graph,
     &all_modules,
     &found_mapped_specifiers,
   )?;
-  let mut declaration_specifiers = HashSet::new();
+  let types = declaration_files.mappings;
+  let mut declaration_specifiers = declaration_files.types_package_files;
   for value in types.values() {
-    declaration_specifiers.insert(&value.selected.specifier);
+    declaration_specifiers.insert(value.selected.specifier.clone());
     for dep in value.ignored.iter() {
-      declaration_specifiers.insert(&dep.specifier);
+      declaration_specifiers.insert(dep.specifier.clone());
     }
   }
 
@@ -181,6 +185,7 @@ pub fn get_specifiers<'a>(
       .filter(|l| !declaration_specifiers.contains(&l))
       .collect(),
     types,
+    types_packages: declaration_files.types_packages,
     test_modules: test_modules
       .values()
       .map(|k| k.specifier().clone())
