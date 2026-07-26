@@ -1169,6 +1169,142 @@ async fn transform_specifier_mappings() {
 }
 
 #[tokio::test]
+async fn transform_jsr_specifier_mappings() {
+  let result = TestBuilder::new()
+    .with_loader(|loader| {
+      loader.add_local_file(
+        "/mod.ts",
+        concat!(
+          "import * as pkg from 'jsr:@scope/name@^1.0.0';\n",
+          "import * as sub from 'jsr:@scope/name@^1.0.0/sub';\n",
+          "import * as inherited from 'jsr:@scope/inherited@~2.0.0';\n",
+          "import * as other from 'jsr:@scope/other';\n",
+        ),
+      );
+    })
+    // the mapping's version requirement doesn't need to match the specifier's
+    .add_package_specifier_mapping(
+      "jsr:@scope/name",
+      "scope-name",
+      Some("^1.0.0"),
+      None,
+    )
+    .add_package_specifier_mapping(
+      "jsr:@scope/name/sub",
+      "scope-name",
+      Some("^1.0.0"),
+      Some("sub"),
+    )
+    // no version on the mapping, so the specifier's is used
+    .add_package_specifier_mapping(
+      "jsr:@scope/inherited",
+      "scope-inherited",
+      None,
+      None,
+    )
+    // no version anywhere, so no dependency is added
+    .add_package_specifier_mapping(
+      "jsr:@scope/other",
+      "scope-other",
+      None,
+      None,
+    )
+    .transform()
+    .await
+    .unwrap();
+
+  assert_files!(
+    result.main.files,
+    &[(
+      "mod.ts",
+      concat!(
+        "import * as pkg from 'scope-name';\n",
+        "import * as sub from 'scope-name/sub';\n",
+        "import * as inherited from 'scope-inherited';\n",
+        "import * as other from 'scope-other';\n",
+      )
+    )]
+  );
+  assert_eq!(
+    result.main.dependencies,
+    &[
+      Dependency {
+        name: "scope-inherited".to_string(),
+        version: "~2.0.0".to_string(),
+        peer_dependency: false,
+      },
+      Dependency {
+        name: "scope-name".to_string(),
+        version: "^1.0.0".to_string(),
+        peer_dependency: false,
+      }
+    ]
+  );
+}
+
+#[tokio::test]
+async fn transform_jsr_specifier_mapping_via_import_map() {
+  let result = TestBuilder::new()
+    .with_loader(|loader| {
+      loader
+        .add_local_file("/mod.ts", "import * as pkg from '@scope/name';")
+        .add_local_file(
+          "/deno.json",
+          r#"{
+  "imports": {
+    "@scope/name": "jsr:@scope/name@^1.0.0"
+  }
+}"#,
+        );
+    })
+    .set_config_file("file:///deno.json")
+    // the version requirement comes from the import map
+    .add_package_specifier_mapping("jsr:@scope/name", "scope-name", None, None)
+    .transform()
+    .await
+    .unwrap();
+
+  assert_files!(
+    result.main.files,
+    &[("mod.ts", "import * as pkg from 'scope-name';")]
+  );
+  assert_eq!(
+    result.main.dependencies,
+    &[Dependency {
+      name: "scope-name".to_string(),
+      version: "^1.0.0".to_string(),
+      peer_dependency: false,
+    }]
+  );
+}
+
+#[tokio::test]
+async fn transform_jsr_specifier_mapping_not_found() {
+  let error_message = TestBuilder::new()
+    .with_loader(|loader| {
+      loader.add_local_file("/mod.ts", "console.log(1);");
+    })
+    .add_package_specifier_mapping(
+      "jsr:@scope/name",
+      "scope-name",
+      Some("^1.0.0"),
+      None,
+    )
+    .transform()
+    .await
+    .err()
+    .unwrap();
+
+  assert_eq!(
+    error_message.to_string(),
+    concat!(
+      "The following specifiers were indicated to be mapped to a package, but were not found:\n",
+      "  * jsr:@scope/name",
+    )
+  );
+}
+
+#[tokio::test]
 async fn transform_specifier_mapping_of_redirected_specifier() {
   let result = TestBuilder::new()
     .with_loader(|loader| {
