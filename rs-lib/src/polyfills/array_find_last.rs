@@ -12,6 +12,10 @@ use crate::ScriptTarget;
 pub struct ArrayFindLastPolyfill;
 
 impl Polyfill for ArrayFindLastPolyfill {
+  fn name(&self) -> &'static str {
+    "arrayFindLast"
+  }
+
   fn use_for_target(&self, _target: ScriptTarget) -> bool {
     true
   }

@@ -52,6 +52,30 @@ export interface PackageJson {
   [propertyName: string]: any;
 }
 
+// NOTICE: make sure to update the `name` of each polyfill in the rust code
+// when changing the names on this
+// todo(dsherret): code generate this from the Rust code to prevent out of sync issues
+
+/** Name of a polyfill that dnt may add to the output. */
+export type PolyfillName =
+  | "arrayFindLast"
+  | "arrayFromAsync"
+  | "errorCause"
+  | "importMeta"
+  | "objectHasOwn"
+  | "promiseWithResolvers"
+  | "stringReplaceAll";
+
+/** Explicitly enables or disables polyfills by name.
+ *
+ * Provide `true` or `false` to enable or disable all polyfills, or an object
+ * to control them individually. Polyfills that aren't specified fall back to
+ * what the script target implies.
+ */
+export type PolyfillOptions =
+  | boolean
+  | Partial<Record<PolyfillName, boolean>>;
+
 // NOTICE: make sure to update `ScriptTarget` in the rust code when changing the names on this
 // todo(dsherret): code generate this from the Rust code to prevent out of sync issues
 

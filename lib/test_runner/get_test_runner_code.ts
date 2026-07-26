@@ -1,6 +1,7 @@
 // Copyright 2018-2024 the Deno authors. MIT license.
 
 import CodeBlockWriter from "code-block-writer";
+import { toJsFilePath } from "../utils.ts";
 import { runTestDefinitions } from "./test_runner.ts";
 
 export function getTestRunnerCode(options: {
@@ -8,8 +9,12 @@ export function getTestRunnerCode(options: {
   denoTestShimPackageName: string | undefined;
   includeEsModule: boolean | undefined;
   includeScriptModule: boolean | undefined;
+  preloadEntryPoint?: string;
 }) {
   const usesDenoTest = options.denoTestShimPackageName != null;
+  const preloadPath = options.preloadEntryPoint == null
+    ? undefined
+    : toJsFilePath(options.preloadEntryPoint);
   const writer = createWriter();
   writer.writeLine(`const pc = require("picocolors");`)
     .writeLine(`const process = require("process");`);
@@ -24,12 +29,30 @@ export function getTestRunnerCode(options: {
   writer.writeLine("const filePaths = [");
   writer.indent(() => {
     for (const entryPoint of options.testEntryPoints) {
-      writer.quote(entryPoint.replace(/\.ts$/, ".js")).write(",").newLine();
+      writer.quote(toJsFilePath(entryPoint)).write(",").newLine();
     }
   });
   writer.writeLine("];").newLine();
 
   writer.write("async function main()").block(() => {
+    if (preloadPath != null) {
+      if (options.includeScriptModule) {
+        writer.writeLine(`process.chdir(__dirname + "/script");`);
+        writer.write("try ").inlineBlock(() => {
+          writer.write("require(").quote(`./script/${preloadPath}`).write(");")
+            .newLine();
+        }).write(" catch(err)").block(() => {
+          writer.writeLine("console.error(err);");
+          writer.writeLine("process.exit(1);");
+        });
+      }
+      if (options.includeEsModule) {
+        writer.writeLine(`process.chdir(__dirname + "/esm");`);
+        writer.write("await import(").quote(`./esm/${preloadPath}`).write(");")
+          .newLine();
+      }
+      writer.blankLine();
+    }
     if (usesDenoTest) {
       writer.write("const testContext = ").inlineBlock(() => {
         writer.writeLine("process,");

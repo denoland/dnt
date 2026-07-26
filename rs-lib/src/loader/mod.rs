@@ -1,5 +1,6 @@
 // Copyright 2018-2024 the Deno authors. MIT license.
 
+use std::borrow::Cow;
 use std::cell::RefCell;
 use std::collections::BTreeMap;
 use std::collections::HashMap;
@@ -12,6 +13,7 @@ mod specifier_mappers;
 
 pub use specifier_mappers::*;
 
+use crate::graph::JsrSpecifierMappings;
 use crate::MappedSpecifier;
 use crate::PackageMappedSpecifier;
 
@@ -26,6 +28,7 @@ pub struct SourceLoader<'a> {
   specifiers: RefCell<LoaderSpecifiers>,
   specifier_mappers: Vec<Box<dyn SpecifierMapper>>,
   specifier_mappings: &'a HashMap<ModuleSpecifier, MappedSpecifier>,
+  jsr_specifier_mappings: &'a JsrSpecifierMappings,
 }
 
 impl<'a> SourceLoader<'a> {
@@ -33,17 +36,33 @@ impl<'a> SourceLoader<'a> {
     loader: Rc<dyn deno_graph::source::Loader>,
     specifier_mappers: Vec<Box<dyn SpecifierMapper>>,
     specifier_mappings: &'a HashMap<ModuleSpecifier, MappedSpecifier>,
+    jsr_specifier_mappings: &'a JsrSpecifierMappings,
   ) -> Self {
     Self {
       loader,
       specifiers: Default::default(),
       specifier_mappers,
       specifier_mappings,
+      jsr_specifier_mappings,
     }
   }
 
   pub fn into_specifiers(self) -> LoaderSpecifiers {
     self.specifiers.take()
+  }
+
+  /// Gets the mapping the user provided for a specifier, if any.
+  ///
+  /// Mapped `jsr:` specifiers don't keep their scheme in the graph, so they
+  /// are looked up by the specifier they were resolved to instead.
+  fn mapping(
+    &self,
+    specifier: &ModuleSpecifier,
+  ) -> Option<Cow<MappedSpecifier>> {
+    match self.specifier_mappings.get(specifier) {
+      Some(mapping) => Some(Cow::Borrowed(mapping)),
+      None => self.jsr_specifier_mappings.get(specifier).map(Cow::Owned),
+    }
   }
 }
 
@@ -53,7 +72,8 @@ impl deno_graph::source::Loader for SourceLoader<'_> {
     specifier: &ModuleSpecifier,
     load_options: deno_graph::source::LoadOptions,
   ) -> deno_graph::source::LoadFuture {
-    let specifier = match self.specifier_mappings.get(specifier) {
+    let mapping = self.mapping(specifier);
+    let specifier = match mapping.as_deref() {
       Some(MappedSpecifier::Package(mapping)) => {
         self
           .specifiers

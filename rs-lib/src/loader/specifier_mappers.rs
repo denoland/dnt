@@ -107,6 +107,14 @@ impl SpecifierMapper for EsmShMapper {
       return None;
     }
 
+    // Ignore esm.sh imports of jsr packages. These are only published to
+    // npm under the `@jsr` scope on the jsr registry, which would require
+    // the output package to be configured with a custom registry, so just
+    // vendor the remote module instead.
+    if specifier.path().starts_with("/jsr/") {
+      return None;
+    }
+
     let captures = ESMSH_MAPPING_RE.captures(specifier.as_str())?;
 
     let sub_path = captures.get(4).map(|m| m.as_str().to_owned());
@@ -241,6 +249,21 @@ mod test {
     assert_eq!(
       mapper
         .map(&ModuleSpecifier::parse("https://esm.sh/gh/owner/repo").unwrap()),
+      None,
+    );
+    assert_eq!(
+      mapper.map(
+        &ModuleSpecifier::parse("https://esm.sh/jsr/@cross/fs@0.1.11").unwrap()
+      ),
+      None,
+    );
+    assert_eq!(
+      mapper.map(
+        &ModuleSpecifier::parse(
+          "https://esm.sh/jsr/@std/path@1.0.8/resolve.ts"
+        )
+        .unwrap()
+      ),
       None,
     );
   }

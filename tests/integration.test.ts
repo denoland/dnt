@@ -927,6 +927,25 @@ Deno.test("should build and test polyfill project", async () => {
   });
 });
 
+Deno.test("should build and test the promise with resolvers polyfill project", async () => {
+  // this polyfill ends up alone in the polyfill file, so ensure the generated
+  // file is still a module and thus type checks (see #440)
+  await runTest("polyfill_promise_with_resolvers_project", {
+    entryPoints: ["mod.ts"],
+    outDir: "./npm",
+    shims: {
+      ...getAllShimOptions(false),
+      deno: "dev",
+    },
+    package: {
+      name: "polyfill-package",
+      version: "1.0.0",
+    },
+  }, (output) => {
+    output.assertExists("esm/_dnt.polyfills.js");
+  });
+});
+
 Deno.test("should build and test the array find last polyfill project", async () => {
   await runTest("polyfill_array_find_last_project", {
     entryPoints: ["mod.ts"],
@@ -956,6 +975,69 @@ Deno.test("should build and test the import meta polyfill project", async () => 
     },
   }, (output) => {
     output.assertExists("esm/_dnt.polyfills.js");
+  });
+});
+
+Deno.test("should not polyfill import.meta when disabled for an esm only build", async () => {
+  await runTest("polyfill_disabled_project", {
+    test: false,
+    entryPoints: ["mod.ts"],
+    outDir: "./npm",
+    scriptModule: false,
+    shims: { deno: "dev" },
+    polyfills: { importMeta: false },
+    package: {
+      name: "polyfill-disabled-project",
+      version: "0.0.0",
+    },
+  }, (output) => {
+    output.assertNotExists("esm/_dnt.polyfills.js");
+    // the call sites should be left alone rather than rewritten to a
+    // ponyfill that's no longer emitted
+    assertStringIncludes(output.getFileText("esm/mod.js"), "import.meta.url");
+  });
+});
+
+Deno.test("should error disabling the import.meta polyfill with a script module", async () => {
+  await assertRejects(
+    () =>
+      runTest("polyfill_import_meta_project", {
+        entryPoints: ["mod.ts"],
+        outDir: "./npm",
+        shims: { deno: "dev" },
+        polyfills: { importMeta: false },
+        package: {
+          name: "polyfill-import-meta-project",
+          version: "0.0.0",
+        },
+      }),
+    Error,
+    "cannot be disabled when emitting a script module",
+  );
+});
+
+Deno.test("should build the polyfill project with all polyfills disabled", async () => {
+  await runTest("polyfill_project", {
+    test: false,
+    entryPoints: ["mod.ts"],
+    outDir: "./npm",
+    scriptModule: false,
+    shims: {
+      ...getAllShimOptions(false),
+      deno: "dev",
+    },
+    polyfills: false,
+    compilerOptions: {
+      // the polyfills provide ambient declarations, so opting out of them
+      // means relying on the lib declarations instead
+      lib: ["ESNext"],
+    },
+    package: {
+      name: "polyfill-package",
+      version: "1.0.0",
+    },
+  }, (output) => {
+    output.assertNotExists("esm/_dnt.polyfills.js");
   });
 });
 
@@ -1085,6 +1167,47 @@ Deno.test("should build undici project", async () => {
       name: "undici-project",
       version: "1.0.0",
     },
+  });
+});
+
+Deno.test("should run the test preload module", async () => {
+  await runTest("test_preload_project", {
+    entryPoints: ["mod.ts"],
+    outDir: "./npm",
+    typeCheck: "both",
+    shims: {
+      ...getAllShimOptions(false),
+      deno: { test: "dev" },
+    },
+    testPreloadModule: "./scripts/test_preload.ts",
+    package: {
+      name: "test-preload-project",
+      version: "1.0.0",
+    },
+  }, (output) => {
+    assertPreloadModuleOutput(output);
+  });
+});
+
+Deno.test("should run the test preload module when it matches the test pattern", async () => {
+  await runTest("test_preload_project", {
+    entryPoints: ["mod.ts"],
+    outDir: "./npm",
+    typeCheck: false,
+    shims: {
+      ...getAllShimOptions(false),
+      deno: { test: "dev" },
+    },
+    // this matches the preload module as well, so it should not be
+    // collected as a test file twice
+    testPattern: "**/{*.test.ts,test_preload.ts}",
+    testPreloadModule: "./scripts/test_preload.ts",
+    package: {
+      name: "test-preload-project",
+      version: "1.0.0",
+    },
+  }, (output) => {
+    assertPreloadModuleOutput(output);
   });
 });
 
@@ -1316,11 +1439,14 @@ async function runTest(
     | "polyfill_project"
     | "polyfill_array_from_async_project"
     | "polyfill_array_find_last_project"
+    | "polyfill_disabled_project"
+    | "polyfill_promise_with_resolvers_project"
     | "polyfill_import_meta_project"
     | "module_mappings_project"
     | "node_types_project"
     | "undici_project"
     | "shim_project"
+    | "test_preload_project"
     | "test_project"
     | "tla_project"
     | "web_socket_project"
@@ -1376,6 +1502,30 @@ async function runTest(
       }
     }
   }
+}
+
+function assertPreloadModuleOutput(output: Output) {
+  // the preload module should be emitted, but not distributed
+  output.assertExists("esm/scripts/test_preload.js");
+  output.assertExists("script/scripts/test_preload.js");
+  assertStringIncludes(output.npmIgnore, "/esm/scripts/test_preload.js\n");
+  assertStringIncludes(output.npmIgnore, "/script/scripts/test_preload.js\n");
+
+  // it should be loaded once for each output, before any test file
+  const testRunnerText = output.getFileText("test_runner.cjs");
+  assertStringIncludes(
+    testRunnerText,
+    `require("./script/scripts/test_preload.js");`,
+  );
+  assertStringIncludes(
+    testRunnerText,
+    `await import("./esm/scripts/test_preload.js");`,
+  );
+
+  // it should not be run as a test file
+  const filePaths = /const filePaths = \[([^\]]*)\]/.exec(testRunnerText)![1];
+  assertStringIncludes(filePaths, "mod.test.js");
+  assertEquals(filePaths.includes("test_preload"), false);
 }
 
 function getAllShimOptions(value: ShimValue): ShimOptions {
