@@ -3,7 +3,11 @@
 import { expandGlob } from "@std/fs/expand-glob";
 import * as path from "@std/path";
 
-/** Gets the files found in the provided root dir path based on the glob. */
+/**
+ * Gets the files found in the provided root dir path based on the glob.
+ *
+ * Any `node_modules` directory is never searched.
+ */
 export async function glob(options: {
   pattern: string;
   rootDir: string;
@@ -14,7 +18,7 @@ export async function glob(options: {
     root: options.rootDir,
     extended: true,
     globstar: true,
-    exclude: options.excludeDirs,
+    exclude: [...options.excludeDirs, "**/node_modules"],
   });
   for await (const entry of entries) {
     if (entry.isFile) {

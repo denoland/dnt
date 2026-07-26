@@ -98,7 +98,11 @@ export interface BuildOptions {
   skipSourceOutput?: boolean;
   /** Root directory to find test files in. Defaults to the cwd. */
   rootTestDir?: string;
-  /** Glob pattern to use to find tests files. Defaults to `deno test`'s pattern. */
+  /**
+   * Glob pattern to use to find tests files. Defaults to `deno test`'s pattern.
+   *
+   * Note that `node_modules` directories are never searched.
+   */
   testPattern?: string;
   /**
    * Specifiers to map from and to.

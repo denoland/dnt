@@ -1,6 +1,37 @@
 import * as path from "@std/path";
 import { assertEquals, assertRejects } from "@std/assert";
-import { getDntVersion, runCommand, valueToUrl } from "./utils.ts";
+import { getDntVersion, glob, runCommand, valueToUrl } from "./utils.ts";
+
+Deno.test("glob should not search node_modules or excluded dirs", async () => {
+  const rootDir = await Deno.makeTempDir();
+  try {
+    const testFilePaths = [
+      ["mod.test.ts"],
+      ["sub", "mod.test.ts"],
+      ["node_modules", "pkg", "mod.test.ts"],
+      ["sub", "node_modules", "pkg", "mod.test.ts"],
+      ["npm", "mod.test.ts"],
+    ];
+    for (const filePath of testFilePaths) {
+      const absPath = path.join(rootDir, ...filePath);
+      await Deno.mkdir(path.dirname(absPath), { recursive: true });
+      await Deno.writeTextFile(absPath, "");
+    }
+
+    const paths = await glob({
+      pattern: "**/*.test.ts",
+      rootDir,
+      excludeDirs: [path.join(rootDir, "npm")],
+    });
+
+    assertEquals(
+      paths.map((p) => path.relative(rootDir, p)).sort(),
+      ["mod.test.ts", path.join("sub", "mod.test.ts")],
+    );
+  } finally {
+    await Deno.remove(rootDir, { recursive: true });
+  }
+});
 
 Deno.test({
   name: "should error when command doesn't exist",
