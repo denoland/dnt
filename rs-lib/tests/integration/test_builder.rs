@@ -29,6 +29,7 @@ pub struct TestBuilder {
   target: ScriptTarget,
   polyfills: PolyfillOverrides,
   config_file: Option<ModuleSpecifier>,
+  no_config: bool,
   import_map: Option<ModuleSpecifier>,
   frozen_lockfile: Option<bool>,
 }
@@ -50,6 +51,7 @@ impl TestBuilder {
       target: ScriptTarget::ES5,
       polyfills: Default::default(),
       config_file: None,
+      no_config: false,
       import_map: None,
       frozen_lockfile: None,
     }
@@ -81,8 +83,13 @@ impl TestBuilder {
   }
 
   pub fn set_config_file(&mut self, url: impl AsRef<str>) -> &mut Self {
-    self.import_map =
+    self.config_file =
       Some(ModuleSpecifier::parse(&normalize_urls(url.as_ref())).unwrap());
+    self
+  }
+
+  pub fn set_no_config(&mut self, value: bool) -> &mut Self {
+    self.no_config = value;
     self
   }
 
@@ -218,6 +225,7 @@ impl TestBuilder {
         target: self.target,
         polyfills: self.polyfills.clone(),
         config_file: self.config_file.clone(),
+        no_config: self.no_config,
         import_map: self.import_map.clone(),
         frozen_lockfile: self.frozen_lockfile,
         cwd: self.loader.sys.env_current_dir().unwrap(),

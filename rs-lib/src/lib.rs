@@ -101,6 +101,12 @@ pub struct TransformOutput {
   pub main: TransformOutputEnvironment,
   pub test: TransformOutputEnvironment,
   pub warnings: Vec<String>,
+  /// Config file that was auto-discovered by searching upwards from the
+  /// entry points (or the cwd when there are no local entry points).
+  ///
+  /// This is `None` when no config file was found, when one was explicitly
+  /// provided, or when auto-discovery is disabled.
+  pub discovered_config_file: Option<PathBuf>,
 }
 
 #[cfg_attr(feature = "serialization", derive(serde::Serialize))]
@@ -265,6 +271,11 @@ pub struct TransformOptions {
   /// over what `target` implies.
   pub polyfills: PolyfillOverrides,
   pub config_file: Option<ModuleSpecifier>,
+  /// Disables auto-discovering a config file based on the entry points
+  /// when no config file or import map is provided.
+  ///
+  /// Note this also disables discovering a package.json and deno.lock.
+  pub no_config: bool,
   pub import_map: Option<ModuleSpecifier>,
   /// Errors when the deno lockfile would need to be updated in order to
   /// transform (ex. a dependency is not in it).
@@ -333,6 +344,7 @@ pub async fn transform(
   };
   let config_discovery = match maybe_config_path.as_ref() {
     Some(config_path) => ConfigDiscoveryOption::Path(config_path.clone()),
+    None if options.no_config => ConfigDiscoveryOption::Disabled,
     None => {
       if paths.is_empty() {
         ConfigDiscoveryOption::DiscoverCwd
@@ -341,6 +353,10 @@ pub async fn transform(
       }
     }
   };
+  let is_auto_discovering = matches!(
+    config_discovery,
+    ConfigDiscoveryOption::Discover { .. } | ConfigDiscoveryOption::DiscoverCwd
+  );
 
   let factory = deno_resolver::factory::WorkspaceFactory::new(
     sys,
@@ -364,6 +380,14 @@ pub async fn transform(
       no_lock: false,
     },
   );
+  let discovered_config_file = if is_auto_discovering {
+    factory
+      .workspace_directory()?
+      .member_or_root_deno_json()
+      .and_then(|c| deno_path_util::url_to_file_path(&c.specifier).ok())
+  } else {
+    None
+  };
   let file_fetcher = PermissionedFileFetcher::new(
     NullBlobStore,
     Rc::new(factory.http_cache()?.clone()),
@@ -680,6 +704,7 @@ pub async fn transform(
     main: main_env_context.environment,
     test: test_env_context.environment,
     warnings,
+    discovered_config_file,
   })
 }
 
