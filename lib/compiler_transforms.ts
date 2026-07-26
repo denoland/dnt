@@ -14,8 +14,11 @@ export const transformImportMeta: ts.TransformerFactory<ts.SourceFile> = (
   return (sourceFile) => ts.visitEachChild(sourceFile, visitNode, context);
 
   function visitNode(node: ts.Node): ts.Node {
-    // find `import.meta`
-    if (ts.isMetaProperty(node)) {
+    // find `import.meta` (not `new.target`, which is also a meta property)
+    if (
+      ts.isMetaProperty(node) &&
+      node.keywordToken === ts.SyntaxKind.ImportKeyword
+    ) {
       if (isScriptModule) {
         return getReplacementImportMetaScript();
       } else {
