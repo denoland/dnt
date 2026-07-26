@@ -467,9 +467,7 @@ export async function build(options: BuildOptions): Promise<void> {
     program = project.createProgram();
     emit({
       transformers: {
-        before: polyfills["importMeta"]
-          ? [compilerTransforms.transformImportMeta]
-          : [],
+        before: getBeforeTransformers(),
       },
     });
     writeFile(
@@ -494,9 +492,7 @@ export async function build(options: BuildOptions): Promise<void> {
     program = getProgramAndMaybeTypeCheck("script");
     emit({
       transformers: {
-        before: polyfills["importMeta"]
-          ? [compilerTransforms.transformImportMeta]
-          : [],
+        before: getBeforeTransformers(),
       },
     });
     writeFile(
@@ -525,6 +521,16 @@ export async function build(options: BuildOptions): Promise<void> {
   }
 
   log("Complete!");
+
+  function getBeforeTransformers() {
+    return [
+      // must go first in order to analyze the unmodified source files
+      compilerTransforms.createShadowedGlobalsTransformer(program),
+      ...(polyfills["importMeta"]
+        ? [compilerTransforms.transformImportMeta]
+        : []),
+    ];
+  }
 
   function emit(
     opts?: { onlyDtsFiles?: boolean; transformers?: ts.CustomTransformers },

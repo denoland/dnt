@@ -1292,6 +1292,35 @@ Deno.test("using declaration project", async () => {
   });
 });
 
+Deno.test("shadowed globals project", async () => {
+  await runTest("shadowed_globals_project", {
+    entryPoints: ["mod.ts"],
+    outDir: "./npm",
+    typeCheck: "both",
+    shims: {
+      deno: {
+        test: true,
+      },
+    },
+    package: {
+      name: "shadowed_globals_project",
+      version: "0.0.0",
+    },
+  }, (output) => {
+    const scriptText = output.getFileText("script/mod.js");
+    assertStringIncludes(scriptText, `const Object_1 = "hello";`);
+    assertStringIncludes(scriptText, `exports.Symbol = Symbol_1;`);
+    const esmText = output.getFileText("esm/mod.js");
+    assertStringIncludes(esmText, `const Object_1 = "hello";`);
+    assertStringIncludes(esmText, `export { Symbol_1 as Symbol };`);
+    // the declaration files keep the original names
+    assertStringIncludes(
+      output.getFileText("esm/mod.d.ts"),
+      `export declare class Symbol {`,
+    );
+  });
+});
+
 Deno.test("should build jsr project", async () => {
   await runTest("jsr_project", {
     entryPoints: ["mod.ts"],
@@ -1445,6 +1474,7 @@ async function runTest(
     | "module_mappings_project"
     | "node_types_project"
     | "undici_project"
+    | "shadowed_globals_project"
     | "shim_project"
     | "test_preload_project"
     | "test_project"
