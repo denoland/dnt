@@ -185,9 +185,12 @@ export let import_meta_ponyfill_esmodule = (
               url: importMeta.url,
               require: createRequire(importMeta.url),
             };
+            // note: the parameter types must be explicitly annotated because
+            // `@types/node` also declares `ImportMeta.resolve`, which makes
+            // the contextual type an overload set that provides no inference
             importMeta.resolve = function resolve(
               specifier: string,
-              parentURL = importMeta.url,
+              parentURL: string | URL = importMeta.url,
             ) {
               return pathToFileURL(
                 (importMetaUrlRequire.url === parentURL

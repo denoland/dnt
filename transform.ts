@@ -7,7 +7,7 @@
  */
 
 import * as wasm from "./lib/pkg/dnt_wasm.js";
-import type { ScriptTarget } from "./lib/types.ts";
+import type { PolyfillName, ScriptTarget } from "./lib/types.ts";
 import { valueToUrl } from "./lib/utils.ts";
 
 /** Specifier to specifier mappings. */
@@ -72,6 +72,10 @@ export interface TransformOptions {
   testShims?: Shim[];
   mappings?: SpecifierMappings;
   target: ScriptTarget;
+  /** Explicitly enables or disables polyfills by name, taking precedence
+   * over what `target` implies.
+   */
+  polyfills?: Partial<Record<PolyfillName, boolean>>;
   /// Path or url to the import map.
   importMap?: string;
   configFile?: string;
@@ -126,6 +130,7 @@ export function transform(
     shims: (options.shims ?? []).map(mapShim),
     testShims: (options.testShims ?? []).map(mapShim),
     target: options.target,
+    polyfills: options.polyfills ?? {},
     importMap: options.importMap == null
       ? undefined
       : valueToUrl(options.importMap),

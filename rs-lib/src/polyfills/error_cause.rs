@@ -10,6 +10,10 @@ use crate::ScriptTarget;
 pub struct ErrorCausePolyfill;
 
 impl Polyfill for ErrorCausePolyfill {
+  fn name(&self) -> &'static str {
+    "errorCause"
+  }
+
   fn use_for_target(&self, _target: ScriptTarget) -> bool {
     true
   }

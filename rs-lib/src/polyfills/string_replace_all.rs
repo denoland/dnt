@@ -12,6 +12,10 @@ use crate::ScriptTarget;
 pub struct StringReplaceAllPolyfill;
 
 impl Polyfill for StringReplaceAllPolyfill {
+  fn name(&self) -> &'static str {
+    "stringReplaceAll"
+  }
+
   fn use_for_target(&self, target: ScriptTarget) -> bool {
     (target as u32) < (ScriptTarget::ES2021 as u32)
   }

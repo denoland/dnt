@@ -9,6 +9,7 @@ use deno_node_transform::PackageMappedSpecifier;
 use deno_node_transform::PackageShim;
 use deno_node_transform::ScriptTarget;
 use deno_node_transform::Shim;
+use deno_node_transform::TransformOutput;
 use pretty_assertions::assert_eq;
 
 #[macro_use]
@@ -1586,6 +1587,217 @@ async fn transform_import_map() {
 }
 
 #[tokio::test]
+async fn transform_import_map_uneven_sibling_depths() {
+  let result = TestBuilder::new()
+    .entry_point("file:///project-one/mod.ts")
+    .with_loader(|loader| {
+      loader
+        .add_local_file(
+          "/project-one/mod.ts",
+          "import value from 'project-two/deeper/mod.ts';",
+        )
+        .add_local_file(
+          "/project-one/deno.json",
+          r#"{
+  "imports": {
+    "project-two/": "../project-two/"
+  }
+}"#,
+        )
+        .add_local_file(
+          "/project-two/deeper/mod.ts",
+          "export default 'hello world';",
+        );
+    })
+    .set_import_map("file:///project-one/deno.json")
+    .transform()
+    .await
+    .unwrap();
+
+  // the sibling is at a different depth, so the shared root moves up to
+  // encompass both projects, the same as it already does for siblings at
+  // equal depths
+  assert_files!(
+    result.main.files,
+    &[
+      (
+        "project-one/mod.ts",
+        "import value from '../project-two/deeper/mod.js';",
+      ),
+      ("project-two/deeper/mod.ts", "export default 'hello world';",),
+    ]
+  );
+  assert_eq!(
+    result.main.entry_points,
+    &[PathBuf::from("project-one/mod.ts")]
+  );
+}
+
+#[tokio::test]
+async fn transform_import_map_local_sibling_and_remote() {
+  let result = TestBuilder::new()
+    .entry_point("file:///example-project/mod.ts")
+    .with_loader(|loader| {
+      loader
+        .add_local_file(
+          "/example-project/mod.ts",
+          "export * from './src/mod.ts';",
+        )
+        .add_local_file(
+          "/example-project/src/mod.ts",
+          "export * from 'example-shared/mod.ts';\nexport * from 'https://example.com/mod.ts';",
+        )
+        .add_local_file(
+          "/example-project/deno.json",
+          r#"{
+  "imports": {
+    "example-shared/": "../example-shared/"
+  }
+}"#,
+        )
+        .add_local_file("/example-shared/mod.ts", "export const shared = 'shared';")
+        .add_remote_file("https://example.com/mod.ts", "export const remote = 'remote';");
+    })
+    .set_import_map("file:///example-project/deno.json")
+    .transform()
+    .await
+    .unwrap();
+
+  // the local sibling shares a root with the project, while the remote module
+  // keeps going to `deps`
+  assert_files!(
+    result.main.files,
+    &[
+      (
+        "example-project/mod.ts",
+        "export * from './src/mod.js';",
+      ),
+      (
+        "example-project/src/mod.ts",
+        "export * from '../../example-shared/mod.js';\nexport * from '../../deps/example.com/mod.js';",
+      ),
+      (
+        "example-shared/mod.ts",
+        "export const shared = 'shared';",
+      ),
+      (
+        "deps/example.com/mod.ts",
+        "export const remote = 'remote';",
+      ),
+    ]
+  );
+  assert_eq!(
+    result.main.entry_points,
+    &[PathBuf::from("example-project/mod.ts")]
+  );
+}
+
+#[tokio::test]
+async fn transform_specifier_not_in_import_map() {
+  let err_message = TestBuilder::new()
+    .with_loader(|loader| {
+      loader
+        .add_local_file(
+          "/mod.ts",
+          "import a from 'other';\nimport b from 'other/sub.ts';",
+        )
+        .add_local_file(
+          "/import_map.json",
+          r#"{
+  "imports": {
+    "other": "./other/mod.ts"
+  }
+}"#,
+        )
+        .add_local_file("/other/mod.ts", "export default 1;")
+        .add_local_file("/other/sub.ts", "export default 2;");
+    })
+    .set_import_map("file:///import_map.json")
+    .transform()
+    .await
+    .err()
+    .unwrap();
+
+  // the sub path is not mapped, so surface it rather than emitting the
+  // bare specifier into the output as-is
+  assert_eq!(
+    err_message.to_string(),
+    normalize_urls(
+      concat!(
+        "Import \"other/sub.ts\" not a dependency and not in import map from \"file:///mod.ts\"",
+        "\n    at file:///mod.ts:2:15",
+      )
+    )
+  );
+}
+
+#[tokio::test]
+async fn transform_entry_point_with_sibling_dir_in_project() {
+  let result = TestBuilder::new()
+    .entry_point("file:///project/src/mod.ts")
+    .with_loader(|loader| {
+      loader
+        .add_local_file(
+          "/project/src/mod.ts",
+          "export * from '../lib/util.ts';",
+        )
+        .add_local_file("/project/lib/util.ts", "export const util = 1;");
+    })
+    .transform()
+    .await
+    .unwrap();
+
+  // a sibling directory of the entry point is still part of the project, so
+  // it must not be treated as a dependency
+  assert_files!(
+    result.main.files,
+    &[
+      ("src/mod.ts", "export * from '../lib/util.js';"),
+      ("lib/util.ts", "export const util = 1;"),
+    ]
+  );
+  assert_eq!(result.main.entry_points, &[PathBuf::from("src/mod.ts")]);
+}
+
+#[tokio::test]
+async fn transform_test_entry_point_uses_test_root_without_moving_main() {
+  let result = TestBuilder::new()
+    .entry_point("file:///example-project/src/mod.ts")
+    .with_loader(|loader| {
+      loader
+        .add_local_file(
+          "/example-project/src/mod.ts",
+          "export const value = 'value';",
+        )
+        .add_local_file(
+          "/example-project/tests/integration/functions/mod.test.ts",
+          "import '../../../src/mod.ts';",
+        );
+    })
+    .add_test_entry_point(
+      "file:///example-project/tests/integration/functions/mod.test.ts",
+    )
+    .transform()
+    .await
+    .unwrap();
+
+  // the tests are in a directory outside the main files' root, which must not
+  // push the main files down a directory
+  assert_eq!(result.main.entry_points, &[PathBuf::from("mod.ts")]);
+  assert_eq!(
+    result.test.entry_points,
+    &[PathBuf::from("tests/integration/functions/mod.test.ts")]
+  );
+  assert_files!(
+    result.test.files,
+    &[(
+      "tests/integration/functions/mod.test.ts",
+      "import '../../../mod.js';",
+    )]
+  );
+}
+
+#[tokio::test]
 async fn transform_config_file() {
   let result = TestBuilder::new()
     .with_loader(|loader| {
@@ -1925,6 +2137,99 @@ async fn test_string_replace_all_polyfill(
     );
   }
   assert_eq!(result.main.entry_points, &[PathBuf::from("mod.ts")]);
+}
+
+#[tokio::test]
+async fn polyfills_override_disables_for_target() {
+  // ES2020 would normally get the polyfill, but the override wins
+  let result = build_string_replace_all_polyfill_test(
+    ScriptTarget::ES2020,
+    Some(("stringReplaceAll", false)),
+  )
+  .await;
+
+  assert_files!(
+    result.main.files,
+    &[("mod.ts", "''.replaceAll('test', 'other');\n")]
+  );
+}
+
+#[tokio::test]
+async fn polyfills_override_enables_for_latest_target() {
+  // `Latest` normally excludes every polyfill, but the override wins
+  let result = build_string_replace_all_polyfill_test(
+    ScriptTarget::Latest,
+    Some(("stringReplaceAll", true)),
+  )
+  .await;
+
+  assert_files!(
+    result.main.files,
+    &[
+      (
+        "mod.ts",
+        concat!(
+          "import \"./_dnt.polyfills.js\";\n",
+          "''.replaceAll('test', 'other');\n",
+        ),
+      ),
+      (
+        "_dnt.polyfills.ts",
+        include_str!("../src/polyfills/scripts/es2021.string-replaceAll.ts")
+      ),
+    ]
+  );
+}
+
+#[tokio::test]
+async fn polyfills_override_only_affects_named_polyfill() {
+  // disabling one polyfill leaves the others resolving by target
+  let result = TestBuilder::new()
+    .with_loader(|loader| {
+      loader.add_local_file(
+        "/mod.ts",
+        "''.replaceAll('test', 'other');\nObject.hasOwn({}, 'test');\n",
+      );
+    })
+    .set_target(ScriptTarget::ES2020)
+    .set_polyfill("stringReplaceAll", false)
+    .transform()
+    .await
+    .unwrap();
+
+  assert_files!(
+    result.main.files,
+    &[
+      (
+        "mod.ts",
+        concat!(
+          "import \"./_dnt.polyfills.js\";\n",
+          "''.replaceAll('test', 'other');\n",
+          "Object.hasOwn({}, 'test');\n",
+        ),
+      ),
+      (
+        "_dnt.polyfills.ts",
+        include_str!("../src/polyfills/scripts/esnext.object-has-own.ts")
+      ),
+    ]
+  );
+}
+
+async fn build_string_replace_all_polyfill_test(
+  target: ScriptTarget,
+  polyfill_override: Option<(&str, bool)>,
+) -> TransformOutput {
+  let mut builder = TestBuilder::new();
+  builder
+    .with_loader(|loader| {
+      loader.add_local_file("/mod.ts", "''.replaceAll('test', 'other');\n");
+    })
+    .set_target(target);
+  if let Some((name, enabled)) = polyfill_override {
+    builder.set_polyfill(name, enabled);
+  }
+  builder.transform().await.unwrap()
 }
 
 #[tokio::test]

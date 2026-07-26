@@ -10,6 +10,10 @@ use crate::ScriptTarget;
 pub struct ImportMetaPolyfill;
 
 impl Polyfill for ImportMetaPolyfill {
+  fn name(&self) -> &'static str {
+    "importMeta"
+  }
+
   fn use_for_target(&self, _target: ScriptTarget) -> bool {
     true
   }

@@ -1,5 +1,6 @@
 // Copyright 2018-2024 the Deno authors. MIT license.
 
+use std::collections::HashMap;
 use std::collections::HashSet;
 
 use deno_ast::swc::common::SyntaxContext;
@@ -23,6 +24,11 @@ mod promise_with_resolvers;
 mod string_replace_all;
 
 pub trait Polyfill {
+  /// Stable name used to enable or disable this polyfill explicitly.
+  ///
+  /// NOTICE: make sure to update `PolyfillName` in the TS code when
+  /// changing these names.
+  fn name(&self) -> &'static str;
   fn use_for_target(&self, target: ScriptTarget) -> bool;
   fn visit_node(
     &self,
@@ -95,14 +101,22 @@ impl PolyfillVisitContext<'_, '_> {
   }
 }
 
-pub fn polyfills_for_target(target: ScriptTarget) -> Vec<Box<dyn Polyfill>> {
-  if matches!(target, ScriptTarget::Latest) {
-    return Vec::new();
-  }
+/// Explicitly enables or disables polyfills by name, overriding what the
+/// script target implies.
+pub type PolyfillOverrides = HashMap<String, bool>;
 
+pub fn polyfills_for_target(
+  target: ScriptTarget,
+  overrides: &PolyfillOverrides,
+) -> Vec<Box<dyn Polyfill>> {
   all_polyfills()
     .into_iter()
-    .filter(|p| p.use_for_target(target))
+    .filter(|p| match overrides.get(p.name()) {
+      Some(enabled) => *enabled,
+      None => {
+        !matches!(target, ScriptTarget::Latest) && p.use_for_target(target)
+      }
+    })
     .collect()
 }
 
@@ -177,5 +191,25 @@ impl PolyfillTester {
       });
       !found_polyfills.is_empty()
     })
+  }
+}
+
+#[cfg(test)]
+mod test {
+  use super::*;
+
+  #[test]
+  fn polyfill_scripts_are_modules() {
+    // a polyfill may end up being the only one in the output file, so each
+    // must be a module on its own for `declare global` to be valid
+    for polyfill in all_polyfills() {
+      let text = polyfill.get_file_text();
+      assert!(
+        text.lines().any(
+          |line| line.starts_with("export ") || line.starts_with("import ")
+        ),
+        "polyfill script was not a module: {text}"
+      );
+    }
   }
 }

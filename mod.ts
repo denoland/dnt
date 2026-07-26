@@ -18,7 +18,15 @@ import {
 } from "./lib/compiler.ts";
 import { type ShimOptions, shimOptionsToTransformShims } from "./lib/shims.ts";
 import { getNpmIgnoreText } from "./lib/npm_ignore.ts";
-import type { PackageJson, ScriptTarget } from "./lib/types.ts";
+import {
+  resolvePolyfillOptions,
+  resolveUseImportMetaPolyfill,
+} from "./lib/polyfills.ts";
+import type {
+  PackageJson,
+  PolyfillOptions,
+  ScriptTarget,
+} from "./lib/types.ts";
 import { glob, runNpmCommand, standardizePath } from "./lib/utils.ts";
 import {
   type SpecifierMappings,
@@ -30,7 +38,11 @@ import { getPackageJson } from "./lib/package_json.ts";
 import { getTestRunnerCode } from "./lib/test_runner/get_test_runner_code.ts";
 
 export { emptyDir } from "@std/fs/empty-dir";
-export type { PackageJson } from "./lib/types.ts";
+export type {
+  PackageJson,
+  PolyfillName,
+  PolyfillOptions,
+} from "./lib/types.ts";
 export type { JsxEmit, LibName, SourceMapOptions } from "./lib/compiler.ts";
 export type { ShimOptions } from "./lib/shims.ts";
 
@@ -88,6 +100,20 @@ export interface BuildOptions {
    * @default true
    */
   esModule?: boolean;
+  /** Explicitly enables or disables polyfills, overriding what
+   * `compilerOptions.target` implies.
+   *
+   * Provide `true` or `false` to enable or disable all polyfills, or an object
+   * to control them individually:
+   *
+   * ```ts
+   * polyfills: { importMeta: false }
+   * ```
+   *
+   * @remarks The `importMeta` polyfill cannot be disabled unless `scriptModule`
+   * is `false`, because `import.meta` is not valid CommonJS.
+   */
+  polyfills?: PolyfillOptions;
   /** Skip running `npm install`.
    * @default false
    */
@@ -104,6 +130,16 @@ export interface BuildOptions {
    * Note that `node_modules` directories are never searched.
    */
   testPattern?: string;
+  /** Path to a module to load before running the tests. Ex. `./scripts/test_preload.ts`
+   *
+   * This is useful for setting up the Node.js environment the tests run in
+   * without affecting the distributed code. For example, setting globals that
+   * the distributed code assumes exist.
+   *
+   * @remarks The module is not included in the npm package. It is loaded once
+   * for each of the emitted script and ESM output.
+   */
+  testPreloadModule?: string;
   /**
    * Specifiers to map from and to.
    *
@@ -130,7 +166,13 @@ export interface BuildOptions {
   package: PackageJson;
   /** Path or url to a deno.json. */
   configFile?: string;
-  /** Path or url to import map. */
+  /** Path or url to import map.
+   *
+   * @remarks Use `configFile` for a deno.json. Like `deno --import-map`, the
+   * file is read as a plain import map, so bare specifier mappings are not
+   * expanded to cover sub paths (ex. `@std/path` will not map
+   * `@std/path/glob-to-regexp`).
+   */
   importMap?: string;
   /** Package manager used to install dependencies and run npm scripts.
    * This also can be an absolute path to the executable file of package manager.
@@ -244,6 +286,14 @@ export async function build(options: BuildOptions): Promise<void> {
     (!!options.declaration && !options.skipSourceOutput);
   const packageManager = options.packageManager ?? "npm";
   const scriptTarget = options.compilerOptions?.target ?? "ES2021";
+  const polyfills = resolvePolyfillOptions(options.polyfills);
+  // `import.meta` call sites are rewritten by the TypeScript compiler rather
+  // than the transform, so resolve this up front and keep both sides in sync
+  polyfills["importMeta"] = resolveUseImportMetaPolyfill({
+    polyfills,
+    target: scriptTarget,
+    emitScriptModule: options.scriptModule !== false,
+  });
   const entryPoints: EntryPoint[] = options.entryPoints.map((e, i) => {
     if (typeof e === "string") {
       return {
@@ -257,6 +307,9 @@ export async function build(options: BuildOptions): Promise<void> {
       };
     }
   });
+  const testPreloadModule = options.testPreloadModule == null
+    ? undefined
+    : standardizePath(options.testPreloadModule);
 
   await Deno.permissions.request({ name: "write", path: options.outDir });
 
@@ -293,6 +346,7 @@ export async function build(options: BuildOptions): Promise<void> {
   const esmOutDir = path.join(options.outDir, "esm");
   const scriptOutDir = path.join(options.outDir, "script");
   const typesOutDir = path.join(options.outDir, "types");
+  const srcOutDir = path.join(options.outDir, "src");
   const compilerScriptTarget = getCompilerScriptTarget(scriptTarget);
   // TypeScript 6.0 no longer automatically discovers the `@types` packages
   // installed in the output's node_modules, so resolve and include them
@@ -303,6 +357,10 @@ export async function build(options: BuildOptions): Promise<void> {
   const project = createProjectSync({
     compilerOptions: {
       outDir: typesOutDir,
+      // pin the root so that a dependency resolving to a file outside the
+      // sources (ex. a package that ships a .ts file) can't shift the output
+      // down a directory and leave the package.json paths dangling
+      rootDir: srcOutDir,
       allowJs: true,
       alwaysStrict: true,
       stripInternal: options.compilerOptions?.stripInternal,
@@ -424,7 +482,9 @@ export async function build(options: BuildOptions): Promise<void> {
     program = project.createProgram();
     emit({
       transformers: {
-        before: [compilerTransforms.transformImportMeta],
+        before: polyfills["importMeta"]
+          ? [compilerTransforms.transformImportMeta]
+          : [],
       },
     });
     writeFile(
@@ -449,7 +509,9 @@ export async function build(options: BuildOptions): Promise<void> {
     program = getProgramAndMaybeTypeCheck("script");
     emit({
       transformers: {
-        before: [compilerTransforms.transformImportMeta],
+        before: polyfills["importMeta"]
+          ? [compilerTransforms.transformImportMeta]
+          : [],
       },
     });
     writeFile(
@@ -535,8 +597,18 @@ export async function build(options: BuildOptions): Promise<void> {
         d.code !== 1343 &&
         // 1470: The_import_meta_meta_property_is_not_allowed_in_files_which_will_build_into_CommonJS_output
         d.code !== 1470 &&
+        !isInNodeModules(d) &&
         (options.filterDiagnostic?.(d) ?? true)
       );
+    }
+
+    /** A dependency shipping a .ts file that resolution lands on is compiled
+     * as a source rather than a declaration file, so `skipLibCheck` doesn't
+     * cover it. Its code is no more the package author's problem than a .d.ts
+     * would be, so ignore it all the same. */
+    function isInNodeModules(diagnostic: ts.Diagnostic) {
+      const fileName = diagnostic.file?.fileName;
+      return fileName != null && fileName.includes("/node_modules/");
     }
 
     function shouldTypeCheck() {
@@ -620,21 +692,33 @@ export async function build(options: BuildOptions): Promise<void> {
     const { shims, testShims } = shimOptionsToTransformShims(options.shims);
     return transform({
       entryPoints: entryPoints.map((e) => e.path),
-      testEntryPoints: options.test
-        ? await glob({
-          pattern: getTestPattern(),
-          rootDir: options.rootTestDir ?? Deno.cwd(),
-          excludeDirs: [options.outDir],
-        })
-        : [],
+      testEntryPoints: options.test ? await getTestEntryPoints() : [],
       shims,
       testShims,
       mappings: options.mappings,
       target: scriptTarget,
+      polyfills,
       importMap: options.importMap,
       configFile: options.configFile,
       cwd: path.toFileUrl(cwd).toString(),
     });
+  }
+
+  async function getTestEntryPoints() {
+    const filePaths = await glob({
+      pattern: getTestPattern(),
+      rootDir: options.rootTestDir ?? Deno.cwd(),
+      excludeDirs: [options.outDir],
+    });
+    if (testPreloadModule == null) {
+      return filePaths;
+    }
+    // keep the preload module first so that its output path is
+    // known when creating the test launcher script
+    return [
+      testPreloadModule,
+      ...filePaths.filter((filePath) => filePath !== testPreloadModule),
+    ];
   }
 
   function log(message: string) {
@@ -648,6 +732,7 @@ export async function build(options: BuildOptions): Promise<void> {
   function createTestLauncherScript() {
     const denoTestShimPackage = getDependencyByName("@deno/shim-deno-test") ??
       getDependencyByName("@deno/shim-deno");
+    const testEntryPoints = transformOutput.test.entryPoints;
     writeFile(
       path.join(options.outDir, "test_runner.cjs"),
       transformCodeToTarget(
@@ -657,7 +742,12 @@ export async function build(options: BuildOptions): Promise<void> {
             : denoTestShimPackage.name === "@deno/shim-deno"
             ? "@deno/shim-deno/test-internals"
             : denoTestShimPackage.name,
-          testEntryPoints: transformOutput.test.entryPoints,
+          preloadEntryPoint: testPreloadModule == null
+            ? undefined
+            : testEntryPoints[0],
+          testEntryPoints: testPreloadModule == null
+            ? testEntryPoints
+            : testEntryPoints.slice(1),
           includeEsModule: options.esModule !== false,
           includeScriptModule: options.scriptModule !== false,
         }),

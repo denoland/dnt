@@ -70,3 +70,17 @@ Deno.test("transform import.meta.resolve expressions in esModule", () => {
     `function test(specifier) { globalThis[Symbol.for("import-meta-ponyfill-esmodule")](import.meta).resolve(specifier); }\n`,
   );
 });
+
+Deno.test("does not transform new.target in commonjs", () => {
+  testImportReplacementsCjs(
+    "function test(...args) { return Reflect.construct(Struct, args, new.target); }",
+    `function test(...args) { return Reflect.construct(Struct, args, new.target); }\n`,
+  );
+});
+
+Deno.test("does not transform new.target in esModule", () => {
+  testImportReplacementsEsm(
+    "function test(...args) { return Reflect.construct(Struct, args, new.target); }",
+    `function test(...args) { return Reflect.construct(Struct, args, new.target); }\n`,
+  );
+});

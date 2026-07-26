@@ -3,6 +3,22 @@
 import { expandGlob } from "@std/fs/expand-glob";
 import * as path from "@std/path";
 
+/** Gets the path of the JavaScript file the TypeScript compiler emits
+ * for the provided output file path. */
+export function toJsFilePath(filePath: string): string {
+  return filePath.replace(COMPILED_EXT_RE, ".js");
+}
+
+/** Gets the path of the declaration file the TypeScript compiler emits
+ * for the provided output file path. */
+export function toDtsFilePath(filePath: string): string {
+  return filePath.replace(COMPILED_EXT_RE, ".d.ts");
+}
+
+// extensions of the transform's output files that the TypeScript compiler
+// emits as `.js` files (the transform already outputs `.mts` and `.mjs` as `.js`)
+const COMPILED_EXT_RE = /\.(?:ts|tsx|jsx)$/i;
+
 /**
  * Gets the files found in the provided root dir path based on the glob.
  *

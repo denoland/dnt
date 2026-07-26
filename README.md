@@ -173,6 +173,73 @@ await build({
 });
 ```
 
+### Test Preload Module
+
+Specify a module to load before running the tests with the `testPreloadModule`
+build option:
+
+```ts
+await build({
+  // ...etc...
+  testPreloadModule: "./scripts/test_preload.ts",
+});
+```
+
+This is useful for setting up the Node.js environment the tests run in without
+affecting the distributed code. For example, when the distributed code assumes a
+global exists that Node.js doesn't have:
+
+```ts
+// scripts/test_preload.ts
+import { Headers, Response } from "npm:undici";
+
+Object.assign(globalThis, { Headers, Response });
+```
+
+The module is transformed and type checked like the test files are and it is not
+included in the npm package. It is loaded once for each of the emitted script
+and ESM output, before any test file.
+
+### Polyfills
+
+dnt adds polyfills for language features that may not exist in the environment
+implied by `compilerOptions.target`. If you're targeting a runtime that already
+supports a feature, use the `polyfills` build option to opt out and keep the
+extra code out of your package:
+
+```ts
+await build({
+  // ...etc...
+  polyfills: {
+    importMeta: false,
+  },
+});
+```
+
+Pass `true` or `false` instead of an object to enable or disable every polyfill
+at once. Anything you don't specify continues to be decided by the target, so
+`polyfills` overrides the target rather than replacing it.
+
+The supported names are `arrayFindLast`, `arrayFromAsync`, `errorCause`,
+`importMeta`, `objectHasOwn`, `promiseWithResolvers`, and `stringReplaceAll`.
+
+Note that the polyfills also provide the type declarations for the features they
+polyfill, so opting out of one means relying on your `compilerOptions.lib`
+declarations for it instead.
+
+The `importMeta` polyfill can only be disabled when the `scriptModule` build
+option is `false`, because `import.meta` is not valid CommonJS:
+
+```ts
+await build({
+  // ...etc...
+  scriptModule: false,
+  polyfills: {
+    importMeta: false,
+  },
+});
+```
+
 ### Shims
 
 dnt will shim the globals specified in the build options. For example, if you
