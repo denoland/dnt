@@ -16,7 +16,7 @@ export function getNpmIgnoreText(options: {
   // Try to make as little of this conditional in case a user edits settings
   // to exclude something, but then the output directory still has that file
   const lines = [];
-  if (!isUsingSourceMaps() || options.inlineSources) {
+  if (!isReferencingSrcDir()) {
     lines.push("/src/");
   }
   for (const fileName of getTestFileNames()) {
@@ -29,6 +29,10 @@ export function getNpmIgnoreText(options: {
     for (const file of options.testFiles) {
       const filePath = toJsFilePath(file.filePath);
       const dtsFilePath = toDtsFilePath(file.filePath);
+      // the whole directory is excluded above when it's not published
+      if (isReferencingSrcDir()) {
+        yield `/src/${file.filePath}`;
+      }
       if (options.includeEsModule) {
         const esmFilePath = `/esm/${filePath}`;
         yield esmFilePath;
@@ -63,6 +67,20 @@ export function getNpmIgnoreText(options: {
       }
     }
     yield "/test_runner.cjs";
+  }
+
+  /** Whether any emitted map points back at the files in `/src/`, in which
+   * case the directory needs to be published for the map to resolve. */
+  function isReferencingSrcDir() {
+    // `inlineSources` embeds the sources in the source map, so `/src/` is only
+    // needed without it. It has no effect on declaration maps though, so those
+    // always need the directory.
+    return (isUsingSourceMaps() && !options.inlineSources) ||
+      isEmittingDeclarationMaps();
+  }
+
+  function isEmittingDeclarationMaps() {
+    return options.declaration !== false && !!options.declarationMap;
   }
 
   function isUsingSourceMaps() {

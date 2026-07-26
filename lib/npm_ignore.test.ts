@@ -101,7 +101,7 @@ Deno.test("should include declaration maps of test files", () => {
   runTest({
     sourceMaps: undefined,
     inlineSources: undefined,
-    expectHasSrcFolder: true,
+    expectHasSrcFolder: false,
     includeScriptModule: true,
     includeEsModule: true,
     declaration: "inline",
@@ -119,7 +119,7 @@ Deno.test("should include declaration maps of test files", () => {
   runTest({
     sourceMaps: undefined,
     inlineSources: undefined,
-    expectHasSrcFolder: true,
+    expectHasSrcFolder: false,
     includeScriptModule: true,
     includeEsModule: true,
     declaration: "separate",
@@ -134,6 +134,39 @@ Deno.test("should include declaration maps of test files", () => {
     includeEsModule: true,
     declaration: false,
     declarationMap: true,
+  });
+});
+
+Deno.test("should keep the src directory when the declaration maps need it", () => {
+  // declaration maps never inline their sources, so `inlineSources` does not
+  // remove the need for the src directory like it does for source maps
+  runTest({
+    sourceMaps: true,
+    inlineSources: true,
+    expectHasSrcFolder: false,
+    includeScriptModule: true,
+    includeEsModule: true,
+    declaration: "inline",
+    declarationMap: true,
+  });
+  runTest({
+    sourceMaps: "inline",
+    inlineSources: true,
+    expectHasSrcFolder: false,
+    includeScriptModule: true,
+    includeEsModule: true,
+    declaration: "separate",
+    declarationMap: true,
+  });
+  // nothing references the src directory, so it's excluded
+  runTest({
+    sourceMaps: true,
+    inlineSources: true,
+    expectHasSrcFolder: true,
+    includeScriptModule: true,
+    includeEsModule: true,
+    declaration: "inline",
+    declarationMap: false,
   });
 });
 
@@ -163,6 +196,9 @@ function runTest(options: {
 
   function getExpectedText() {
     let startText = options.expectHasSrcFolder ? "/src/\n" : "";
+    if (!options.expectHasSrcFolder) {
+      startText += "/src/mod.test.ts\n";
+    }
     if (options.includeEsModule !== false) {
       startText += "/esm/mod.test.js\n";
       if (options.sourceMaps === true) {

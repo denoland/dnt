@@ -89,7 +89,14 @@ export interface BuildOptions {
    * @default "inline"
    */
   declaration?: "inline" | "separate" | false;
-  /** Create declaration map files. Defaults to `true` if `declaration` is enabled and `skipSourceOutput` is `false`.
+  /** Create declaration map files so that "go to definition" in an editor
+   * lands on the original TypeScript rather than the emitted declaration file.
+   *
+   * @remarks Enabling this causes the `src` directory to be published, because
+   * that's what the declaration maps point at. Requires `declaration` to be
+   * enabled and `skipSourceOutput` to be `false`.
+   *
+   * @default false
    */
   declarationMap?: boolean;
   /** Include a CommonJS or UMD module.
@@ -278,8 +285,16 @@ export async function build(options: BuildOptions): Promise<void> {
       : options.declaration ?? "inline",
   };
   const cwd = Deno.cwd();
-  const declarationMap = options.declarationMap ??
-    (!!options.declaration && !options.skipSourceOutput);
+  // the declaration maps point at the `src` directory, so they're only useful
+  // when it's written out and published alongside them
+  const declarationMap = (options.declarationMap ?? false) &&
+    !!options.declaration && !options.skipSourceOutput;
+  if (options.declarationMap && !declarationMap) {
+    warn(
+      `Ignoring the 'declarationMap' build option because it requires ` +
+        `'declaration' to be enabled and 'skipSourceOutput' to be 'false'.`,
+    );
+  }
   const packageManager = options.packageManager ?? "npm";
   const scriptTarget = options.compilerOptions?.target ?? "ES2021";
   const polyfills = resolvePolyfillOptions(options.polyfills);
