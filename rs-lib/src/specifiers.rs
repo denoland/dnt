@@ -163,6 +163,11 @@ pub fn get_specifiers<'a>(
   )?;
   let types = declaration_files.mappings;
   let mut declaration_specifiers = declaration_files.types_package_files;
+  // a declaration file that a module imports directly still needs to be
+  // in the output even when a types package provides it
+  for specifier in get_imported_specifiers(module_graph, &all_modules) {
+    declaration_specifiers.remove(&specifier);
+  }
   for value in types.values() {
     declaration_specifiers.insert(value.selected.specifier.clone());
     for dep in value.ignored.iter() {
@@ -197,6 +202,23 @@ pub fn get_specifiers<'a>(
       mapped: specifiers.mapped_packages,
     },
   })
+}
+
+/// Gets the specifiers that the modules import in their code, which
+/// excludes the declaration files they only specify types with.
+fn get_imported_specifiers(
+  module_graph: &ModuleGraph,
+  modules: &[&Module],
+) -> HashSet<ModuleSpecifier> {
+  let mut specifiers = HashSet::new();
+  for module in modules.iter().filter_map(|m| m.js()) {
+    for dep in module.dependencies.values() {
+      if let Some(specifier) = dep.get_code() {
+        specifiers.insert(module_graph.resolve(specifier).clone());
+      }
+    }
+  }
+  specifiers
 }
 
 fn ensure_package_mapped_specifiers_valid(

@@ -968,6 +968,63 @@ export * from 'svg-path-parser';"
 }
 
 #[tokio::test]
+async fn transform_types_package_declaration_file_that_is_imported() {
+  let result = TestBuilder::new()
+    .with_loader(|loader| {
+      loader
+        .add_local_file(
+          "/mod.ts",
+          concat!(
+            "import type { PathCommand } from 'https://esm.sh/@types/svg-path-parser@1.1.3/index.d.ts';
+",
+            "export * from 'https://esm.sh/svg-path-parser@1.1.0';
+",
+            "export type { PathCommand };
+",
+          ),
+        )
+        .add_remote_file_with_headers(
+          "https://esm.sh/svg-path-parser@1.1.0",
+          "export function parseSVG() {}",
+          &[(
+            "x-typescript-types",
+            "https://esm.sh/@types/svg-path-parser@1.1.3/index.d.ts",
+          )],
+        )
+        .add_remote_file(
+          "https://esm.sh/@types/svg-path-parser@1.1.3/index.d.ts",
+          "export declare interface PathCommand {}",
+        );
+    })
+    .transform()
+    .await
+    .unwrap();
+
+  // the declaration file is imported directly, so it still needs
+  // to be in the output
+  assert_files!(
+    result.main.files,
+    &[
+      (
+        "mod.ts",
+        concat!(
+          "import type { PathCommand } from './deps/esm.sh/@types/svg-path-parser@1.1.3/index';
+",
+          "export * from 'svg-path-parser';
+",
+          "export type { PathCommand };
+",
+        )
+      ),
+      (
+        "deps/esm.sh/@types/svg-path-parser@1.1.3/index.d.ts",
+        "export declare interface PathCommand {}"
+      ),
+    ]
+  );
+}
+
+#[tokio::test]
 async fn transform_no_types_package_for_mapped_module_without_types() {
   let result = TestBuilder::new()
     .with_loader(|loader| {

@@ -119,7 +119,13 @@ impl SpecifierMapper for SkypackMapper {
     &self,
     specifier: &ModuleSpecifier,
   ) -> Option<PackageMappedSpecifier> {
-    let captures = SKYPACK_MAPPING_RE.captures(specifier.as_str())?;
+    if specifier.path().starts_with("/-/") {
+      // ignore, it's an internal url whose version is a build hash
+      return None;
+    }
+
+    let text = without_query(specifier);
+    let captures = SKYPACK_MAPPING_RE.captures(&text)?;
     to_types_package(&captures)
   }
 }
@@ -171,7 +177,9 @@ impl SpecifierMapper for EsmShMapper {
     {
       return None;
     }
-    let captures = ESMSH_MAPPING_RE.captures(specifier.as_str())?;
+
+    let text = without_query(specifier);
+    let captures = ESMSH_MAPPING_RE.captures(&text)?;
     to_types_package(&captures)
   }
 }
@@ -181,23 +189,28 @@ impl SpecifierMapper for EsmShMapper {
 fn to_types_package(
   captures: &regex::Captures,
 ) -> Option<PackageMappedSpecifier> {
-  let sub_path = captures.get(4)?.as_str().to_lowercase();
-  if !sub_path.ends_with(".d.ts") && !sub_path.ends_with(".d.mts") {
-    return None;
-  }
   Some(PackageMappedSpecifier {
-    name: captures.get(2).unwrap().as_str().to_string(),
+    name: captures.get(2)?.as_str().to_string(),
     version: Some(
       captures
-        .get(3)
-        .unwrap()
+        .get(3)?
         .as_str()
         .trim_start_matches('v')
         .to_string(),
     ),
+    // the sub path is dropped because the package is only used as a
+    // dependency in the package.json and never in a module specifier
     sub_path: None,
     peer_dependency: false,
   })
+}
+
+fn without_query(specifier: &ModuleSpecifier) -> String {
+  let text = specifier.as_str();
+  match text.find(['?', '#']) {
+    Some(index) => text[..index].to_string(),
+    None => text.to_string(),
+  }
 }
 
 struct DenoStdNodeSpecifierMapper {
@@ -331,4 +344,66 @@ mod test {
       None,
     );
   }
+}
+#[test]
+fn map_types_esm_sh() {
+  assert_types_package(
+    "https://esm.sh/@types/svg-path-parser@~1.1.6/index.d.ts",
+    Some(("@types/svg-path-parser", "~1.1.6")),
+  );
+  // versioned cdn path
+  assert_types_package(
+    "https://esm.sh/v135/@types/react@18.2.0/index.d.ts",
+    Some(("@types/react", "18.2.0")),
+  );
+  // nested sub paths and other declaration file extensions
+  assert_types_package(
+    "https://esm.sh/@types/node@22.0.0/ts5.6/index.d.mts",
+    Some(("@types/node", "22.0.0")),
+  );
+  assert_types_package(
+    "https://esm.sh/@types/node@22.0.0/index.d.cts",
+    Some(("@types/node", "22.0.0")),
+  );
+  // no sub path
+  assert_types_package(
+    "https://esm.sh/@types/node@22.0.0",
+    Some(("@types/node", "22.0.0")),
+  );
+  // query strings
+  assert_types_package(
+    "https://esm.sh/@types/node@22.0.0/index.d.ts?target=denonext",
+    Some(("@types/node", "22.0.0")),
+  );
+  // github and jsr packages aren't on npm
+  assert_types_package("https://esm.sh/gh/user/repo@1.0.0/index.d.ts", None);
+  assert_types_package("https://esm.sh/jsr/@scope/name@1.0.0/index.d.ts", None);
+}
+
+#[test]
+fn map_types_skypack() {
+  assert_types_package(
+    "https://cdn.skypack.dev/@types/lodash@4.14.191/index.d.ts",
+    Some(("@types/lodash", "4.14.191")),
+  );
+  // internal urls have a build hash for a version
+  assert_types_package(
+      "https://cdn.skypack.dev/-/@types/lodash@v4.14.191-abcXYZ/dist=es2019/index.d.ts",
+      None,
+    );
+}
+
+#[test]
+fn map_types_unknown_cdn() {
+  assert_types_package("https://deno.land/x/mod@1.0.0/mod.d.ts", None);
+}
+
+fn assert_types_package(specifier: &str, expected: Option<(&str, &str)>) {
+  let mappers = get_all_specifier_mappers();
+  let specifier = ModuleSpecifier::parse(specifier).unwrap();
+  let result = get_types_package_for_specifier(&mappers, &specifier);
+  assert_eq!(
+    result.map(|p| (p.name, p.version.unwrap())),
+    expected.map(|(n, v)| (n.to_string(), v.to_string()))
+  );
 }

@@ -512,7 +512,7 @@ pub async fn transform(
 
   let mut warnings = get_declaration_warnings(&specifiers);
   let types_dependencies =
-    get_types_dependencies(&specifiers, &file_fetcher).await;
+    get_types_dependencies(&specifiers, &file_fetcher, &mut warnings).await;
   let mut main_env_context = EnvironmentContext {
     environment: TransformOutputEnvironment {
       entry_points: options
@@ -907,8 +907,7 @@ fn check_add_shim_file_to_environment(
 /// dependencies, which are added to the dev dependencies.
 ///
 /// A mapped module isn't part of the module graph, so the `X-TypeScript-Types`
-/// header of each is resolved here. Failures are ignored because a mapped
-/// module isn't required to be fetchable.
+/// header of each is resolved here.
 async fn get_types_dependencies<TSys: WorkspaceFactorySys>(
   specifiers: &Specifiers,
   file_fetcher: &PermissionedFileFetcher<
@@ -916,6 +915,7 @@ async fn get_types_dependencies<TSys: WorkspaceFactorySys>(
     TSys,
     impl deno_cache_dir::file_fetcher::HttpClient,
   >,
+  warnings: &mut Vec<String>,
 ) -> Vec<Dependency> {
   let mappers = get_all_specifier_mappers();
   let mut types_packages = specifiers.types_packages.clone();
@@ -925,16 +925,37 @@ async fn get_types_dependencies<TSys: WorkspaceFactorySys>(
       .mapped
       .keys()
       .chain(specifiers.test.mapped.keys())
-      .filter(|s| matches!(s.scheme(), "http" | "https"))
-      .map(|specifier| async {
-        let types_specifier =
-          get_types_header_specifier(file_fetcher, specifier).await?;
-        get_types_package_for_specifier(&mappers, &types_specifier)
+      // only a module mapped by one of the cdn mappers may have a types
+      // header, so don't fetch the modules the user mapped themselves
+      .filter(|s| mappers.iter().any(|m| m.map(s).is_some()))
+      .map(|specifier| {
+        let mappers = &mappers;
+        async move {
+          match get_types_header_specifier(file_fetcher, specifier).await {
+            Ok(types_specifier) => Ok(
+              types_specifier
+                .and_then(|s| get_types_package_for_specifier(mappers, &s)),
+            ),
+            Err(err) => Err(format!(
+              "Failed getting the type declarations of {}. {:#}",
+              specifier, err
+            )),
+          }
+        }
       }),
   )
   .await;
-  for package in header_packages.into_iter().flatten() {
-    types_packages.insert(package.name.clone(), package);
+  for result in header_packages {
+    match result {
+      Ok(Some(package)) => {
+        // a declaration file specified in the code takes precedence
+        types_packages
+          .entry(package.name.clone())
+          .or_insert(package);
+      }
+      Ok(None) => {}
+      Err(warning) => warnings.push(warning),
+    }
   }
 
   types_packages
@@ -958,13 +979,17 @@ async fn get_types_header_specifier<TSys: WorkspaceFactorySys>(
     impl deno_cache_dir::file_fetcher::HttpClient,
   >,
   specifier: &ModuleSpecifier,
-) -> Option<ModuleSpecifier> {
-  let file = file_fetcher
-    .fetch_bypass_permissions(specifier)
-    .await
-    .ok()?;
-  let types_header = file.maybe_headers?.remove("x-typescript-types")?;
-  deno_path_util::resolve_url_or_path(&types_header, Path::new("")).ok()
+) -> Result<Option<ModuleSpecifier>> {
+  let mut file = file_fetcher.fetch_bypass_permissions(specifier).await?;
+  let Some(types_header) = file
+    .maybe_headers
+    .as_mut()
+    .and_then(|h| h.remove("x-typescript-types"))
+  else {
+    return Ok(None);
+  };
+  // resolve relative to the final url so that redirects are handled
+  Ok(file.url.join(&types_header).ok())
 }
 
 fn get_dependencies(
