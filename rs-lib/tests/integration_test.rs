@@ -1484,6 +1484,176 @@ async fn transform_jsr_specifier_mapping_via_import_map() {
 }
 
 #[tokio::test]
+async fn transform_specifier_mapping_of_bare_specifier() {
+  let result = TestBuilder::new()
+    .with_loader(|loader| {
+      loader
+        .add_local_file("/mod.ts", "import * as pkg from 'my-lib';")
+        .add_local_file(
+          "/deno.json",
+          r#"{
+  "imports": {
+    "my-lib": "https://localhost/my-lib/mod.ts"
+  }
+}"#,
+        )
+        .add_remote_file(
+          "https://localhost/my-lib/mod.ts",
+          "export const a = 1;",
+        );
+    })
+    // the bare specifier is resolved via the config file
+    .add_package_specifier_mapping(
+      "my-lib",
+      "npm-my-lib",
+      Some("^39.0.0"),
+      None,
+    )
+    .transform()
+    .await
+    .unwrap();
+
+  assert_files!(
+    result.main.files,
+    &[("mod.ts", "import * as pkg from 'npm-my-lib';")]
+  );
+  assert_eq!(
+    result.main.dependencies,
+    &[Dependency {
+      name: "npm-my-lib".to_string(),
+      version: "^39.0.0".to_string(),
+      peer_dependency: false,
+    }]
+  );
+}
+
+#[tokio::test]
+async fn transform_specifier_mapping_of_bare_specifier_to_jsr() {
+  let result = TestBuilder::new()
+    .with_loader(|loader| {
+      loader
+        .add_local_file("/mod.ts", "import * as pkg from 'my-lib';")
+        .add_local_file(
+          "/deno.json",
+          r#"{
+  "imports": {
+    "my-lib": "jsr:@scope/name@^1.0.0"
+  }
+}"#,
+        );
+    })
+    .add_package_specifier_mapping("my-lib", "scope-name", None, None)
+    .transform()
+    .await
+    .unwrap();
+
+  assert_files!(
+    result.main.files,
+    &[("mod.ts", "import * as pkg from 'scope-name';")]
+  );
+  assert_eq!(
+    result.main.dependencies,
+    &[Dependency {
+      name: "scope-name".to_string(),
+      version: "^1.0.0".to_string(),
+      peer_dependency: false,
+    }]
+  );
+}
+
+#[tokio::test]
+async fn transform_module_specifier_mapping_of_bare_specifier() {
+  let result = TestBuilder::new()
+    .with_loader(|loader| {
+      loader
+        .add_local_file("/mod.ts", "import * as other from 'my-lib';")
+        .add_local_file(
+          "/deno.json",
+          r#"{
+  "imports": {
+    "my-lib": "./deno_file.ts"
+  }
+}"#,
+        )
+        .add_local_file("/deno_file.ts", "export const a = 1;")
+        .add_local_file("/node_file.ts", "export const a = 2;");
+    })
+    .add_module_specifier_mapping("my-lib", "file:///node_file.ts")
+    .transform()
+    .await
+    .unwrap();
+
+  assert_files!(
+    result.main.files,
+    &[
+      ("mod.ts", "import * as other from './node_file.js';"),
+      ("node_file.ts", "export const a = 2;")
+    ]
+  );
+}
+
+#[tokio::test]
+async fn transform_specifier_mappings_resolving_to_same_specifier() {
+  let err_message = TestBuilder::new()
+    .with_loader(|loader| {
+      loader
+        .add_local_file("/mod.ts", "import * as pkg from 'my-lib';")
+        .add_local_file(
+          "/deno.json",
+          r#"{
+  "imports": {
+    "my-lib": "https://localhost/my-lib/mod.ts"
+  }
+}"#,
+        )
+        .add_remote_file(
+          "https://localhost/my-lib/mod.ts",
+          "export const a = 1;",
+        );
+    })
+    .add_package_specifier_mapping("my-lib", "npm-my-lib", Some("^1.0.0"), None)
+    .add_package_specifier_mapping(
+      "https://localhost/my-lib/mod.ts",
+      "other-lib",
+      Some("^1.0.0"),
+      None,
+    )
+    .transform()
+    .await
+    .err()
+    .unwrap();
+
+  assert_eq!(
+    err_message.to_string(),
+    "The mappings \"https://localhost/my-lib/mod.ts\" and \"my-lib\" both resolved to https://localhost/my-lib/mod.ts"
+  );
+}
+
+#[tokio::test]
+async fn transform_specifier_mapping_of_unresolvable_bare_specifier() {
+  let err_message = TestBuilder::new()
+    .with_loader(|loader| {
+      loader.add_local_file("/mod.ts", "console.log(1);");
+    })
+    .add_package_specifier_mapping(
+      "my-lib",
+      "npm-my-lib",
+      Some("^39.0.0"),
+      None,
+    )
+    .transform()
+    .await
+    .err()
+    .unwrap();
+
+  // the message the user sees includes the cause
+  assert_eq!(
+    format!("{:#}", err_message),
+    "Failed resolving mapping \"my-lib\": Import \"my-lib\" not a dependency"
+  );
+}
+
+#[tokio::test]
 async fn transform_jsr_specifier_mapping_not_found() {
   let error_message = TestBuilder::new()
     .with_loader(|loader| {

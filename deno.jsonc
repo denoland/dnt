@@ -43,6 +43,7 @@
     "wasm/target/",
     "lib/pkg/",
     "rs-lib/src/polyfills/scripts/",
+    "tests/bare_mapping_project/npm",
     "tests/config_discovery_project/npm",
     "tests/declaration_import_project/npm",
     "tests/frozen_lockfile_project/npm",

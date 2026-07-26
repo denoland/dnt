@@ -499,6 +499,36 @@ Note that dnt will error if you specify a mapping and it is not found in the
 code. This is done to prevent the scenario where a remote specifier's version is
 bumped and the mapping isn't updated.
 
+#### Mapping a bare specifier
+
+A bare specifier may be used, in which case it's resolved via the config file's
+import map. For example, given a deno.json with:
+
+```jsonc
+{
+  "imports": {
+    "code-block-writer": "https://deno.land/x/code_block_writer@11.0.0/mod.ts"
+  }
+}
+```
+
+...the specifier can be mapped by the name used in the code:
+
+```ts
+await build({
+  // ...etc...
+  mappings: {
+    "code-block-writer": {
+      name: "code-block-writer",
+      version: "^11.0.0",
+    },
+  },
+});
+```
+
+A key that has a scheme or that looks like a relative or absolute path is not
+treated as a bare specifier.
+
 #### Mapping a JSR package to an npm package
 
 A `jsr:` specifier may be mapped the same way:

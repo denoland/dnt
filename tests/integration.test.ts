@@ -779,6 +779,36 @@ Deno.test("should build with peer dependencies in mappings", async () => {
   });
 });
 
+Deno.test("should build with a bare specifier in the mappings", async () => {
+  await runTest("bare_mapping_project", {
+    entryPoints: ["mod.ts"],
+    outDir: "./npm",
+    typeCheck: false,
+    test: false,
+    skipNpmInstall: true,
+    shims: {},
+    package: {
+      name: "bare-mappings",
+      version: "1.0.0",
+    },
+    mappings: {
+      // resolved via the deno.json's imports
+      "code-block-writer": {
+        name: "code-block-writer",
+        version: "=11.0.0",
+      },
+    },
+  }, (output) => {
+    assertEquals(output.packageJson.dependencies, {
+      "code-block-writer": "=11.0.0",
+    });
+    assertStringIncludes(
+      output.getFileText("esm/mod.js"),
+      `from "code-block-writer"`,
+    );
+  });
+});
+
 Deno.test("should build shim project with everything enabled", async () => {
   await runTest("shim_project", {
     entryPoints: ["mod.ts"],
@@ -1568,6 +1598,7 @@ export interface Output {
 
 async function runTest(
   project:
+    | "bare_mapping_project"
     | "bin_shebang_project"
     | "config_discovery_project"
     | "declaration_import_project"

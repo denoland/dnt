@@ -43,6 +43,8 @@ pub struct ModuleGraphOptions<'a, TSys: WorkspaceFactorySys> {
   pub loader: Rc<dyn deno_graph::source::Loader>,
   pub resolver: DefaultDenoResolverRc<TSys>,
   pub specifier_mappings: &'a HashMap<ModuleSpecifier, MappedSpecifier>,
+  /// Original key of each mapping, which is what the user specified.
+  pub specifier_mapping_keys: &'a HashMap<ModuleSpecifier, String>,
   pub compiler_options_resolver: Rc<CompilerOptionsResolver>,
   pub cjs_tracker:
     Rc<deno_resolver::cjs::CjsTracker<DenoInNpmPackageChecker, TSys>>,
@@ -208,7 +210,10 @@ impl ModuleGraph {
     if !not_found_module_mappings.is_empty() {
       bail!(
         "The following specifiers were indicated to be mapped to a module, but were not found:\n{}",
-        format_specifiers_for_message(not_found_module_mappings),
+        format_specifiers_for_message(
+          not_found_module_mappings,
+          options.specifier_mapping_keys,
+        ),
       );
     }
 
@@ -240,7 +245,10 @@ impl ModuleGraph {
     if !not_found_package_specifiers.is_empty() {
       bail!(
         "The following specifiers were indicated to be mapped to a package, but were not found:\n{}",
-        format_specifiers_for_message(not_found_package_specifiers),
+        format_specifiers_for_message(
+          not_found_package_specifiers,
+          options.specifier_mapping_keys,
+        ),
       );
     }
 
@@ -485,11 +493,16 @@ fn from_graph_specifier(
 
 fn format_specifiers_for_message(
   mut specifiers: Vec<&ModuleSpecifier>,
+  keys: &HashMap<ModuleSpecifier, String>,
 ) -> String {
   specifiers.sort();
   specifiers
     .into_iter()
-    .map(|s| format!("  * {}", s))
+    .map(|s| match keys.get(s) {
+      // show what the user specified when it was a bare specifier
+      Some(key) if key != s.as_str() => format!("  * {} ({})", key, s),
+      _ => format!("  * {}", s),
+    })
     .collect::<Vec<_>>()
     .join("\n")
 }
