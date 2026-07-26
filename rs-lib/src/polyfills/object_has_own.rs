@@ -9,6 +9,10 @@ use crate::ScriptTarget;
 pub struct ObjectHasOwnPolyfill;
 
 impl Polyfill for ObjectHasOwnPolyfill {
+  fn name(&self) -> &'static str {
+    "objectHasOwn"
+  }
+
   fn use_for_target(&self, _target: ScriptTarget) -> bool {
     true
   }

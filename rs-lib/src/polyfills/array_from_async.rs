@@ -9,6 +9,10 @@ use crate::ScriptTarget;
 pub struct ArrayFromAsyncPolyfill;
 
 impl Polyfill for ArrayFromAsyncPolyfill {
+  fn name(&self) -> &'static str {
+    "arrayFromAsync"
+  }
+
   fn use_for_target(&self, _target: ScriptTarget) -> bool {
     true
   }

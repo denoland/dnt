@@ -202,6 +202,8 @@ pub struct TransformOptions {
   pub test_shims: Vec<Shim>,
   pub mappings: HashMap<ModuleSpecifier, MappedSpecifier>,
   pub target: ScriptTarget,
+  #[serde(default)]
+  pub polyfills: HashMap<String, bool>,
   pub import_map: Option<ModuleSpecifier>,
   pub config_file: Option<ModuleSpecifier>,
   pub cwd: ModuleSpecifier,
@@ -235,6 +237,7 @@ async fn transform_inner(options: JsValue) -> Result<JsValue, anyhow::Error> {
       test_shims: options.test_shims,
       specifier_mappings: options.mappings,
       target: options.target,
+      polyfills: options.polyfills,
       import_map: options.import_map,
       config_file: options.config_file,
       cwd: deno_path_util::url_to_file_path(&options.cwd)?,

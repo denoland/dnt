@@ -9,6 +9,7 @@ use deno_node_transform::MappedSpecifier;
 use deno_node_transform::ModuleSpecifier;
 use deno_node_transform::PackageMappedSpecifier;
 use deno_node_transform::PackageShim;
+use deno_node_transform::PolyfillOverrides;
 use deno_node_transform::ScriptTarget;
 use deno_node_transform::Shim;
 use deno_node_transform::TransformOptions;
@@ -26,6 +27,7 @@ pub struct TestBuilder {
   shims: Vec<Shim>,
   test_shims: Vec<Shim>,
   target: ScriptTarget,
+  polyfills: PolyfillOverrides,
   config_file: Option<ModuleSpecifier>,
   import_map: Option<ModuleSpecifier>,
 }
@@ -45,6 +47,7 @@ impl TestBuilder {
       shims: Default::default(),
       test_shims: Default::default(),
       target: ScriptTarget::ES5,
+      polyfills: Default::default(),
       config_file: None,
       import_map: None,
     }
@@ -178,6 +181,11 @@ impl TestBuilder {
     self
   }
 
+  pub fn set_polyfill(&mut self, name: &str, enabled: bool) -> &mut Self {
+    self.polyfills.insert(name.to_string(), enabled);
+    self
+  }
+
   pub async fn transform(&self) -> Result<TransformOutput> {
     let mut entry_points =
       vec![ModuleSpecifier::parse(&self.entry_point).unwrap()];
@@ -201,6 +209,7 @@ impl TestBuilder {
         test_shims: self.test_shims.clone(),
         specifier_mappings: self.specifier_mappings.clone(),
         target: self.target,
+        polyfills: self.polyfills.clone(),
         config_file: self.config_file.clone(),
         import_map: self.import_map.clone(),
         cwd: self.loader.sys.env_current_dir().unwrap(),

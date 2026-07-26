@@ -18,7 +18,15 @@ import {
 } from "./lib/compiler.ts";
 import { type ShimOptions, shimOptionsToTransformShims } from "./lib/shims.ts";
 import { getNpmIgnoreText } from "./lib/npm_ignore.ts";
-import type { PackageJson, ScriptTarget } from "./lib/types.ts";
+import {
+  resolvePolyfillOptions,
+  resolveUseImportMetaPolyfill,
+} from "./lib/polyfills.ts";
+import type {
+  PackageJson,
+  PolyfillOptions,
+  ScriptTarget,
+} from "./lib/types.ts";
 import { glob, runNpmCommand, standardizePath } from "./lib/utils.ts";
 import {
   type SpecifierMappings,
@@ -30,7 +38,11 @@ import { getPackageJson } from "./lib/package_json.ts";
 import { getTestRunnerCode } from "./lib/test_runner/get_test_runner_code.ts";
 
 export { emptyDir } from "@std/fs/empty-dir";
-export type { PackageJson } from "./lib/types.ts";
+export type {
+  PackageJson,
+  PolyfillName,
+  PolyfillOptions,
+} from "./lib/types.ts";
 export type { JsxEmit, LibName, SourceMapOptions } from "./lib/compiler.ts";
 export type { ShimOptions } from "./lib/shims.ts";
 
@@ -88,6 +100,20 @@ export interface BuildOptions {
    * @default true
    */
   esModule?: boolean;
+  /** Explicitly enables or disables polyfills, overriding what
+   * `compilerOptions.target` implies.
+   *
+   * Provide `true` or `false` to enable or disable all polyfills, or an object
+   * to control them individually:
+   *
+   * ```ts
+   * polyfills: { importMeta: false }
+   * ```
+   *
+   * @remarks The `importMeta` polyfill cannot be disabled unless `scriptModule`
+   * is `false`, because `import.meta` is not valid CommonJS.
+   */
+  polyfills?: PolyfillOptions;
   /** Skip running `npm install`.
    * @default false
    */
@@ -250,6 +276,14 @@ export async function build(options: BuildOptions): Promise<void> {
     (!!options.declaration && !options.skipSourceOutput);
   const packageManager = options.packageManager ?? "npm";
   const scriptTarget = options.compilerOptions?.target ?? "ES2021";
+  const polyfills = resolvePolyfillOptions(options.polyfills);
+  // `import.meta` call sites are rewritten by the TypeScript compiler rather
+  // than the transform, so resolve this up front and keep both sides in sync
+  polyfills["importMeta"] = resolveUseImportMetaPolyfill({
+    polyfills,
+    target: scriptTarget,
+    emitScriptModule: options.scriptModule !== false,
+  });
   const entryPoints: EntryPoint[] = options.entryPoints.map((e, i) => {
     if (typeof e === "string") {
       return {
@@ -433,7 +467,9 @@ export async function build(options: BuildOptions): Promise<void> {
     program = project.createProgram();
     emit({
       transformers: {
-        before: [compilerTransforms.transformImportMeta],
+        before: polyfills["importMeta"]
+          ? [compilerTransforms.transformImportMeta]
+          : [],
       },
     });
     writeFile(
@@ -458,7 +494,9 @@ export async function build(options: BuildOptions): Promise<void> {
     program = getProgramAndMaybeTypeCheck("script");
     emit({
       transformers: {
-        before: [compilerTransforms.transformImportMeta],
+        before: polyfills["importMeta"]
+          ? [compilerTransforms.transformImportMeta]
+          : [],
       },
     });
     writeFile(
@@ -634,6 +672,7 @@ export async function build(options: BuildOptions): Promise<void> {
       testShims,
       mappings: options.mappings,
       target: scriptTarget,
+      polyfills,
       importMap: options.importMap,
       configFile: options.configFile,
       cwd: path.toFileUrl(cwd).toString(),

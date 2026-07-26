@@ -9,6 +9,7 @@ use deno_node_transform::PackageMappedSpecifier;
 use deno_node_transform::PackageShim;
 use deno_node_transform::ScriptTarget;
 use deno_node_transform::Shim;
+use deno_node_transform::TransformOutput;
 use pretty_assertions::assert_eq;
 
 #[macro_use]
@@ -1925,6 +1926,99 @@ async fn test_string_replace_all_polyfill(
     );
   }
   assert_eq!(result.main.entry_points, &[PathBuf::from("mod.ts")]);
+}
+
+#[tokio::test]
+async fn polyfills_override_disables_for_target() {
+  // ES2020 would normally get the polyfill, but the override wins
+  let result = build_string_replace_all_polyfill_test(
+    ScriptTarget::ES2020,
+    Some(("stringReplaceAll", false)),
+  )
+  .await;
+
+  assert_files!(
+    result.main.files,
+    &[("mod.ts", "''.replaceAll('test', 'other');\n")]
+  );
+}
+
+#[tokio::test]
+async fn polyfills_override_enables_for_latest_target() {
+  // `Latest` normally excludes every polyfill, but the override wins
+  let result = build_string_replace_all_polyfill_test(
+    ScriptTarget::Latest,
+    Some(("stringReplaceAll", true)),
+  )
+  .await;
+
+  assert_files!(
+    result.main.files,
+    &[
+      (
+        "mod.ts",
+        concat!(
+          "import \"./_dnt.polyfills.js\";\n",
+          "''.replaceAll('test', 'other');\n",
+        ),
+      ),
+      (
+        "_dnt.polyfills.ts",
+        include_str!("../src/polyfills/scripts/es2021.string-replaceAll.ts")
+      ),
+    ]
+  );
+}
+
+#[tokio::test]
+async fn polyfills_override_only_affects_named_polyfill() {
+  // disabling one polyfill leaves the others resolving by target
+  let result = TestBuilder::new()
+    .with_loader(|loader| {
+      loader.add_local_file(
+        "/mod.ts",
+        "''.replaceAll('test', 'other');\nObject.hasOwn({}, 'test');\n",
+      );
+    })
+    .set_target(ScriptTarget::ES2020)
+    .set_polyfill("stringReplaceAll", false)
+    .transform()
+    .await
+    .unwrap();
+
+  assert_files!(
+    result.main.files,
+    &[
+      (
+        "mod.ts",
+        concat!(
+          "import \"./_dnt.polyfills.js\";\n",
+          "''.replaceAll('test', 'other');\n",
+          "Object.hasOwn({}, 'test');\n",
+        ),
+      ),
+      (
+        "_dnt.polyfills.ts",
+        include_str!("../src/polyfills/scripts/esnext.object-has-own.ts")
+      ),
+    ]
+  );
+}
+
+async fn build_string_replace_all_polyfill_test(
+  target: ScriptTarget,
+  polyfill_override: Option<(&str, bool)>,
+) -> TransformOutput {
+  let mut builder = TestBuilder::new();
+  builder
+    .with_loader(|loader| {
+      loader.add_local_file("/mod.ts", "''.replaceAll('test', 'other');\n");
+    })
+    .set_target(target);
+  if let Some((name, enabled)) = polyfill_override {
+    builder.set_polyfill(name, enabled);
+  }
+  builder.transform().await.unwrap()
 }
 
 #[tokio::test]
