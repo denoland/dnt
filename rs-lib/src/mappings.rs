@@ -49,13 +49,43 @@ impl Mappings {
   ) -> Result<Self> {
     let mut mappings = HashMap::new();
     let mut mapped_filepaths_no_ext = HashSet::new();
-    let base_dir = get_base_dir(&specifiers.local)?;
+    // the main files keep their paths relative to the main files' root so that
+    // where the tests happen to live doesn't shift the distributed code
+    let main_specifiers = specifiers
+      .local
+      .iter()
+      .filter(|s| !specifiers.test_modules.contains(s))
+      .cloned()
+      .collect::<Vec<_>>();
+    let main_base_dir = if main_specifiers.is_empty() {
+      get_base_dir(&specifiers.local)?
+    } else {
+      get_base_dir(&main_specifiers)?
+    };
+    // the tests may be in a directory outside the main files' root, so they get
+    // a root that encompasses both
+    let mut test_base_dir_candidates = vec![main_base_dir.clone()];
+    for specifier in specifiers
+      .local
+      .iter()
+      .filter(|s| specifiers.test_modules.contains(s))
+    {
+      let file_path = url_to_file_path(specifier)?;
+      test_base_dir_candidates.push(file_path.parent().unwrap().to_path_buf());
+    }
+    let test_base_dir = get_common_dir(test_base_dir_candidates);
+    ensure_nonempty_base_dir(&test_base_dir)?;
     let mut root_local_dirs = HashSet::new();
 
     for specifier in specifiers.local.iter() {
       let file_path = url_to_file_path(specifier)?;
+      let base_dir = if specifiers.test_modules.contains(specifier) {
+        &test_base_dir
+      } else {
+        &main_base_dir
+      };
       let relative_file_path =
-        file_path.strip_prefix(&base_dir).map_err(|_| {
+        file_path.strip_prefix(base_dir).map_err(|_| {
           anyhow::anyhow!(
             "Error stripping prefix of {} with base {}",
             file_path.display(),
@@ -499,20 +529,37 @@ fn get_base_dir(specifiers: &[ModuleSpecifier]) -> Result<PathBuf> {
   if specifiers.is_empty() {
     bail!("Did not find any local files. Specifying only remote files is not currently supported.");
   }
+  let base_dir = get_common_dir(
+    specifiers
+      .iter()
+      .map(|specifier| {
+        Ok(url_to_file_path(specifier)?.parent().unwrap().into())
+      })
+      .collect::<Result<Vec<PathBuf>>>()?,
+  );
+  ensure_nonempty_base_dir(&base_dir)?;
+  Ok(base_dir)
+}
+
+fn ensure_nonempty_base_dir(base_dir: &Path) -> Result<()> {
+  if base_dir.as_os_str().is_empty() {
+    bail!("Local files span different filesystem roots.");
+  }
+  Ok(())
+}
+
+fn get_common_dir(dirs: impl IntoIterator<Item = PathBuf>) -> PathBuf {
   // todo(dsherret): should maybe error on windows when the files
   // span different drives...
-  let mut base_dir = url_to_file_path(&specifiers[0])?
-    .parent()
-    .unwrap()
-    .to_path_buf();
-  for specifier in specifiers {
-    let file_path = url_to_file_path(specifier)?;
-    let parent_dir = file_path.parent().unwrap();
+  let mut dirs = dirs.into_iter();
+  let Some(mut base_dir) = dirs.next() else {
+    return PathBuf::new();
+  };
+  for parent_dir in dirs {
     if base_dir != parent_dir {
-      if base_dir.starts_with(parent_dir) {
-        base_dir = parent_dir.to_path_buf();
-      } else if base_dir.components().count() == parent_dir.components().count()
-      {
+      if base_dir.starts_with(&parent_dir) {
+        base_dir = parent_dir;
+      } else {
         let mut final_path = PathBuf::new();
         for (a, b) in base_dir.components().zip(parent_dir.components()) {
           if a == b {
@@ -525,7 +572,7 @@ fn get_base_dir(specifiers: &[ModuleSpecifier]) -> Result<PathBuf> {
       }
     }
   }
-  Ok(base_dir)
+  base_dir
 }
 
 #[cfg(test)]
@@ -552,6 +599,13 @@ mod test {
     run_test(
       vec!["file:///project/b/other.ts", "file:///project/a/other.ts"],
       "/project",
+    );
+    run_test(
+      vec![
+        "file:///project-one/mod.ts",
+        "file:///project-two/deeper/mod.ts",
+      ],
+      "/",
     );
 
     fn run_test(urls: Vec<&str>, expected: &str) {
