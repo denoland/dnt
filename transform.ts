@@ -79,6 +79,13 @@ export interface TransformOptions {
   /// Path or url to the import map.
   importMap?: string;
   configFile?: string;
+  /**
+   * Errors when the deno lock file would need to be updated in order to
+   * transform (ex. a dependency is not in it).
+   *
+   * Leave this undefined to use the `lock.frozen` setting in the deno.json file.
+   */
+  frozenLockfile?: boolean;
   cwd: string;
 }
 

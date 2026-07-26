@@ -206,6 +206,7 @@ pub struct TransformOptions {
   pub polyfills: HashMap<String, bool>,
   pub import_map: Option<ModuleSpecifier>,
   pub config_file: Option<ModuleSpecifier>,
+  pub frozen_lockfile: Option<bool>,
   pub cwd: ModuleSpecifier,
 }
 
@@ -240,6 +241,7 @@ async fn transform_inner(options: JsValue) -> Result<JsValue, anyhow::Error> {
       polyfills: options.polyfills,
       import_map: options.import_map,
       config_file: options.config_file,
+      frozen_lockfile: options.frozen_lockfile,
       cwd: deno_path_util::url_to_file_path(&options.cwd)?,
     },
   )

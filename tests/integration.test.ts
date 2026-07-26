@@ -1458,6 +1458,42 @@ pnpm-lock.yaml
   }
 });
 
+Deno.test("should error building with a frozen and out of date lock file", async () => {
+  const error = await assertRejects(() =>
+    runTest("frozen_lockfile_project", {
+      entryPoints: ["mod.ts"],
+      outDir: "./npm",
+      frozenLockfile: true,
+      typeCheck: false,
+      test: false,
+      skipNpmInstall: true,
+      shims: {},
+      package: {
+        name: "add",
+        version: "1.0.0",
+      },
+    })
+  );
+  assertStringIncludes(String(error), "The lockfile is out of date.");
+});
+
+Deno.test("should build with an out of date lock file when not frozen", async () => {
+  await runTest("frozen_lockfile_project", {
+    entryPoints: ["mod.ts"],
+    outDir: "./npm",
+    typeCheck: false,
+    test: false,
+    skipNpmInstall: true,
+    shims: {},
+    package: {
+      name: "add",
+      version: "1.0.0",
+    },
+  }, (output) => {
+    output.assertExists("esm/mod.js");
+  });
+});
+
 export interface Output {
   packageJson: any;
   npmIgnore: string;
@@ -1470,6 +1506,7 @@ async function runTest(
   project:
     | "bin_shebang_project"
     | "declaration_import_project"
+    | "frozen_lockfile_project"
     | "import_map_project"
     | "json_module_project"
     | "jsr_project"

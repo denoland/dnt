@@ -706,6 +706,33 @@ await build({
 });
 ```
 
+### Frozen Lock File
+
+The deno.lock file that's beside the deno.json is used to resolve dependencies,
+but by default a dependency that's missing from it will still be resolved.
+
+To error instead, which ensures a build never uses a dependency that's not
+accounted for in the version controlled lock file, set the `frozenLockfile`
+build option (the equivalent of Deno's `--frozen` flag):
+
+```ts
+await build({
+  // ...etc...
+  frozenLockfile: true,
+});
+```
+
+When this option is not specified, the `lock.frozen` setting in the deno.json
+file is used:
+
+```jsonc
+{
+  "lock": {
+    "frozen": true
+  }
+}
+```
+
 ### GitHub Actions - Npm Publish on Tag
 
 1. Ensure your build script accepts a version as a CLI argument and sets that in

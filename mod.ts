@@ -174,6 +174,16 @@ export interface BuildOptions {
    * `@std/path/glob-to-regexp`).
    */
   importMap?: string;
+  /** Errors when the deno lock file would need to be updated in order to
+   * build (ex. a dependency is not in it).
+   *
+   * This is the equivalent of Deno's `--frozen` flag and ensures a build
+   * doesn't silently use dependencies that aren't in the version controlled
+   * lock file.
+   *
+   * Leave this undefined to use the `lock.frozen` setting in the deno.json file.
+   */
+  frozenLockfile?: boolean;
   /** Package manager used to install dependencies and run npm scripts.
    * This also can be an absolute path to the executable file of package manager.
    * @default "npm"
@@ -700,6 +710,7 @@ export async function build(options: BuildOptions): Promise<void> {
       polyfills,
       importMap: options.importMap,
       configFile: options.configFile,
+      frozenLockfile: options.frozenLockfile,
       cwd: path.toFileUrl(cwd).toString(),
     });
   }

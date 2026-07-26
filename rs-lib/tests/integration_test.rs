@@ -2726,6 +2726,123 @@ async fn transform_ignores_unrelated_lockfile_redirects() {
   assert_files!(result.main.files, &[("mod.ts", "console.log(1);")]);
 }
 
+#[tokio::test]
+async fn transform_frozen_lockfile_errors_for_missing_remote() {
+  // a frozen lockfile should error rather than resolve a dependency
+  // that's not in it
+  let result = TestBuilder::new()
+    .with_loader(|loader| {
+      loader
+        .add_local_file("/deno.json", "{}")
+        .add_local_file(
+          "/deno.lock",
+          concat!("{\n", "  \"version\": \"5\"\n", "}\n"),
+        )
+        .add_local_file("/mod.ts", "import 'https://localhost/mod.ts';")
+        .add_remote_file("https://localhost/mod.ts", "console.log(1);");
+    })
+    .set_frozen_lockfile(true)
+    .transform()
+    .await
+    .err()
+    .unwrap();
+
+  assert!(
+    result.to_string().contains("The lockfile is out of date."),
+    "unexpected error: {:#}",
+    result
+  );
+}
+
+#[tokio::test]
+async fn transform_frozen_lockfile_via_config_file() {
+  // the `lock.frozen` setting in the deno.json should be respected
+  let result = TestBuilder::new()
+    .with_loader(|loader| {
+      loader
+        .add_local_file("/deno.json", r#"{ "lock": { "frozen": true } }"#)
+        .add_local_file(
+          "/deno.lock",
+          concat!("{\n", "  \"version\": \"5\"\n", "}\n"),
+        )
+        .add_local_file("/mod.ts", "import 'https://localhost/mod.ts';")
+        .add_remote_file("https://localhost/mod.ts", "console.log(1);");
+    })
+    .transform()
+    .await
+    .err()
+    .unwrap();
+
+  assert!(
+    result.to_string().contains("The lockfile is out of date."),
+    "unexpected error: {:#}",
+    result
+  );
+}
+
+#[tokio::test]
+async fn transform_frozen_lockfile_up_to_date() {
+  // a frozen lockfile that has all the dependencies should transform
+  let result = TestBuilder::new()
+    .with_loader(|loader| {
+      loader
+        .add_local_file("/deno.json", "{}")
+        .add_local_file(
+          "/deno.lock",
+          concat!(
+            "{\n",
+            "  \"version\": \"5\",\n",
+            "  \"remote\": {\n",
+            "    \"https://localhost/mod.ts\": \"35c146f76e129477c64061bc84511e1090f3d4d8059713e6663dd4b35b1f7642\"\n",
+            "  }\n",
+            "}\n"
+          ),
+        )
+        .add_local_file("/mod.ts", "import 'https://localhost/mod.ts';")
+        .add_remote_file("https://localhost/mod.ts", "console.log(1);");
+    })
+    .set_frozen_lockfile(true)
+    .transform()
+    .await
+    .unwrap();
+
+  assert_files!(
+    result.main.files,
+    &[
+      ("mod.ts", "import './deps/localhost/mod.js';"),
+      ("deps/localhost/mod.ts", "console.log(1);"),
+    ]
+  );
+}
+
+#[tokio::test]
+async fn transform_frozen_lockfile_false_overrides_config_file() {
+  // explicitly opting out should win over the deno.json setting
+  let result = TestBuilder::new()
+    .with_loader(|loader| {
+      loader
+        .add_local_file("/deno.json", r#"{ "lock": { "frozen": true } }"#)
+        .add_local_file(
+          "/deno.lock",
+          concat!("{\n", "  \"version\": \"5\"\n", "}\n"),
+        )
+        .add_local_file("/mod.ts", "import 'https://localhost/mod.ts';")
+        .add_remote_file("https://localhost/mod.ts", "console.log(1);");
+    })
+    .set_frozen_lockfile(false)
+    .transform()
+    .await
+    .unwrap();
+
+  assert_files!(
+    result.main.files,
+    &[
+      ("mod.ts", "import './deps/localhost/mod.js';"),
+      ("deps/localhost/mod.ts", "console.log(1);"),
+    ]
+  );
+}
+
 fn get_shim_file_text(mut text: String) -> String {
   text.push('\n');
   text.push_str(

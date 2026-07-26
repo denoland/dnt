@@ -262,6 +262,11 @@ pub struct TransformOptions {
   pub polyfills: PolyfillOverrides,
   pub config_file: Option<ModuleSpecifier>,
   pub import_map: Option<ModuleSpecifier>,
+  /// Errors when the deno lockfile would need to be updated in order to
+  /// transform (ex. a dependency is not in it).
+  ///
+  /// Leave this `None` to use the `lock.frozen` setting in the deno.json file.
+  pub frozen_lockfile: Option<bool>,
   pub cwd: PathBuf,
 }
 
@@ -348,7 +353,7 @@ pub async fn transform(
       npm_process_state: None,
       root_node_modules_dir_override: None,
       vendor: None,
-      frozen_lockfile: None,
+      frozen_lockfile: options.frozen_lockfile,
       lock_arg: None,
       lockfile_skip_write: true,
       maybe_custom_deno_dir_root: None,

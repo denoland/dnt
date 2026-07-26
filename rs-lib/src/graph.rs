@@ -178,6 +178,14 @@ impl ModuleGraph {
       bail!("{}", error_message);
     }
 
+    // when the lockfile is frozen, error instead of silently using
+    // dependencies that aren't in it
+    if let Some(lockfile) = &options.maybe_lockfile {
+      lockfile
+        .error_if_changed()
+        .map_err(|err| anyhow::anyhow!("{}", err))?;
+    }
+
     let graph = Self {
       graph,
       capturing_analyzer,
