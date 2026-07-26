@@ -1,5 +1,6 @@
 // Copyright 2018-2024 the Deno authors. MIT license.
 
+use std::borrow::Cow;
 use std::cell::RefCell;
 use std::collections::HashMap;
 use std::collections::HashSet;
@@ -49,51 +50,50 @@ impl Mappings {
   ) -> Result<Self> {
     let mut mappings = HashMap::new();
     let mut mapped_filepaths_no_ext = HashSet::new();
+    let local_files = LocalFile::resolve_all(specifiers)?;
     // the main files keep their paths relative to the main files' root so that
     // where the tests happen to live doesn't shift the distributed code
-    let main_specifiers = specifiers
-      .local
-      .iter()
-      .filter(|s| !specifiers.test_modules.contains(s))
-      .cloned()
-      .collect::<Vec<_>>();
-    let main_base_dir = if main_specifiers.is_empty() {
-      get_base_dir(&specifiers.local)?
-    } else {
-      get_base_dir(&main_specifiers)?
+    let main_base_dir = {
+      let mut main_dirs = local_files
+        .iter()
+        .filter(|f| !f.is_test)
+        .filter_map(|f| f.file_path.parent())
+        .peekable();
+      if main_dirs.peek().is_some() {
+        get_base_dir(main_dirs)?
+      } else {
+        get_base_dir(local_files.iter().filter_map(|f| f.file_path.parent()))?
+      }
     };
     // the tests may be in a directory outside the main files' root, so they get
     // a root that encompasses both
-    let mut test_base_dir_candidates = vec![main_base_dir.clone()];
-    for specifier in specifiers
-      .local
-      .iter()
-      .filter(|s| specifiers.test_modules.contains(s))
-    {
-      let file_path = url_to_file_path(specifier)?;
-      test_base_dir_candidates.push(file_path.parent().unwrap().to_path_buf());
-    }
-    let test_base_dir = get_common_dir(test_base_dir_candidates);
+    let test_base_dir = get_common_dir(
+      std::iter::once(main_base_dir.as_path()).chain(
+        local_files
+          .iter()
+          .filter(|f| f.is_test)
+          .filter_map(|f| f.file_path.parent()),
+      ),
+    );
     ensure_nonempty_base_dir(&test_base_dir)?;
     let mut root_local_dirs = HashSet::new();
 
-    for specifier in specifiers.local.iter() {
-      let file_path = url_to_file_path(specifier)?;
-      let base_dir = if specifiers.test_modules.contains(specifier) {
+    for local_file in local_files.iter() {
+      let base_dir = if local_file.is_test {
         &test_base_dir
       } else {
         &main_base_dir
       };
       let relative_file_path =
-        file_path.strip_prefix(base_dir).map_err(|_| {
+        local_file.file_path.strip_prefix(base_dir).map_err(|_| {
           anyhow::anyhow!(
             "Error stripping prefix of {} with base {}",
-            file_path.display(),
+            local_file.file_path.display(),
             base_dir.display()
           )
         })?;
       mappings.insert(
-        specifier.clone(),
+        local_file.specifier.clone(),
         get_mapped_file_path(
           MediaType::from_path(relative_file_path),
           relative_file_path,
@@ -214,6 +214,33 @@ impl Mappings {
     self.inner.get(specifier).unwrap_or_else(|| {
       panic!("Could not find file path for specifier: {}", specifier,);
     })
+  }
+}
+
+/// A local file with its path and test status resolved once up front, since
+/// both are needed several times while working out the output paths.
+struct LocalFile<'a> {
+  specifier: &'a ModuleSpecifier,
+  file_path: PathBuf,
+  is_test: bool,
+}
+
+impl<'a> LocalFile<'a> {
+  pub fn resolve_all(specifiers: &'a Specifiers) -> Result<Vec<Self>> {
+    if specifiers.local.is_empty() {
+      bail!("Did not find any local files. Specifying only remote files is not currently supported.");
+    }
+    specifiers
+      .local
+      .iter()
+      .map(|specifier| {
+        Ok(Self {
+          specifier,
+          file_path: url_to_file_path(specifier)?,
+          is_test: specifiers.test_modules.contains(specifier),
+        })
+      })
+      .collect()
   }
 }
 
@@ -525,18 +552,10 @@ fn is_banned_segment_char(c: char) -> bool {
   matches!(c, '/' | '\\') || is_banned_path_char(c)
 }
 
-fn get_base_dir(specifiers: &[ModuleSpecifier]) -> Result<PathBuf> {
-  if specifiers.is_empty() {
-    bail!("Did not find any local files. Specifying only remote files is not currently supported.");
-  }
-  let base_dir = get_common_dir(
-    specifiers
-      .iter()
-      .map(|specifier| {
-        Ok(url_to_file_path(specifier)?.parent().unwrap().into())
-      })
-      .collect::<Result<Vec<PathBuf>>>()?,
-  );
+fn get_base_dir<'a>(
+  dirs: impl IntoIterator<Item = &'a Path>,
+) -> Result<PathBuf> {
+  let base_dir = get_common_dir(dirs);
   ensure_nonempty_base_dir(&base_dir)?;
   Ok(base_dir)
 }
@@ -548,17 +567,19 @@ fn ensure_nonempty_base_dir(base_dir: &Path) -> Result<()> {
   Ok(())
 }
 
-fn get_common_dir(dirs: impl IntoIterator<Item = PathBuf>) -> PathBuf {
+fn get_common_dir<'a>(dirs: impl IntoIterator<Item = &'a Path>) -> PathBuf {
   // todo(dsherret): should maybe error on windows when the files
   // span different drives...
   let mut dirs = dirs.into_iter();
-  let Some(mut base_dir) = dirs.next() else {
+  let Some(first_dir) = dirs.next() else {
     return PathBuf::new();
   };
+  // only allocates when the directories actually diverge
+  let mut base_dir = Cow::Borrowed(first_dir);
   for parent_dir in dirs {
     if base_dir != parent_dir {
-      if base_dir.starts_with(&parent_dir) {
-        base_dir = parent_dir;
+      if base_dir.starts_with(parent_dir) {
+        base_dir = Cow::Borrowed(parent_dir);
       } else {
         let mut final_path = PathBuf::new();
         for (a, b) in base_dir.components().zip(parent_dir.components()) {
@@ -568,11 +589,11 @@ fn get_common_dir(dirs: impl IntoIterator<Item = PathBuf>) -> PathBuf {
             break;
           }
         }
-        base_dir = final_path;
+        base_dir = Cow::Owned(final_path);
       }
     }
   }
-  base_dir
+  base_dir.into_owned()
 }
 
 #[cfg(test)]
@@ -609,13 +630,12 @@ mod test {
     );
 
     fn run_test(urls: Vec<&str>, expected: &str) {
-      let result = get_base_dir(
-        &urls
-          .into_iter()
-          .map(|u| ModuleSpecifier::parse(u).unwrap())
-          .collect::<Vec<_>>(),
-      )
-      .unwrap();
+      let file_paths = urls
+        .into_iter()
+        .map(|u| url_to_file_path(&ModuleSpecifier::parse(u).unwrap()).unwrap())
+        .collect::<Vec<_>>();
+      let result =
+        get_base_dir(file_paths.iter().filter_map(|p| p.parent())).unwrap();
       assert_eq!(result, PathBuf::from(expected));
     }
   }
