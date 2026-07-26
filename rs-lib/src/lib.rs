@@ -461,12 +461,7 @@ pub async fn transform(
     })
     .await?;
 
-  let mappings = Mappings::new(
-    &module_graph,
-    &specifiers,
-    &options.entry_points,
-    &options.test_entry_points,
-  )?;
+  let mappings = Mappings::new(&module_graph, &specifiers)?;
   let all_package_specifier_mappings: HashMap<ModuleSpecifier, String> =
     specifiers
       .main

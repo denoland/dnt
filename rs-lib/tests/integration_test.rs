@@ -1450,7 +1450,7 @@ async fn transform_import_map() {
 }
 
 #[tokio::test]
-async fn transform_import_map_places_uneven_siblings_in_deps() {
+async fn transform_import_map_uneven_sibling_depths() {
   let result = TestBuilder::new()
     .entry_point("file:///project-one/mod.ts")
     .with_loader(|loader| {
@@ -1477,23 +1477,27 @@ async fn transform_import_map_places_uneven_siblings_in_deps() {
     .await
     .unwrap();
 
+  // the sibling is at a different depth, so the shared root moves up to
+  // encompass both projects, the same as it already does for siblings at
+  // equal depths
   assert_files!(
     result.main.files,
     &[
       (
-        "mod.ts",
-        "import value from './deps/project-two/deeper/mod.js';",
+        "project-one/mod.ts",
+        "import value from '../project-two/deeper/mod.js';",
       ),
-      (
-        "deps/project-two/deeper/mod.ts",
-        "export default 'hello world';",
-      ),
+      ("project-two/deeper/mod.ts", "export default 'hello world';",),
     ]
+  );
+  assert_eq!(
+    result.main.entry_points,
+    &[PathBuf::from("project-one/mod.ts")]
   );
 }
 
 #[tokio::test]
-async fn transform_import_map_keeps_entry_point_root_for_local_siblings() {
+async fn transform_import_map_local_sibling_and_remote() {
   let result = TestBuilder::new()
     .entry_point("file:///example-project/mod.ts")
     .with_loader(|loader| {
@@ -1522,22 +1526,61 @@ async fn transform_import_map_keeps_entry_point_root_for_local_siblings() {
     .await
     .unwrap();
 
+  // the local sibling shares a root with the project, while the remote module
+  // keeps going to `deps`
   assert_files!(
     result.main.files,
     &[
-      ("mod.ts", "export * from './src/mod.js';"),
       (
-        "src/mod.ts",
-        "export * from '../deps/example-shared/mod.js';\nexport * from '../deps_2/example.com/mod.js';",
+        "example-project/mod.ts",
+        "export * from './src/mod.js';",
       ),
-      ("deps/example-shared/mod.ts", "export const shared = 'shared';"),
       (
-        "deps_2/example.com/mod.ts",
+        "example-project/src/mod.ts",
+        "export * from '../../example-shared/mod.js';\nexport * from '../../deps/example.com/mod.js';",
+      ),
+      (
+        "example-shared/mod.ts",
+        "export const shared = 'shared';",
+      ),
+      (
+        "deps/example.com/mod.ts",
         "export const remote = 'remote';",
       ),
     ]
   );
-  assert_eq!(result.main.entry_points, &[PathBuf::from("mod.ts")]);
+  assert_eq!(
+    result.main.entry_points,
+    &[PathBuf::from("example-project/mod.ts")]
+  );
+}
+
+#[tokio::test]
+async fn transform_entry_point_with_sibling_dir_in_project() {
+  let result = TestBuilder::new()
+    .entry_point("file:///project/src/mod.ts")
+    .with_loader(|loader| {
+      loader
+        .add_local_file(
+          "/project/src/mod.ts",
+          "export * from '../lib/util.ts';",
+        )
+        .add_local_file("/project/lib/util.ts", "export const util = 1;");
+    })
+    .transform()
+    .await
+    .unwrap();
+
+  // a sibling directory of the entry point is still part of the project, so
+  // it must not be treated as a dependency
+  assert_files!(
+    result.main.files,
+    &[
+      ("src/mod.ts", "export * from '../lib/util.js';"),
+      ("lib/util.ts", "export const util = 1;"),
+    ]
+  );
+  assert_eq!(result.main.entry_points, &[PathBuf::from("src/mod.ts")]);
 }
 
 #[tokio::test]
@@ -1548,33 +1591,22 @@ async fn transform_test_entry_point_uses_test_root_without_moving_main() {
       loader
         .add_local_file(
           "/example-project/src/mod.ts",
-          "export * from 'example-shared/mod.ts';",
+          "export const value = 'value';",
         )
         .add_local_file(
           "/example-project/tests/integration/functions/mod.test.ts",
           "import '../../../src/mod.ts';",
-        )
-        .add_local_file(
-          "/example-project/deno.json",
-          r#"{
-  "imports": {
-    "example-shared/": "../example-shared/"
-  }
-}"#,
-        )
-        .add_local_file(
-          "/example-shared/mod.ts",
-          "export const shared = 'shared';",
         );
     })
     .add_test_entry_point(
       "file:///example-project/tests/integration/functions/mod.test.ts",
     )
-    .set_import_map("file:///example-project/deno.json")
     .transform()
     .await
     .unwrap();
 
+  // the tests are in a directory outside the main files' root, which must not
+  // push the main files down a directory
   assert_eq!(result.main.entry_points, &[PathBuf::from("mod.ts")]);
   assert_eq!(
     result.test.entry_points,
