@@ -81,7 +81,10 @@ export interface TransformOptions {
   /** Path or url to a deno.json.
    *
    * When not specified, a deno.json is auto-discovered by searching upwards
-   * from the entry points. Specify `false` to disable auto-discovery.
+   * from the entry points.
+   *
+   * Specify `false` to disable the auto-discovery, which also disables
+   * discovering a package.json and deno.lock.
    */
   configFile?: string | false;
   /**
@@ -108,11 +111,11 @@ export interface TransformOutput {
   main: TransformOutputEnvironment;
   test: TransformOutputEnvironment;
   warnings: string[];
-  /** Path of the config file that was auto-discovered based on the entry
-   * points.
+  /** Path of the config file that was auto-discovered by searching upwards
+   * from the entry points (or the cwd when there are no local entry points).
    *
-   * This is `undefined` when a config file was explicitly provided or when
-   * auto-discovery is disabled.
+   * This is `undefined` when no config file was found, when one was
+   * explicitly provided, or when auto-discovery is disabled.
    */
   discoveredConfigFile?: string;
 }

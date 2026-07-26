@@ -100,10 +100,11 @@ pub struct TransformOutput {
   pub main: TransformOutputEnvironment,
   pub test: TransformOutputEnvironment,
   pub warnings: Vec<String>,
-  /// Config file that was auto-discovered based on the entry points.
+  /// Config file that was auto-discovered by searching upwards from the
+  /// entry points (or the cwd when there are no local entry points).
   ///
-  /// This is `None` when a config file was explicitly provided or when
-  /// auto-discovery is disabled.
+  /// This is `None` when no config file was found, when one was explicitly
+  /// provided, or when auto-discovery is disabled.
   pub discovered_config_file: Option<PathBuf>,
 }
 
@@ -268,6 +269,8 @@ pub struct TransformOptions {
   pub config_file: Option<ModuleSpecifier>,
   /// Disables auto-discovering a config file based on the entry points
   /// when no config file or import map is provided.
+  ///
+  /// Note this also disables discovering a package.json and deno.lock.
   pub no_config: bool,
   pub import_map: Option<ModuleSpecifier>,
   /// Errors when the deno lockfile would need to be updated in order to

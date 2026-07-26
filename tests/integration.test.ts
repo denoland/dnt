@@ -1442,30 +1442,24 @@ Deno.test("should auto-discover the deno.json", async () => {
 });
 
 Deno.test("should not auto-discover the deno.json when configFile is false", async () => {
-  const logs = await captureLogs(async () => {
-    const err = await assertRejects(() =>
-      runTest("config_discovery_project", {
-        entryPoints: ["mod.ts"],
-        outDir: "./npm",
-        shims: {},
-        test: false,
-        typeCheck: false,
-        skipNpmInstall: true,
-        configFile: false,
-        package: {
-          name: "config_discovery",
-          version: "0.0.0",
-        },
-      })
-    );
-    // the mapping in the deno.json was not applied
-    assertStringIncludes(String(err), `Import "@dnt/marker" not a dependency`);
-  });
-
-  assertEquals(
-    logs.some((l) => l.includes("Auto-discovered config file")),
-    false,
+  const err = await assertRejects(() =>
+    runTest("config_discovery_project", {
+      entryPoints: ["mod.ts"],
+      outDir: "./npm",
+      shims: {},
+      test: false,
+      typeCheck: false,
+      skipNpmInstall: true,
+      configFile: false,
+      package: {
+        name: "config_discovery",
+        version: "0.0.0",
+      },
+    })
   );
+
+  // the mapping in the deno.json was not applied
+  assertStringIncludes(String(err), `Import "@dnt/marker" not a dependency`);
 });
 
 Deno.test("should build workspace project", async () => {

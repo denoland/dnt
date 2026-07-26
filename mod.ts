@@ -174,7 +174,10 @@ export interface BuildOptions {
   /** Path or url to a deno.json.
    *
    * When not specified, a deno.json is auto-discovered by searching upwards
-   * from the entry points. Specify `false` to disable auto-discovery.
+   * from the entry points.
+   *
+   * Specify `false` to disable the auto-discovery, which also disables
+   * discovering a package.json and deno.lock.
    */
   configFile?: string | false;
   /** Path or url to import map.

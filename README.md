@@ -712,7 +712,8 @@ await build({
 });
 ```
 
-Or set it to `false` to not use a config file at all:
+Or set it to `false` to not use a config file at all, which also disables
+discovering a package.json and deno.lock:
 
 ```ts
 await build({
