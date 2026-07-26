@@ -28,6 +28,7 @@ pub struct TestBuilder {
   target: ScriptTarget,
   config_file: Option<ModuleSpecifier>,
   import_map: Option<ModuleSpecifier>,
+  frozen_lockfile: Option<bool>,
 }
 
 impl TestBuilder {
@@ -47,6 +48,7 @@ impl TestBuilder {
       target: ScriptTarget::ES5,
       config_file: None,
       import_map: None,
+      frozen_lockfile: None,
     }
   }
 
@@ -173,6 +175,11 @@ impl TestBuilder {
     self
   }
 
+  pub fn set_frozen_lockfile(&mut self, value: bool) -> &mut Self {
+    self.frozen_lockfile = Some(value);
+    self
+  }
+
   pub fn set_target(&mut self, target: ScriptTarget) -> &mut Self {
     self.target = target;
     self
@@ -203,6 +210,7 @@ impl TestBuilder {
         target: self.target,
         config_file: self.config_file.clone(),
         import_map: self.import_map.clone(),
+        frozen_lockfile: self.frozen_lockfile,
         cwd: self.loader.sys.env_current_dir().unwrap(),
       },
     )
