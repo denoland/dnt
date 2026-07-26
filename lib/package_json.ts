@@ -3,7 +3,7 @@
 import type { EntryPoint, ShimOptions } from "../mod.ts";
 import type { TransformOutput } from "../transform.ts";
 import type { PackageJson } from "./types.ts";
-import { getDntVersion } from "./utils.ts";
+import { getDntVersion, toDtsFilePath, toJsFilePath } from "./utils.ts";
 
 export interface GetPackageJsonOptions {
   transformOutput: TransformOutput;
@@ -32,8 +32,8 @@ export function getPackageJson({
     .main.entryPoints.map((e, i) => ({
       name: entryPoints[i].name,
       kind: entryPoints[i].kind ?? "export",
-      path: e.replace(/\.tsx?$/i, ".js"),
-      types: e.replace(/\.tsx?$/i, ".d.ts"),
+      path: toJsFilePath(e),
+      types: toDtsFilePath(e),
     }));
   const exports = finalEntryPoints.filter((e) => e.kind === "export");
   const binaries = finalEntryPoints.filter((e) => e.kind === "bin");

@@ -1,6 +1,6 @@
 // Copyright 2018-2024 the Deno authors. MIT license.
 
-import { assertEquals } from "@std/assert";
+import { assertEquals, assertStringIncludes } from "@std/assert";
 import { getTestRunnerCode } from "./get_test_runner_code.ts";
 import { runTestDefinitions } from "./test_runner.ts";
 
@@ -205,6 +205,73 @@ async function main() {
 main();
 `,
   );
+});
+
+Deno.test("gets code when a preload module is used without esm", () => {
+  const code = getTestRunnerCode({
+    testEntryPoints: ["./test.ts"],
+    denoTestShimPackageName: undefined,
+    preloadEntryPoint: "test_preload.ts",
+    includeEsModule: false,
+    includeScriptModule: true,
+  });
+  assertEquals(
+    code,
+    `const pc = require("picocolors");
+const process = require("process");
+
+const filePaths = [
+  "./test.js",
+];
+
+async function main() {
+  process.chdir(__dirname + "/script");
+  try {
+    require("./script/test_preload.js");
+  } catch(err) {
+    console.error(err);
+    process.exit(1);
+  }
+
+  for (const [i, filePath] of filePaths.entries()) {
+    if (i > 0) {
+      console.log("");
+    }
+
+    const scriptPath = "./script/" + filePath;
+    console.log("Running tests in " + pc.underline(scriptPath) + "...\\n");
+    process.chdir(__dirname + "/script");
+    try {
+      require(scriptPath);
+    } catch(err) {
+      console.error(err);
+      process.exit(1);
+    }
+  }
+}
+
+main();
+`,
+  );
+});
+
+Deno.test("gets code for jsx and tsx entry points", () => {
+  const code = getTestRunnerCode({
+    testEntryPoints: ["./test.tsx", "./other.jsx", "./final.js"],
+    denoTestShimPackageName: undefined,
+    preloadEntryPoint: "test_preload.tsx",
+    includeEsModule: true,
+    includeScriptModule: false,
+  });
+  assertStringIncludes(
+    code,
+    `const filePaths = [
+  "./test.js",
+  "./other.js",
+  "./final.js",
+];`,
+  );
+  assertStringIncludes(code, `await import("./esm/test_preload.js");`);
 });
 
 Deno.test("gets code when cjs is not used", () => {

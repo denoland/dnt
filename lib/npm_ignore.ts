@@ -2,6 +2,7 @@
 
 import type { OutputFile } from "../transform.ts";
 import type { SourceMapOptions } from "./compiler.ts";
+import { toDtsFilePath, toJsFilePath } from "./utils.ts";
 
 export function getNpmIgnoreText(options: {
   sourceMap?: SourceMapOptions;
@@ -26,8 +27,8 @@ export function getNpmIgnoreText(options: {
 
   function* getTestFileNames() {
     for (const file of options.testFiles) {
-      const filePath = file.filePath.replace(/\.ts$/i, ".js");
-      const dtsFilePath = file.filePath.replace(/\.ts$/i, ".d.ts");
+      const filePath = toJsFilePath(file.filePath);
+      const dtsFilePath = toDtsFilePath(file.filePath);
       if (options.includeEsModule) {
         const esmFilePath = `/esm/${filePath}`;
         yield esmFilePath;
