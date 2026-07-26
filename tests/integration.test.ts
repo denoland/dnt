@@ -90,46 +90,32 @@ Deno.test("should build test project - basic", async () => {
       `/src/
 /esm/mod.test.js
 /esm/mod.test.d.ts
-/esm/mod.test.d.ts.map
 /script/mod.test.js
 /script/mod.test.d.ts
-/script/mod.test.d.ts.map
 /esm/deps/deno.land/std@0.181.0/fmt/colors.js
 /esm/deps/deno.land/std@0.181.0/fmt/colors.d.ts
-/esm/deps/deno.land/std@0.181.0/fmt/colors.d.ts.map
 /script/deps/deno.land/std@0.181.0/fmt/colors.js
 /script/deps/deno.land/std@0.181.0/fmt/colors.d.ts
-/script/deps/deno.land/std@0.181.0/fmt/colors.d.ts.map
 /esm/deps/deno.land/std@0.181.0/testing/_diff.js
 /esm/deps/deno.land/std@0.181.0/testing/_diff.d.ts
-/esm/deps/deno.land/std@0.181.0/testing/_diff.d.ts.map
 /script/deps/deno.land/std@0.181.0/testing/_diff.js
 /script/deps/deno.land/std@0.181.0/testing/_diff.d.ts
-/script/deps/deno.land/std@0.181.0/testing/_diff.d.ts.map
 /esm/deps/deno.land/std@0.181.0/testing/_format.js
 /esm/deps/deno.land/std@0.181.0/testing/_format.d.ts
-/esm/deps/deno.land/std@0.181.0/testing/_format.d.ts.map
 /script/deps/deno.land/std@0.181.0/testing/_format.js
 /script/deps/deno.land/std@0.181.0/testing/_format.d.ts
-/script/deps/deno.land/std@0.181.0/testing/_format.d.ts.map
 /esm/deps/deno.land/std@0.181.0/testing/asserts.js
 /esm/deps/deno.land/std@0.181.0/testing/asserts.d.ts
-/esm/deps/deno.land/std@0.181.0/testing/asserts.d.ts.map
 /script/deps/deno.land/std@0.181.0/testing/asserts.js
 /script/deps/deno.land/std@0.181.0/testing/asserts.d.ts
-/script/deps/deno.land/std@0.181.0/testing/asserts.d.ts.map
 /esm/_dnt.test_polyfills.js
 /esm/_dnt.test_polyfills.d.ts
-/esm/_dnt.test_polyfills.d.ts.map
 /script/_dnt.test_polyfills.js
 /script/_dnt.test_polyfills.d.ts
-/script/_dnt.test_polyfills.d.ts.map
 /esm/_dnt.test_shims.js
 /esm/_dnt.test_shims.d.ts
-/esm/_dnt.test_shims.d.ts.map
 /script/_dnt.test_shims.js
 /script/_dnt.test_shims.d.ts
-/script/_dnt.test_shims.d.ts.map
 /test_runner.cjs
 yarn.lock
 pnpm-lock.yaml
@@ -183,25 +169,18 @@ Deno.test("should build test project without esm", async () => {
       `/src/
 /script/mod.test.js
 /types/mod.test.d.ts
-/types/mod.test.d.ts.map
 /script/deps/deno.land/std@0.181.0/fmt/colors.js
 /types/deps/deno.land/std@0.181.0/fmt/colors.d.ts
-/types/deps/deno.land/std@0.181.0/fmt/colors.d.ts.map
 /script/deps/deno.land/std@0.181.0/testing/_diff.js
 /types/deps/deno.land/std@0.181.0/testing/_diff.d.ts
-/types/deps/deno.land/std@0.181.0/testing/_diff.d.ts.map
 /script/deps/deno.land/std@0.181.0/testing/_format.js
 /types/deps/deno.land/std@0.181.0/testing/_format.d.ts
-/types/deps/deno.land/std@0.181.0/testing/_format.d.ts.map
 /script/deps/deno.land/std@0.181.0/testing/asserts.js
 /types/deps/deno.land/std@0.181.0/testing/asserts.d.ts
-/types/deps/deno.land/std@0.181.0/testing/asserts.d.ts.map
 /script/_dnt.test_polyfills.js
 /types/_dnt.test_polyfills.d.ts
-/types/_dnt.test_polyfills.d.ts.map
 /script/_dnt.test_shims.js
 /types/_dnt.test_shims.d.ts
-/types/_dnt.test_shims.d.ts.map
 /test_runner.cjs
 yarn.lock
 pnpm-lock.yaml
@@ -334,7 +313,7 @@ Deno.test("should build test project with declarations inline by default", async
   }
 });
 
-Deno.test("should build test project with declaration maps by default", async () => {
+Deno.test("should build test project without declaration maps by default", async () => {
   await runTest("test_project", {
     entryPoints: ["mod.ts"],
     outDir: "./npm",
@@ -347,15 +326,40 @@ Deno.test("should build test project with declaration maps by default", async ()
       version: "1.0.0",
     },
   }, (output) => {
+    output.assertNotExists("script/mod.d.ts.map");
+    output.assertNotExists("esm/mod.d.ts.map");
+    // nothing points at the sources, so they're not published
+    assertStringIncludes(output.npmIgnore, "/src/\n");
+  });
+});
+
+Deno.test("should build test project with declaration maps when enabled", async () => {
+  await runTest("test_project", {
+    entryPoints: ["mod.ts"],
+    outDir: "./npm",
+    declaration: "inline",
+    declarationMap: true,
+    shims: {
+      deno: "dev",
+    },
+    package: {
+      name: "add",
+      version: "1.0.0",
+    },
+  }, (output) => {
     output.assertNotExists("types/mod.d.ts");
     output.assertExists("script/mod.d.ts.map");
     output.assertExists("esm/mod.d.ts.map");
+    // the declaration maps point at the sources, so they must be published
+    output.assertExists("src/mod.ts");
+    assertEquals(output.npmIgnore.includes("/src/\n"), false);
   });
 
   await runTest("test_project", {
     entryPoints: ["mod.ts"],
     outDir: "./npm",
     declaration: "separate",
+    declarationMap: true,
     shims: {
       deno: "dev",
     },
@@ -365,6 +369,29 @@ Deno.test("should build test project with declaration maps by default", async ()
     },
   }, (output) => {
     output.assertExists("types/mod.d.ts.map");
+    output.assertNotExists("script/mod.d.ts.map");
+    output.assertNotExists("esm/mod.d.ts.map");
+    output.assertExists("src/mod.ts");
+    assertEquals(output.npmIgnore.includes("/src/\n"), false);
+  });
+});
+
+Deno.test("should not create declaration maps when the sources are skipped", async () => {
+  await runTest("test_project", {
+    entryPoints: ["mod.ts"],
+    outDir: "./npm",
+    declaration: "inline",
+    declarationMap: true,
+    skipSourceOutput: true,
+    shims: {
+      deno: "dev",
+    },
+    package: {
+      name: "add",
+      version: "1.0.0",
+    },
+  }, (output) => {
+    output.assertNotExists("src/mod.ts");
     output.assertNotExists("script/mod.d.ts.map");
     output.assertNotExists("esm/mod.d.ts.map");
   });
@@ -569,62 +596,55 @@ Deno.test("should build with source maps", async () => {
     output.assertExists("esm/mod.js.map");
     assertEquals(
       output.npmIgnore,
-      `/esm/mod.test.js
+      `/src/mod.test.ts
+/esm/mod.test.js
 /esm/mod.test.js.map
 /esm/mod.test.d.ts
-/esm/mod.test.d.ts.map
 /script/mod.test.js
 /script/mod.test.js.map
 /script/mod.test.d.ts
-/script/mod.test.d.ts.map
+/src/deps/deno.land/std@0.181.0/fmt/colors.ts
 /esm/deps/deno.land/std@0.181.0/fmt/colors.js
 /esm/deps/deno.land/std@0.181.0/fmt/colors.js.map
 /esm/deps/deno.land/std@0.181.0/fmt/colors.d.ts
-/esm/deps/deno.land/std@0.181.0/fmt/colors.d.ts.map
 /script/deps/deno.land/std@0.181.0/fmt/colors.js
 /script/deps/deno.land/std@0.181.0/fmt/colors.js.map
 /script/deps/deno.land/std@0.181.0/fmt/colors.d.ts
-/script/deps/deno.land/std@0.181.0/fmt/colors.d.ts.map
+/src/deps/deno.land/std@0.181.0/testing/_diff.ts
 /esm/deps/deno.land/std@0.181.0/testing/_diff.js
 /esm/deps/deno.land/std@0.181.0/testing/_diff.js.map
 /esm/deps/deno.land/std@0.181.0/testing/_diff.d.ts
-/esm/deps/deno.land/std@0.181.0/testing/_diff.d.ts.map
 /script/deps/deno.land/std@0.181.0/testing/_diff.js
 /script/deps/deno.land/std@0.181.0/testing/_diff.js.map
 /script/deps/deno.land/std@0.181.0/testing/_diff.d.ts
-/script/deps/deno.land/std@0.181.0/testing/_diff.d.ts.map
+/src/deps/deno.land/std@0.181.0/testing/_format.ts
 /esm/deps/deno.land/std@0.181.0/testing/_format.js
 /esm/deps/deno.land/std@0.181.0/testing/_format.js.map
 /esm/deps/deno.land/std@0.181.0/testing/_format.d.ts
-/esm/deps/deno.land/std@0.181.0/testing/_format.d.ts.map
 /script/deps/deno.land/std@0.181.0/testing/_format.js
 /script/deps/deno.land/std@0.181.0/testing/_format.js.map
 /script/deps/deno.land/std@0.181.0/testing/_format.d.ts
-/script/deps/deno.land/std@0.181.0/testing/_format.d.ts.map
+/src/deps/deno.land/std@0.181.0/testing/asserts.ts
 /esm/deps/deno.land/std@0.181.0/testing/asserts.js
 /esm/deps/deno.land/std@0.181.0/testing/asserts.js.map
 /esm/deps/deno.land/std@0.181.0/testing/asserts.d.ts
-/esm/deps/deno.land/std@0.181.0/testing/asserts.d.ts.map
 /script/deps/deno.land/std@0.181.0/testing/asserts.js
 /script/deps/deno.land/std@0.181.0/testing/asserts.js.map
 /script/deps/deno.land/std@0.181.0/testing/asserts.d.ts
-/script/deps/deno.land/std@0.181.0/testing/asserts.d.ts.map
+/src/_dnt.test_polyfills.ts
 /esm/_dnt.test_polyfills.js
 /esm/_dnt.test_polyfills.js.map
 /esm/_dnt.test_polyfills.d.ts
-/esm/_dnt.test_polyfills.d.ts.map
 /script/_dnt.test_polyfills.js
 /script/_dnt.test_polyfills.js.map
 /script/_dnt.test_polyfills.d.ts
-/script/_dnt.test_polyfills.d.ts.map
+/src/_dnt.test_shims.ts
 /esm/_dnt.test_shims.js
 /esm/_dnt.test_shims.js.map
 /esm/_dnt.test_shims.d.ts
-/esm/_dnt.test_shims.d.ts.map
 /script/_dnt.test_shims.js
 /script/_dnt.test_shims.js.map
 /script/_dnt.test_shims.d.ts
-/script/_dnt.test_shims.d.ts.map
 /test_runner.cjs
 yarn.lock
 pnpm-lock.yaml
@@ -691,11 +711,9 @@ Deno.test("should build with package mappings", async () => {
 /esm/mod.test.js
 /script/mod.test.js
 /types/mod.test.d.ts
-/types/mod.test.d.ts.map
 /esm/_dnt.test_shims.js
 /script/_dnt.test_shims.js
 /types/_dnt.test_shims.d.ts
-/types/_dnt.test_shims.d.ts.map
 /test_runner.cjs
 yarn.lock
 pnpm-lock.yaml
@@ -1380,16 +1398,12 @@ Deno.test("should build jsr project", async () => {
       `/src/
 /esm/mod.test.js
 /esm/mod.test.d.ts
-/esm/mod.test.d.ts.map
 /script/mod.test.js
 /script/mod.test.d.ts
-/script/mod.test.d.ts.map
 /esm/_dnt.test_shims.js
 /esm/_dnt.test_shims.d.ts
-/esm/_dnt.test_shims.d.ts.map
 /script/_dnt.test_shims.js
 /script/_dnt.test_shims.d.ts
-/script/_dnt.test_shims.d.ts.map
 /test_runner.cjs
 yarn.lock
 pnpm-lock.yaml
