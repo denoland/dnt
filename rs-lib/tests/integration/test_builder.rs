@@ -23,7 +23,7 @@ pub struct TestBuilder {
   entry_point: String,
   additional_entry_points: Vec<String>,
   test_entry_points: Vec<String>,
-  specifier_mappings: HashMap<ModuleSpecifier, MappedSpecifier>,
+  specifier_mappings: HashMap<String, MappedSpecifier>,
   shims: Vec<Shim>,
   test_shims: Vec<Shim>,
   target: ScriptTarget,
@@ -153,7 +153,7 @@ impl TestBuilder {
     path: Option<&str>,
   ) -> &mut Self {
     self.specifier_mappings.insert(
-      ModuleSpecifier::parse(&normalize_urls(specifier.as_ref())).unwrap(),
+      normalize_urls(specifier.as_ref()),
       MappedSpecifier::Package(PackageMappedSpecifier {
         name: bare_specifier.as_ref().to_string(),
         version: version.map(|v| v.to_string()),
@@ -170,7 +170,7 @@ impl TestBuilder {
     to: impl AsRef<str>,
   ) -> &mut Self {
     self.specifier_mappings.insert(
-      ModuleSpecifier::parse(&normalize_urls(from.as_ref())).unwrap(),
+      normalize_urls(from.as_ref()),
       MappedSpecifier::Module(
         ModuleSpecifier::parse(&normalize_urls(to.as_ref())).unwrap(),
       ),

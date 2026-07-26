@@ -253,7 +253,10 @@ pub struct TransformOptions {
   pub shims: Vec<Shim>,
   pub test_shims: Vec<Shim>,
   /// Maps specifiers to an npm package or module.
-  pub specifier_mappings: HashMap<ModuleSpecifier, MappedSpecifier>,
+  ///
+  /// A key may be a url or a bare specifier that resolves via the config
+  /// file's import map (ex. `my-lib`).
+  pub specifier_mappings: HashMap<String, MappedSpecifier>,
   /// Version of ECMAScript that the final code will target.
   /// This controls whether certain polyfills should occur.
   pub target: ScriptTarget,
@@ -417,6 +420,11 @@ pub async fn transform(
     },
   );
   let deno_resolver = resolver_factory.deno_resolver().await?;
+  let specifier_mappings = resolve_specifier_mappings(
+    options.specifier_mappings,
+    &deno_resolver,
+    &options.entry_points[0],
+  )?;
   let cjs_tracker = resolver_factory.cjs_tracker()?.clone();
   let maybe_lockfile = resolver_factory
     .workspace_factory()
@@ -459,7 +467,7 @@ pub async fn transform(
             .filter_map(|s| s.maybe_specifier()),
         )
         .collect(),
-      specifier_mappings: &options.specifier_mappings,
+      specifier_mappings: &specifier_mappings,
       loader,
       resolver: deno_resolver.clone(),
       compiler_options_resolver: resolver_factory
@@ -867,6 +875,42 @@ fn check_add_shim_file_to_environment(
 
     text
   }
+}
+
+/// Resolves the specifier mapping keys, which may be bare specifiers that
+/// resolve via the config file's import map (ex. `my-lib`).
+fn resolve_specifier_mappings<
+  TInNpmPackageChecker: node_resolver::InNpmPackageChecker,
+  TIsBuiltInNodeModuleChecker: node_resolver::IsBuiltInNodeModuleChecker,
+  TNpmPackageFolderResolver: node_resolver::NpmPackageFolderResolver,
+  TSys: deno_resolver::DenoResolverSys,
+>(
+  mappings: HashMap<String, MappedSpecifier>,
+  resolver: &deno_resolver::graph::DenoResolver<
+    TInNpmPackageChecker,
+    TIsBuiltInNodeModuleChecker,
+    TNpmPackageFolderResolver,
+    TSys,
+  >,
+  referrer: &ModuleSpecifier,
+) -> Result<HashMap<ModuleSpecifier, MappedSpecifier>> {
+  let mut result = HashMap::with_capacity(mappings.len());
+  for (key, value) in mappings {
+    let specifier = match ModuleSpecifier::parse(&key) {
+      Ok(specifier) => specifier,
+      Err(_) => resolver
+        .resolve(
+          &key,
+          referrer,
+          deno_graph::Position::zeroed(),
+          node_resolver::ResolutionMode::Import,
+          node_resolver::NodeResolutionKind::Execution,
+        )
+        .with_context(|| format!("Failed resolving mapping \"{}\".", key))?,
+    };
+    result.insert(specifier, value);
+  }
+  Ok(result)
 }
 
 fn get_dependencies(

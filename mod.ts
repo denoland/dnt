@@ -167,6 +167,18 @@ export interface BuildOptions {
    *   version: "^11.0.0",
    * }
    * ```
+   *
+   * A bare specifier may be used, which is resolved via the config file's
+   * import map:
+   *
+   * ```
+   * mappings: {
+   *   "code-block-writer": {
+   *     name: "code-block-writer",
+   *     version: "^11.0.0",
+   *   }
+   * }
+   * ```
    */
   mappings?: SpecifierMappings;
   /** Package.json output. You may override dependencies and dev dependencies in here. */

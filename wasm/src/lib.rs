@@ -200,7 +200,7 @@ pub struct TransformOptions {
   pub test_entry_points: Vec<String>,
   pub shims: Vec<Shim>,
   pub test_shims: Vec<Shim>,
-  pub mappings: HashMap<ModuleSpecifier, MappedSpecifier>,
+  pub mappings: HashMap<String, MappedSpecifier>,
   pub target: ScriptTarget,
   #[serde(default)]
   pub polyfills: HashMap<String, bool>,

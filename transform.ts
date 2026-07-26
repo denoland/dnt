@@ -12,7 +12,11 @@ import { valueToUrl } from "./lib/utils.ts";
 
 /** Specifier to specifier mappings. */
 export interface SpecifierMappings {
-  /** Map a specifier to another module or npm package. */
+  /** Map a specifier to another module or npm package.
+   *
+   * The specifier may be a path, url, or a bare specifier that's resolved
+   * via the config file's import map (ex. `my-lib`).
+   */
   [specifier: string]: PackageMappedSpecifier | string;
 }
 
@@ -129,7 +133,7 @@ export function transform(
     ...options,
     mappings: Object.fromEntries(
       Object.entries(options.mappings ?? {}).map(([key, value]) => {
-        return [valueToUrl(key), mapMappedSpecifier(value)];
+        return [mapMappingKey(key), mapMappedSpecifier(value)];
       }),
     ),
     entryPoints: options.entryPoints.map(valueToUrl),
@@ -143,6 +147,12 @@ export function transform(
       : valueToUrl(options.importMap),
   };
   return wasm.transform(newOptions);
+}
+
+function mapMappingKey(key: string) {
+  // leave bare specifiers alone so that they can be resolved
+  // via the config file's import map (ex. `my-lib`)
+  return isPathOrUrl(key) ? valueToUrl(key) : key;
 }
 
 type SerializableMappedSpecifier = {
