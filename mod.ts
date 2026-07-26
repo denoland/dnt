@@ -100,6 +100,16 @@ export interface BuildOptions {
   rootTestDir?: string;
   /** Glob pattern to use to find tests files. Defaults to `deno test`'s pattern. */
   testPattern?: string;
+  /** Path to a module to load before running the tests. Ex. `./scripts/test_preload.ts`
+   *
+   * This is useful for setting up the Node.js environment the tests run in
+   * without affecting the distributed code. For example, setting globals that
+   * the distributed code assumes exist.
+   *
+   * @remarks The module is not included in the npm package. It is loaded once
+   * for each of the emitted script and ESM output.
+   */
+  testPreloadModule?: string;
   /**
    * Specifiers to map from and to.
    *
@@ -253,6 +263,9 @@ export async function build(options: BuildOptions): Promise<void> {
       };
     }
   });
+  const testPreloadModule = options.testPreloadModule == null
+    ? undefined
+    : standardizePath(options.testPreloadModule);
 
   await Deno.permissions.request({ name: "write", path: options.outDir });
 
@@ -616,13 +629,7 @@ export async function build(options: BuildOptions): Promise<void> {
     const { shims, testShims } = shimOptionsToTransformShims(options.shims);
     return transform({
       entryPoints: entryPoints.map((e) => e.path),
-      testEntryPoints: options.test
-        ? await glob({
-          pattern: getTestPattern(),
-          rootDir: options.rootTestDir ?? Deno.cwd(),
-          excludeDirs: [options.outDir],
-        })
-        : [],
+      testEntryPoints: options.test ? await getTestEntryPoints() : [],
       shims,
       testShims,
       mappings: options.mappings,
@@ -631,6 +638,23 @@ export async function build(options: BuildOptions): Promise<void> {
       configFile: options.configFile,
       cwd: path.toFileUrl(cwd).toString(),
     });
+  }
+
+  async function getTestEntryPoints() {
+    const filePaths = await glob({
+      pattern: getTestPattern(),
+      rootDir: options.rootTestDir ?? Deno.cwd(),
+      excludeDirs: [options.outDir],
+    });
+    if (testPreloadModule == null) {
+      return filePaths;
+    }
+    // keep the preload module first so that its output path is
+    // known when creating the test launcher script
+    return [
+      testPreloadModule,
+      ...filePaths.filter((filePath) => filePath !== testPreloadModule),
+    ];
   }
 
   function log(message: string) {
@@ -644,6 +668,7 @@ export async function build(options: BuildOptions): Promise<void> {
   function createTestLauncherScript() {
     const denoTestShimPackage = getDependencyByName("@deno/shim-deno-test") ??
       getDependencyByName("@deno/shim-deno");
+    const testEntryPoints = transformOutput.test.entryPoints;
     writeFile(
       path.join(options.outDir, "test_runner.cjs"),
       transformCodeToTarget(
@@ -653,7 +678,12 @@ export async function build(options: BuildOptions): Promise<void> {
             : denoTestShimPackage.name === "@deno/shim-deno"
             ? "@deno/shim-deno/test-internals"
             : denoTestShimPackage.name,
-          testEntryPoints: transformOutput.test.entryPoints,
+          preloadEntryPoint: testPreloadModule == null
+            ? undefined
+            : testEntryPoints[0],
+          testEntryPoints: testPreloadModule == null
+            ? testEntryPoints
+            : testEntryPoints.slice(1),
           includeEsModule: options.esModule !== false,
           includeScriptModule: options.scriptModule !== false,
         }),
