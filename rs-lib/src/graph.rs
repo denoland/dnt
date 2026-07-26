@@ -27,6 +27,7 @@ use deno_graph::source::ResolveError;
 use deno_graph::source::Resolver;
 use deno_graph::JsModule;
 use deno_graph::Module;
+use deno_graph::ModuleGraphError;
 use deno_graph::Range;
 use deno_resolver::deno_json::CompilerOptionsResolver;
 use deno_resolver::deno_json::JsxImportSourceConfigResolver;
@@ -144,6 +145,34 @@ impl ModuleGraph {
       if !error_message.contains(error.specifier().as_str()) {
         error_message.push_str(&format!(" ({})", error.specifier()));
       }
+    }
+    // module errors don't include specifiers that failed to resolve, so walk
+    // the graph for those as well. Otherwise they would be silently emitted
+    // into the output as-is, which is broken for anything but an npm package.
+    for error in graph
+      .walk(
+        graph.roots.iter(),
+        deno_graph::WalkOptions {
+          check_js: deno_graph::CheckJsOption::True,
+          kind: deno_graph::GraphKind::All,
+          follow_dynamic: true,
+          prefer_fast_check_graph: false,
+        },
+      )
+      .errors()
+    {
+      let range = match &error {
+        // already reported above
+        ModuleGraphError::ModuleError(_) => continue,
+        ModuleGraphError::ResolutionError(error)
+        | ModuleGraphError::TypesResolutionError(error) => {
+          error.range().clone()
+        }
+      };
+      if !error_message.is_empty() {
+        error_message.push_str("\n\n");
+      }
+      write!(error_message, "{:#}\n    at {}", error, range).unwrap();
     }
     if !error_message.is_empty() {
       bail!("{}", error_message);
