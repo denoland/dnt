@@ -179,3 +179,23 @@ impl PolyfillTester {
     })
   }
 }
+
+#[cfg(test)]
+mod test {
+  use super::*;
+
+  #[test]
+  fn polyfill_scripts_are_modules() {
+    // a polyfill may end up being the only one in the output file, so each
+    // must be a module on its own for `declare global` to be valid
+    for polyfill in all_polyfills() {
+      let text = polyfill.get_file_text();
+      assert!(
+        text.lines().any(
+          |line| line.starts_with("export ") || line.starts_with("import ")
+        ),
+        "polyfill script was not a module: {text}"
+      );
+    }
+  }
+}

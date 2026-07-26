@@ -20,3 +20,5 @@ if (Promise.withResolvers === undefined) {
     return out;
   };
 }
+
+export {};
