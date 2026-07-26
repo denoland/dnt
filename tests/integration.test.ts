@@ -16,6 +16,7 @@ const versions = {
   undici: "^6.0.0",
   picocolors: "^1.0.0",
   nodeTypes: "^20.9.0",
+  newNodeTypes: "^22.16.3",
   tsLib: "^2.6.2",
 };
 
@@ -966,12 +967,21 @@ Deno.test("should build and test the array find last polyfill project", async ()
 Deno.test("should build and test the import meta polyfill project", async () => {
   await runTest("polyfill_import_meta_project", {
     test: true,
+    typeCheck: "both",
     entryPoints: ["mod.ts"],
     outDir: "./npm",
     shims: { deno: "dev" },
+    // see issue #472 -- `@types/node` declares `ImportMeta.resolve` in terms
+    // of the dom's `URL`, so the polyfill's own declaration must not conflict
+    compilerOptions: {
+      lib: ["ES2022", "DOM"],
+    },
     package: {
       name: "polyfill-import-meta-project",
       version: "0.0.0",
+      devDependencies: {
+        "@types/node": versions.newNodeTypes,
+      },
     },
   }, (output) => {
     output.assertExists("esm/_dnt.polyfills.js");
