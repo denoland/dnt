@@ -171,8 +171,12 @@ export interface BuildOptions {
   mappings?: SpecifierMappings;
   /** Package.json output. You may override dependencies and dev dependencies in here. */
   package: PackageJson;
-  /** Path or url to a deno.json. */
-  configFile?: string;
+  /** Path or url to a deno.json.
+   *
+   * When not specified, a deno.json is auto-discovered by searching upwards
+   * from the entry points. Specify `false` to disable auto-discovery.
+   */
+  configFile?: string | false;
   /** Path or url to import map.
    *
    * @remarks Use `configFile` for a deno.json. Like `deno --import-map`, the
@@ -340,6 +344,13 @@ export async function build(options: BuildOptions): Promise<void> {
 
   log("Transforming...");
   const transformOutput = await transformEntryPoints();
+  if (transformOutput.discoveredConfigFile != null) {
+    log(
+      `Auto-discovered config file: ${
+        standardizePath(transformOutput.discoveredConfigFile)
+      }`,
+    );
+  }
   for (const warning of transformOutput.warnings) {
     warn(warning);
   }

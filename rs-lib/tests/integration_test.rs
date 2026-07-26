@@ -1826,6 +1826,8 @@ async fn transform_config_file() {
     .await
     .unwrap();
 
+  // it was provided, so it wasn't auto-discovered
+  assert_eq!(result.discovered_config_file, None);
   assert_files!(
     result.main.files,
     &[
@@ -1834,6 +1836,77 @@ async fn transform_config_file() {
       ("subdir/other.ts", "export function test() {}",)
     ]
   );
+}
+
+#[tokio::test]
+async fn transform_auto_discovered_config_file() {
+  let result = TestBuilder::new()
+    .with_loader(|loader| {
+      add_auto_discovered_config_files(loader);
+    })
+    .entry_point("file:///sub_dir/mod.ts")
+    .transform()
+    .await
+    .unwrap();
+
+  assert_eq!(
+    result.discovered_config_file,
+    Some(PathBuf::from(if cfg!(windows) {
+      "C:\\deno.json"
+    } else {
+      "/deno.json"
+    }))
+  );
+  assert_files!(
+    result.main.files,
+    &[
+      ("sub_dir/mod.ts", "import * as remote from '../other.js';",),
+      ("other.ts", "export function test() {}",)
+    ]
+  );
+}
+
+#[tokio::test]
+async fn transform_no_config() {
+  let err_message = TestBuilder::new()
+    .with_loader(|loader| {
+      add_auto_discovered_config_files(loader);
+    })
+    .entry_point("file:///sub_dir/mod.ts")
+    .set_no_config(true)
+    .transform()
+    .await
+    .err()
+    .unwrap();
+
+  // the config file should not have been discovered, so its
+  // import mapping should not have been applied
+  assert_eq!(
+    err_message.to_string(),
+    normalize_urls(
+      "Import \"localhost/mod.ts\" not a dependency
+    at file:///sub_dir/mod.ts:1:25"
+    )
+  );
+}
+
+/// Adds a config file in a parent directory of the `/sub_dir/mod.ts`
+/// entry point so that it's only found by searching upwards from it.
+fn add_auto_discovered_config_files(loader: &mut integration::InMemoryLoader) {
+  loader
+    .add_local_file(
+      "/sub_dir/mod.ts",
+      "import * as remote from 'localhost/mod.ts';",
+    )
+    .add_local_file(
+      "/deno.json",
+      r#"{
+  "imports": {
+    "localhost/mod.ts": "./other.ts"
+  }
+}"#,
+    )
+    .add_local_file("/other.ts", "export function test() {}");
 }
 
 #[tokio::test]
