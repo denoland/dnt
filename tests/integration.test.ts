@@ -1412,6 +1412,56 @@ pnpm-lock.yaml
   });
 });
 
+Deno.test("should auto-discover the deno.json", async () => {
+  const logs = await captureLogs(() =>
+    runTest("config_discovery_project", {
+      entryPoints: ["mod.ts"],
+      outDir: "./npm",
+      shims: {},
+      test: false,
+      typeCheck: false,
+      skipNpmInstall: true,
+      package: {
+        name: "config_discovery",
+        version: "0.0.0",
+      },
+    }, (output) => {
+      assertStringIncludes(
+        output.getFileText("esm/mod.js"),
+        `from "./marker.js"`,
+      );
+    })
+  );
+
+  assertStringIncludes(
+    logs.join("\n"),
+    `[dnt] Auto-discovered config file: ${
+      path.join(Deno.cwd(), "tests", "config_discovery_project", "deno.json")
+    }`,
+  );
+});
+
+Deno.test("should not auto-discover the deno.json when configFile is false", async () => {
+  const err = await assertRejects(() =>
+    runTest("config_discovery_project", {
+      entryPoints: ["mod.ts"],
+      outDir: "./npm",
+      shims: {},
+      test: false,
+      typeCheck: false,
+      skipNpmInstall: true,
+      configFile: false,
+      package: {
+        name: "config_discovery",
+        version: "0.0.0",
+      },
+    })
+  );
+
+  // the mapping in the deno.json was not applied
+  assertStringIncludes(String(err), `Import "@dnt/marker" not a dependency`);
+});
+
 Deno.test("should build workspace project", async () => {
   for (
     const configFile of [
@@ -1519,6 +1569,7 @@ export interface Output {
 async function runTest(
   project:
     | "bin_shebang_project"
+    | "config_discovery_project"
     | "declaration_import_project"
     | "frozen_lockfile_project"
     | "import_map_project"
@@ -1616,6 +1667,21 @@ function assertPreloadModuleOutput(output: Output) {
   const filePaths = /const filePaths = \[([^\]]*)\]/.exec(testRunnerText)![1];
   assertStringIncludes(filePaths, "mod.test.js");
   assertEquals(filePaths.includes("test_preload"), false);
+}
+
+async function captureLogs(action: () => Promise<void>) {
+  const logs: string[] = [];
+  const originalLog = console.log;
+  console.log = (...args: unknown[]) => {
+    logs.push(args.join(" "));
+    originalLog(...args);
+  };
+  try {
+    await action();
+  } finally {
+    console.log = originalLog;
+  }
+  return logs;
 }
 
 function getAllShimOptions(value: ShimValue): ShimOptions {

@@ -78,7 +78,15 @@ export interface TransformOptions {
   polyfills?: Partial<Record<PolyfillName, boolean>>;
   /// Path or url to the import map.
   importMap?: string;
-  configFile?: string;
+  /** Path or url to a deno.json.
+   *
+   * When not specified, a deno.json is auto-discovered by searching upwards
+   * from the entry points.
+   *
+   * Specify `false` to disable the auto-discovery, which also disables
+   * discovering a package.json and deno.lock.
+   */
+  configFile?: string | false;
   /**
    * Errors when the deno lock file would need to be updated in order to
    * transform (ex. a dependency is not in it).
@@ -103,6 +111,13 @@ export interface TransformOutput {
   main: TransformOutputEnvironment;
   test: TransformOutputEnvironment;
   warnings: string[];
+  /** Path of the config file that was auto-discovered by searching upwards
+   * from the entry points (or the cwd when there are no local entry points).
+   *
+   * This is `undefined` when no config file was found, when one was
+   * explicitly provided, or when auto-discovery is disabled.
+   */
+  discoveredConfigFile?: string;
 }
 
 export interface TransformOutputEnvironment {
@@ -141,6 +156,10 @@ export function transform(
     importMap: options.importMap == null
       ? undefined
       : valueToUrl(options.importMap),
+    configFile: typeof options.configFile === "string"
+      ? valueToUrl(options.configFile)
+      : undefined,
+    noConfig: options.configFile === false,
   };
   return wasm.transform(newOptions);
 }

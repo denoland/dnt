@@ -15,6 +15,7 @@ use pretty_assertions::assert_eq;
 #[macro_use]
 mod integration;
 
+use integration::InMemoryLoader;
 use integration::TestBuilder;
 
 use crate::integration::assert_identity_transforms;
@@ -1244,7 +1245,7 @@ async fn transform_jsr_specifier_mappings() {
 }
 
 #[tokio::test]
-async fn transform_jsr_specifier_mapping_via_import_map() {
+async fn transform_jsr_specifier_mapping_via_config_file() {
   let result = TestBuilder::new()
     .with_loader(|loader| {
       loader
@@ -1259,6 +1260,42 @@ async fn transform_jsr_specifier_mapping_via_import_map() {
         );
     })
     .set_config_file("file:///deno.json")
+    // the version requirement comes from the config file
+    .add_package_specifier_mapping("jsr:@scope/name", "scope-name", None, None)
+    .transform()
+    .await
+    .unwrap();
+
+  assert_files!(
+    result.main.files,
+    &[("mod.ts", "import * as pkg from 'scope-name';")]
+  );
+  assert_eq!(
+    result.main.dependencies,
+    &[Dependency {
+      name: "scope-name".to_string(),
+      version: "^1.0.0".to_string(),
+      peer_dependency: false,
+    }]
+  );
+}
+
+#[tokio::test]
+async fn transform_jsr_specifier_mapping_via_import_map() {
+  let result = TestBuilder::new()
+    .with_loader(|loader| {
+      loader
+        .add_local_file("/mod.ts", "import * as pkg from '@scope/name';")
+        .add_local_file(
+          "/import_map.json",
+          r#"{
+  "imports": {
+    "@scope/name": "jsr:@scope/name@^1.0.0"
+  }
+}"#,
+        );
+    })
+    .set_import_map("file:///import_map.json")
     // the version requirement comes from the import map
     .add_package_specifier_mapping("jsr:@scope/name", "scope-name", None, None)
     .transform()
@@ -1576,6 +1613,8 @@ async fn transform_import_map() {
     .await
     .unwrap();
 
+  // the import map is used as the config file, so nothing was auto-discovered
+  assert_eq!(result.discovered_config_file, None);
   assert_files!(
     result.main.files,
     &[
@@ -1826,6 +1865,8 @@ async fn transform_config_file() {
     .await
     .unwrap();
 
+  // it was provided, so it wasn't auto-discovered
+  assert_eq!(result.discovered_config_file, None);
   assert_files!(
     result.main.files,
     &[
@@ -1833,6 +1874,58 @@ async fn transform_config_file() {
       ("subdir/mod.ts", "import * as myOther from './other.js';",),
       ("subdir/other.ts", "export function test() {}",)
     ]
+  );
+}
+
+#[tokio::test]
+async fn transform_auto_discovered_config_file() {
+  let result = TestBuilder::new()
+    .with_loader(|loader| {
+      add_config_discovery_files(loader);
+    })
+    .entry_point("file:///sub_dir/mod.ts")
+    .transform()
+    .await
+    .unwrap();
+
+  assert_eq!(
+    result.discovered_config_file,
+    Some(PathBuf::from(if cfg!(windows) {
+      "C:\\deno.json"
+    } else {
+      "/deno.json"
+    }))
+  );
+  assert_files!(
+    result.main.files,
+    &[
+      ("sub_dir/mod.ts", "import * as remote from '../other.js';",),
+      ("other.ts", "export function test() {}",)
+    ]
+  );
+}
+
+#[tokio::test]
+async fn transform_no_config() {
+  let err_message = TestBuilder::new()
+    .with_loader(|loader| {
+      add_config_discovery_files(loader);
+    })
+    .entry_point("file:///sub_dir/mod.ts")
+    .set_no_config(true)
+    .transform()
+    .await
+    .err()
+    .unwrap();
+
+  // the config file should not have been discovered, so its
+  // import mapping should not have been applied
+  assert_eq!(
+    err_message.to_string(),
+    normalize_urls(
+      "Import \"localhost/mod.ts\" not a dependency
+    at file:///sub_dir/mod.ts:1:25"
+    )
   );
 }
 
@@ -2850,4 +2943,23 @@ fn get_shim_file_text(mut text: String) -> String {
       .replace("export function", "function"),
   );
   text
+}
+
+/// Adds a config file in a parent directory of the `/sub_dir/mod.ts`
+/// entry point so that it's only found by searching upwards from it.
+fn add_config_discovery_files(loader: &mut InMemoryLoader) {
+  loader
+    .add_local_file(
+      "/sub_dir/mod.ts",
+      "import * as remote from 'localhost/mod.ts';",
+    )
+    .add_local_file(
+      "/deno.json",
+      r#"{
+  "imports": {
+    "localhost/mod.ts": "./other.ts"
+  }
+}"#,
+    )
+    .add_local_file("/other.ts", "export function test() {}");
 }
