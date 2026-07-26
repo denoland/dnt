@@ -162,7 +162,13 @@ export interface BuildOptions {
   package: PackageJson;
   /** Path or url to a deno.json. */
   configFile?: string;
-  /** Path or url to import map. */
+  /** Path or url to import map.
+   *
+   * @remarks Use `configFile` for a deno.json. Like `deno --import-map`, the
+   * file is read as a plain import map, so bare specifier mappings are not
+   * expanded to cover sub paths (ex. `@std/path` will not map
+   * `@std/path/glob-to-regexp`).
+   */
   importMap?: string;
   /** Package manager used to install dependencies and run npm scripts.
    * This also can be an absolute path to the executable file of package manager.

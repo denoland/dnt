@@ -1693,6 +1693,45 @@ async fn transform_import_map_local_sibling_and_remote() {
 }
 
 #[tokio::test]
+async fn transform_specifier_not_in_import_map() {
+  let err_message = TestBuilder::new()
+    .with_loader(|loader| {
+      loader
+        .add_local_file(
+          "/mod.ts",
+          "import a from 'other';\nimport b from 'other/sub.ts';",
+        )
+        .add_local_file(
+          "/import_map.json",
+          r#"{
+  "imports": {
+    "other": "./other/mod.ts"
+  }
+}"#,
+        )
+        .add_local_file("/other/mod.ts", "export default 1;")
+        .add_local_file("/other/sub.ts", "export default 2;");
+    })
+    .set_import_map("file:///import_map.json")
+    .transform()
+    .await
+    .err()
+    .unwrap();
+
+  // the sub path is not mapped, so surface it rather than emitting the
+  // bare specifier into the output as-is
+  assert_eq!(
+    err_message.to_string(),
+    normalize_urls(
+      concat!(
+        "Import \"other/sub.ts\" not a dependency and not in import map from \"file:///mod.ts\"",
+        "\n    at file:///mod.ts:2:15",
+      )
+    )
+  );
+}
+
+#[tokio::test]
 async fn transform_entry_point_with_sibling_dir_in_project() {
   let result = TestBuilder::new()
     .entry_point("file:///project/src/mod.ts")
