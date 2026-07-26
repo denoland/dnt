@@ -344,66 +344,70 @@ mod test {
       None,
     );
   }
-}
-#[test]
-fn map_types_esm_sh() {
-  assert_types_package(
-    "https://esm.sh/@types/svg-path-parser@~1.1.6/index.d.ts",
-    Some(("@types/svg-path-parser", "~1.1.6")),
-  );
-  // versioned cdn path
-  assert_types_package(
-    "https://esm.sh/v135/@types/react@18.2.0/index.d.ts",
-    Some(("@types/react", "18.2.0")),
-  );
-  // nested sub paths and other declaration file extensions
-  assert_types_package(
-    "https://esm.sh/@types/node@22.0.0/ts5.6/index.d.mts",
-    Some(("@types/node", "22.0.0")),
-  );
-  assert_types_package(
-    "https://esm.sh/@types/node@22.0.0/index.d.cts",
-    Some(("@types/node", "22.0.0")),
-  );
-  // no sub path
-  assert_types_package(
-    "https://esm.sh/@types/node@22.0.0",
-    Some(("@types/node", "22.0.0")),
-  );
-  // query strings
-  assert_types_package(
-    "https://esm.sh/@types/node@22.0.0/index.d.ts?target=denonext",
-    Some(("@types/node", "22.0.0")),
-  );
-  // github and jsr packages aren't on npm
-  assert_types_package("https://esm.sh/gh/user/repo@1.0.0/index.d.ts", None);
-  assert_types_package("https://esm.sh/jsr/@scope/name@1.0.0/index.d.ts", None);
-}
 
-#[test]
-fn map_types_skypack() {
-  assert_types_package(
-    "https://cdn.skypack.dev/@types/lodash@4.14.191/index.d.ts",
-    Some(("@types/lodash", "4.14.191")),
-  );
-  // internal urls have a build hash for a version
-  assert_types_package(
-      "https://cdn.skypack.dev/-/@types/lodash@v4.14.191-abcXYZ/dist=es2019/index.d.ts",
+  #[test]
+  fn map_types_esm_sh() {
+    assert_types_package(
+      "https://esm.sh/@types/svg-path-parser@~1.1.6/index.d.ts",
+      Some(("@types/svg-path-parser", "~1.1.6")),
+    );
+    // versioned cdn path
+    assert_types_package(
+      "https://esm.sh/v135/@types/react@18.2.0/index.d.ts",
+      Some(("@types/react", "18.2.0")),
+    );
+    // nested sub paths and other declaration file extensions
+    assert_types_package(
+      "https://esm.sh/@types/node@22.0.0/ts5.6/index.d.mts",
+      Some(("@types/node", "22.0.0")),
+    );
+    assert_types_package(
+      "https://esm.sh/@types/node@22.0.0/index.d.cts",
+      Some(("@types/node", "22.0.0")),
+    );
+    // no sub path
+    assert_types_package(
+      "https://esm.sh/@types/node@22.0.0",
+      Some(("@types/node", "22.0.0")),
+    );
+    // query strings
+    assert_types_package(
+      "https://esm.sh/@types/node@22.0.0/index.d.ts?target=denonext",
+      Some(("@types/node", "22.0.0")),
+    );
+    // github and jsr packages aren't on npm
+    assert_types_package("https://esm.sh/gh/user/repo@1.0.0/index.d.ts", None);
+    assert_types_package(
+      "https://esm.sh/jsr/@scope/name@1.0.0/index.d.ts",
       None,
     );
-}
+  }
 
-#[test]
-fn map_types_unknown_cdn() {
-  assert_types_package("https://deno.land/x/mod@1.0.0/mod.d.ts", None);
-}
+  #[test]
+  fn map_types_skypack() {
+    assert_types_package(
+      "https://cdn.skypack.dev/@types/lodash@4.14.191/index.d.ts",
+      Some(("@types/lodash", "4.14.191")),
+    );
+    // internal urls have a build hash for a version
+    assert_types_package(
+        "https://cdn.skypack.dev/-/@types/lodash@v4.14.191-abcXYZ/dist=es2019/index.d.ts",
+        None,
+      );
+  }
 
-fn assert_types_package(specifier: &str, expected: Option<(&str, &str)>) {
-  let mappers = get_all_specifier_mappers();
-  let specifier = ModuleSpecifier::parse(specifier).unwrap();
-  let result = get_types_package_for_specifier(&mappers, &specifier);
-  assert_eq!(
-    result.map(|p| (p.name, p.version.unwrap())),
-    expected.map(|(n, v)| (n.to_string(), v.to_string()))
-  );
+  #[test]
+  fn map_types_unknown_cdn() {
+    assert_types_package("https://deno.land/x/mod@1.0.0/mod.d.ts", None);
+  }
+
+  fn assert_types_package(specifier: &str, expected: Option<(&str, &str)>) {
+    let mappers = get_all_specifier_mappers();
+    let specifier = ModuleSpecifier::parse(specifier).unwrap();
+    let result = get_types_package_for_specifier(&mappers, &specifier);
+    assert_eq!(
+      result.map(|p| (p.name, p.version.unwrap())),
+      expected.map(|(n, v)| (n.to_string(), v.to_string()))
+    );
+  }
 }
