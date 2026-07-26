@@ -978,6 +978,69 @@ Deno.test("should build and test the import meta polyfill project", async () => 
   });
 });
 
+Deno.test("should not polyfill import.meta when disabled for an esm only build", async () => {
+  await runTest("polyfill_disabled_project", {
+    test: false,
+    entryPoints: ["mod.ts"],
+    outDir: "./npm",
+    scriptModule: false,
+    shims: { deno: "dev" },
+    polyfills: { importMeta: false },
+    package: {
+      name: "polyfill-disabled-project",
+      version: "0.0.0",
+    },
+  }, (output) => {
+    output.assertNotExists("esm/_dnt.polyfills.js");
+    // the call sites should be left alone rather than rewritten to a
+    // ponyfill that's no longer emitted
+    assertStringIncludes(output.getFileText("esm/mod.js"), "import.meta.url");
+  });
+});
+
+Deno.test("should error disabling the import.meta polyfill with a script module", async () => {
+  await assertRejects(
+    () =>
+      runTest("polyfill_import_meta_project", {
+        entryPoints: ["mod.ts"],
+        outDir: "./npm",
+        shims: { deno: "dev" },
+        polyfills: { importMeta: false },
+        package: {
+          name: "polyfill-import-meta-project",
+          version: "0.0.0",
+        },
+      }),
+    Error,
+    "cannot be disabled when emitting a script module",
+  );
+});
+
+Deno.test("should build the polyfill project with all polyfills disabled", async () => {
+  await runTest("polyfill_project", {
+    test: false,
+    entryPoints: ["mod.ts"],
+    outDir: "./npm",
+    scriptModule: false,
+    shims: {
+      ...getAllShimOptions(false),
+      deno: "dev",
+    },
+    polyfills: false,
+    compilerOptions: {
+      // the polyfills provide ambient declarations, so opting out of them
+      // means relying on the lib declarations instead
+      lib: ["ESNext"],
+    },
+    package: {
+      name: "polyfill-package",
+      version: "1.0.0",
+    },
+  }, (output) => {
+    output.assertNotExists("esm/_dnt.polyfills.js");
+  });
+});
+
 Deno.test("should build and test the array.fromAsync polyfill project", async () => {
   await runTest("polyfill_array_from_async_project", {
     entryPoints: ["mod.ts"],
@@ -1376,6 +1439,7 @@ async function runTest(
     | "polyfill_project"
     | "polyfill_array_from_async_project"
     | "polyfill_array_find_last_project"
+    | "polyfill_disabled_project"
     | "polyfill_promise_with_resolvers_project"
     | "polyfill_import_meta_project"
     | "module_mappings_project"

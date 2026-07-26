@@ -43,6 +43,7 @@ use node_resolver::NodeConditionOptions;
 use polyfills::build_polyfill_file;
 use polyfills::polyfills_for_target;
 use polyfills::Polyfill;
+pub use polyfills::PolyfillOverrides;
 use specifiers::Specifiers;
 use utils::get_relative_specifier;
 use utils::prepend_statement_to_text;
@@ -256,6 +257,9 @@ pub struct TransformOptions {
   /// Version of ECMAScript that the final code will target.
   /// This controls whether certain polyfills should occur.
   pub target: ScriptTarget,
+  /// Explicitly enables or disables polyfills by name, taking precedence
+  /// over what `target` implies.
+  pub polyfills: PolyfillOverrides,
   pub config_file: Option<ModuleSpecifier>,
   pub import_map: Option<ModuleSpecifier>,
   pub cwd: PathBuf,
@@ -482,7 +486,10 @@ pub async fn transform(
       dependencies: get_dependencies(specifiers.main.mapped),
       ..Default::default()
     },
-    searching_polyfills: polyfills_for_target(options.target),
+    searching_polyfills: polyfills_for_target(
+      options.target,
+      &options.polyfills,
+    ),
     found_polyfills: Default::default(),
     shim_file_specifier: &SYNTHETIC_SPECIFIERS.shims,
     shim_global_names: options
@@ -503,7 +510,10 @@ pub async fn transform(
       dependencies: get_dependencies(specifiers.test.mapped),
       ..Default::default()
     },
-    searching_polyfills: polyfills_for_target(options.target),
+    searching_polyfills: polyfills_for_target(
+      options.target,
+      &options.polyfills,
+    ),
     found_polyfills: Default::default(),
     shim_file_specifier: &SYNTHETIC_TEST_SPECIFIERS.shims,
     shim_global_names: options

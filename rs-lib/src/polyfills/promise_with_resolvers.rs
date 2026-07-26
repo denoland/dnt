@@ -9,6 +9,10 @@ use crate::ScriptTarget;
 pub struct PromiseWithResolversPolyfill;
 
 impl Polyfill for PromiseWithResolversPolyfill {
+  fn name(&self) -> &'static str {
+    "promiseWithResolvers"
+  }
+
   fn use_for_target(&self, _target: ScriptTarget) -> bool {
     // (target as u32) < (ScriptTarget::ES2021 as u32)
     true // just always use it for the time being
