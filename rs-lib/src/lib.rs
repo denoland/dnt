@@ -31,6 +31,7 @@ use deno_resolver::file_fetcher::DenoGraphLoader;
 use deno_resolver::file_fetcher::DenoGraphLoaderOptions;
 use deno_resolver::file_fetcher::PermissionedFileFetcher;
 use deno_resolver::file_fetcher::PermissionedFileFetcherOptions;
+use deno_resolver::npm::DenoInNpmPackageChecker;
 use deno_resolver::workspace::SpecifiedImportMap;
 use deno_resolver::NodeResolverOptions;
 use deno_semver::npm::NpmPackageReqReference;
@@ -259,7 +260,10 @@ pub struct TransformOptions {
   pub shims: Vec<Shim>,
   pub test_shims: Vec<Shim>,
   /// Maps specifiers to an npm package or module.
-  pub specifier_mappings: HashMap<ModuleSpecifier, MappedSpecifier>,
+  ///
+  /// A key may be a url or a bare specifier that resolves via the config
+  /// file's import map (ex. `my-lib`).
+  pub specifier_mappings: HashMap<String, MappedSpecifier>,
   /// Version of ECMAScript that the final code will target.
   /// This controls whether certain polyfills should occur.
   pub target: ScriptTarget,
@@ -442,6 +446,16 @@ pub async fn transform(
   );
   let deno_resolver = resolver_factory.deno_resolver().await?;
   let cjs_tracker = resolver_factory.cjs_tracker()?.clone();
+  let (specifier_mappings, specifier_mapping_keys) =
+    resolve_specifier_mappings(
+      options.specifier_mappings,
+      &deno_resolver,
+      &cjs_tracker,
+      options
+        .entry_points
+        .iter()
+        .chain(options.test_entry_points.iter()),
+    )?;
   let maybe_lockfile = resolver_factory
     .workspace_factory()
     .maybe_lockfile(&NullNpmPackageInfoProvider)
@@ -483,7 +497,8 @@ pub async fn transform(
             .filter_map(|s| s.maybe_specifier()),
         )
         .collect(),
-      specifier_mappings: &options.specifier_mappings,
+      specifier_mappings: &specifier_mappings,
+      specifier_mapping_keys: &specifier_mapping_keys,
       loader,
       resolver: deno_resolver.clone(),
       compiler_options_resolver: resolver_factory
@@ -691,6 +706,71 @@ pub async fn transform(
     warnings,
     discovered_config_file,
   })
+}
+
+/// Resolves the specifier mapping keys, which may be bare specifiers that
+/// resolve via the config file's import map (ex. `my-lib`).
+///
+/// Returns the resolved mappings along with the original key of each, which
+/// is used when displaying a mapping in an error message.
+fn resolve_specifier_mappings<'a, TSys: deno_resolver::DenoResolverSys>(
+  mappings: HashMap<String, MappedSpecifier>,
+  resolver: &deno_resolver::graph::DefaultDenoResolverRc<TSys>,
+  cjs_tracker: &deno_resolver::cjs::CjsTracker<DenoInNpmPackageChecker, TSys>,
+  referrers: impl Iterator<Item = &'a ModuleSpecifier> + Clone,
+) -> Result<(
+  HashMap<ModuleSpecifier, MappedSpecifier>,
+  HashMap<ModuleSpecifier, String>,
+)> {
+  let mut resolved = HashMap::with_capacity(mappings.len());
+  let mut keys = HashMap::with_capacity(mappings.len());
+  // resolve in a deterministic order so that any error is deterministic
+  for (key, value) in mappings.into_iter().collect::<BTreeMap<_, _>>() {
+    // urls are used as-is in order to not change how they've always resolved
+    let specifier = match ModuleSpecifier::parse(&key) {
+      Ok(specifier) => specifier,
+      Err(_) => {
+        resolve_mapping_key(&key, resolver, cjs_tracker, referrers.clone())?
+      }
+    };
+    if let Some(previous_key) = keys.insert(specifier.clone(), key.clone()) {
+      bail!(
+        "The mappings \"{}\" and \"{}\" both resolved to {}",
+        previous_key,
+        key,
+        specifier,
+      );
+    }
+    resolved.insert(specifier, value);
+  }
+  Ok((resolved, keys))
+}
+
+fn resolve_mapping_key<'a, TSys: deno_resolver::DenoResolverSys>(
+  key: &str,
+  resolver: &deno_resolver::graph::DefaultDenoResolverRc<TSys>,
+  cjs_tracker: &deno_resolver::cjs::CjsTracker<DenoInNpmPackageChecker, TSys>,
+  referrers: impl Iterator<Item = &'a ModuleSpecifier>,
+) -> Result<ModuleSpecifier> {
+  let mut last_err = None;
+  for referrer in referrers {
+    match resolver.resolve(
+      key,
+      referrer,
+      deno_graph::Position::zeroed(),
+      cjs_tracker.get_referrer_kind(referrer),
+      node_resolver::NodeResolutionKind::Execution,
+    ) {
+      Ok(specifier) => return Ok(specifier),
+      Err(err) => last_err = Some(err),
+    }
+  }
+  match last_err {
+    Some(err) => {
+      Err(err).with_context(|| format!("Failed resolving mapping \"{}\"", key))
+    }
+    None => bail!("Failed resolving mapping \"{}\"", key),
+  }
 }
 
 /// Provides npm package info when reading the lockfile.

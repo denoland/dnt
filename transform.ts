@@ -6,13 +6,19 @@
  * @module
  */
 
+import { existsSync } from "@std/fs";
+import * as path from "@std/path";
 import * as wasm from "./lib/pkg/dnt_wasm.js";
 import type { PolyfillName, ScriptTarget } from "./lib/types.ts";
 import { valueToUrl } from "./lib/utils.ts";
 
 /** Specifier to specifier mappings. */
 export interface SpecifierMappings {
-  /** Map a specifier to another module or npm package. */
+  /** Map a specifier to another module or npm package.
+   *
+   * The specifier may be a path, url, or a bare specifier that's resolved
+   * via the config file's import map (ex. `my-lib`).
+   */
   [specifier: string]: PackageMappedSpecifier | string;
 }
 
@@ -144,7 +150,7 @@ export function transform(
     ...options,
     mappings: Object.fromEntries(
       Object.entries(options.mappings ?? {}).map(([key, value]) => {
-        return [valueToUrl(key), mapMappedSpecifier(value)];
+        return [mapMappingKey(key), mapMappedSpecifier(value)];
       }),
     ),
     entryPoints: options.entryPoints.map(valueToUrl),
@@ -162,6 +168,25 @@ export function transform(
     noConfig: options.configFile === false,
   };
   return wasm.transform(newOptions);
+}
+
+function mapMappingKey(key: string) {
+  key = key.trim();
+  if (/^[a-z]+:/i.test(key) || isRelativeOrAbsolutePath(key)) {
+    return valueToUrl(key);
+  }
+  // fall back to a path for a key like `mod.ts` that resolved to
+  // one before bare specifiers were supported
+  if (existsSync(key)) {
+    return valueToUrl(key);
+  }
+  // leave bare specifiers alone so that they're resolved
+  // via the config file's import map (ex. `my-lib`)
+  return key;
+}
+
+function isRelativeOrAbsolutePath(value: string) {
+  return /^\.\.?[\\/]/.test(value) || path.isAbsolute(value);
 }
 
 type SerializableMappedSpecifier = {

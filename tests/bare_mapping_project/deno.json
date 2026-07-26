@@ -1,0 +1,5 @@
+{
+  "imports": {
+    "code-block-writer": "https://deno.land/x/code_block_writer@11.0.0/mod.ts"
+  }
+}
