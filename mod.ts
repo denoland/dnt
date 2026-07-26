@@ -254,6 +254,8 @@ export async function build(options: BuildOptions): Promise<void> {
     }
   });
 
+  const { shims, testShims } = shimOptionsToTransformShims(options.shims);
+
   await Deno.permissions.request({ name: "write", path: options.outDir });
 
   log("Transforming...");
@@ -613,7 +615,6 @@ export async function build(options: BuildOptions): Promise<void> {
   }
 
   async function transformEntryPoints(): Promise<TransformOutput> {
-    const { shims, testShims } = shimOptionsToTransformShims(options.shims);
     return transform({
       entryPoints: entryPoints.map((e) => e.path),
       testEntryPoints: options.test
@@ -656,6 +657,7 @@ export async function build(options: BuildOptions): Promise<void> {
           testEntryPoints: transformOutput.test.entryPoints,
           includeEsModule: options.esModule !== false,
           includeScriptModule: options.scriptModule !== false,
+          testShims,
         }),
         compilerScriptTarget,
       ),

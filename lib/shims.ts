@@ -40,7 +40,7 @@ export interface ShimOptions {
    */
   weakRef?: ShimValue;
   /** Shim `WebSocket` with the `ws` package (https://www.npmjs.com/package/ws). */
-  webSocket?: boolean | "dev";
+  webSocket?: ShimValue;
   /** Custom shims to use. */
   custom?: Shim[];
   /** Custom shims to use only for the test code. */
@@ -51,7 +51,7 @@ export interface DenoShimOptions {
   /** Only import the `Deno` namespace for `Deno.test`.
    * This may be useful for environments
    */
-  test: boolean | "dev";
+  test: ShimValue;
 }
 
 export function shimOptionsToTransformShims(options: ShimOptions) {
@@ -84,7 +84,7 @@ export function shimOptionsToTransformShims(options: ShimOptions) {
     testShims,
   };
 
-  function add(option: boolean | "dev" | undefined, getShim: () => Shim) {
+  function add(option: ShimValue | undefined, getShim: () => Shim) {
     if (option === true) {
       shims.push(getShim());
       testShims.push(getShim());

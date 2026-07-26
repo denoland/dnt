@@ -1,15 +1,33 @@
 // Copyright 2018-2024 the Deno authors. MIT license.
 
 import CodeBlockWriter from "code-block-writer";
+import type { GlobalName, Shim } from "../../transform.ts";
+import { isPathOrUrl } from "../utils.ts";
 import { runTestDefinitions } from "./test_runner.ts";
+
+/** The `Deno` namespace is never set as a global because code commonly checks
+ * for its existence in order to detect the runtime it's running in.
+ */
+const nonGlobalShimNames = new Set(["Deno"]);
 
 export function getTestRunnerCode(options: {
   testEntryPoints: string[];
   denoTestShimPackageName: string | undefined;
   includeEsModule: boolean | undefined;
   includeScriptModule: boolean | undefined;
+  testShims?: Shim[];
 }) {
   const usesDenoTest = options.denoTestShimPackageName != null;
+  // the test code is transformed to use the shims, but the code being tested
+  // is not, so set the globals in order for it to use them as well
+  const globalShims = (options.testShims ?? [])
+    .map((shim) => ({
+      specifier: getShimSpecifier(shim),
+      globalNames: shim.globalNames
+        .map(toGlobalName)
+        .filter((n) => !n.typeOnly && !nonGlobalShimNames.has(n.name)),
+    }))
+    .filter((shim) => shim.specifier != null && shim.globalNames.length > 0);
   const writer = createWriter();
   writer.writeLine(`const pc = require("picocolors");`)
     .writeLine(`const process = require("process");`);
@@ -30,6 +48,9 @@ export function getTestRunnerCode(options: {
   writer.writeLine("];").newLine();
 
   writer.write("async function main()").block(() => {
+    if (globalShims.length > 0) {
+      writer.writeLine("await setUpGlobals();");
+    }
     if (usesDenoTest) {
       writer.write("const testContext = ").inlineBlock(() => {
         writer.writeLine("process,");
@@ -93,6 +114,42 @@ export function getTestRunnerCode(options: {
   });
   writer.blankLine();
 
+  if (globalShims.length > 0) {
+    writer.write("async function setUpGlobals()").block(() => {
+      for (const [i, shim] of globalShims.entries()) {
+        const shimName = `shim${i}`;
+        writer.writeLine(
+          `const ${shimName} = await import(${
+            JSON.stringify(shim.specifier)
+          });`,
+        );
+        for (const globalName of shim.globalNames) {
+          writer.writeLine(
+            `defineGlobal(${JSON.stringify(globalName.name)}, ${shimName}.${
+              globalName.exportName ?? globalName.name
+            });`,
+          );
+        }
+      }
+      writer.blankLine();
+      writer.write("function defineGlobal(name, value)").block(() => {
+        writer.writeLine(
+          "// some globals are defined as getters on globalThis (ex. `crypto`),",
+        );
+        writer.writeLine("// so a plain assignment would not work here");
+        writer.write("Object.defineProperty(globalThis, name, ").inlineBlock(
+          () => {
+            writer.writeLine("value,");
+            writer.writeLine("writable: true,");
+            writer.writeLine("enumerable: false,");
+            writer.writeLine("configurable: true,");
+          },
+        ).write(");").newLine();
+      });
+    });
+    writer.blankLine();
+  }
+
   if (options.denoTestShimPackageName != null) {
     writer.writeLine(`${getRunTestDefinitionsCode()}`);
     writer.blankLine();
@@ -100,6 +157,25 @@ export function getTestRunnerCode(options: {
 
   writer.writeLine("main();");
   return writer.toString();
+}
+
+/** Gets the specifier to import the shim from in the test runner or
+ * `undefined` when the shim can't be imported from there.
+ */
+function getShimSpecifier(shim: Shim) {
+  if ("package" in shim) {
+    return shim.package.subPath == null
+      ? shim.package.name
+      : `${shim.package.name}/${shim.package.subPath}`;
+  }
+
+  // local and remote modules are part of the graph, which the test runner
+  // has no way of resolving to an output file
+  return isPathOrUrl(shim.module) ? undefined : shim.module;
+}
+
+function toGlobalName(name: GlobalName | string): GlobalName {
+  return typeof name === "string" ? { name } : name;
 }
 
 function getRunTestDefinitionsCode() {

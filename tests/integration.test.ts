@@ -1088,6 +1088,54 @@ Deno.test("should build undici project", async () => {
   });
 });
 
+Deno.test("should set the globals of the dev shims when testing", async () => {
+  await runTest("dev_shim_globals_project", {
+    entryPoints: ["mod.ts"],
+    outDir: "./npm",
+    typeCheck: "both",
+    shims: {
+      ...getAllShimOptions(false),
+      deno: { test: "dev" },
+      prompts: "dev",
+      customDev: [{
+        module: "node:buffer",
+        globalNames: ["Blob"],
+      }],
+    },
+    package: {
+      name: "dev-shim-globals-project",
+      version: "1.0.0",
+    },
+  }, (output) => {
+    // the shims should only be dev dependencies
+    assertEquals(output.packageJson.dependencies, undefined);
+    assertEquals(output.packageJson.devDependencies, {
+      "@deno/shim-deno-test": versions.denoTestShim,
+      "@deno/shim-prompts": versions.promptsShim,
+      "@types/node": versions.nodeTypes,
+      "picocolors": versions.picocolors,
+    });
+
+    // the code being tested should not be transformed
+    output.assertNotExists("esm/_dnt.shims.js");
+    assertStringIncludes(
+      output.getFileText("esm/mod.js"),
+      "name in globalThis",
+    );
+
+    const testRunnerText = output.getFileText("test_runner.cjs");
+    assertStringIncludes(testRunnerText, `await import("@deno/shim-prompts")`);
+    assertStringIncludes(
+      testRunnerText,
+      `defineGlobal("confirm", shim0.confirm)`,
+    );
+    assertStringIncludes(testRunnerText, `await import("node:buffer")`);
+    assertStringIncludes(testRunnerText, `defineGlobal("Blob", shim1.Blob)`);
+    // the `Deno` namespace should never be set as a global
+    assertEquals(testRunnerText.includes(`"Deno"`), false);
+  });
+});
+
 Deno.test("should build and type check node types project", async () => {
   await runTest("node_types_project", {
     scriptModule: false,
@@ -1309,6 +1357,7 @@ async function runTest(
   project:
     | "bin_shebang_project"
     | "declaration_import_project"
+    | "dev_shim_globals_project"
     | "import_map_project"
     | "json_module_project"
     | "jsr_project"

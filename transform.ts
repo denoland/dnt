@@ -8,7 +8,7 @@
 
 import * as wasm from "./lib/pkg/dnt_wasm.js";
 import type { ScriptTarget } from "./lib/types.ts";
-import { valueToUrl } from "./lib/utils.ts";
+import { isPathOrUrl, valueToUrl } from "./lib/utils.ts";
 
 /** Specifier to specifier mappings. */
 export interface SpecifierMappings {
@@ -212,12 +212,4 @@ function resolveBareSpecifierOrPath(value: string) {
   } else {
     return value;
   }
-}
-
-function isPathOrUrl(value: string) {
-  value = value.trim();
-  return /^[a-z]+:\/\//i.test(value) || // has scheme
-    value.startsWith("./") ||
-    value.startsWith("../") ||
-    /\.[a-z]+$/i.test(value); // has extension
 }

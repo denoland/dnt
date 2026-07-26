@@ -114,6 +114,114 @@ main();
   );
 });
 
+Deno.test("gets code that sets the globals of the test shims", () => {
+  const code = getTestRunnerCode({
+    testEntryPoints: ["./test.ts"],
+    denoTestShimPackageName: undefined,
+    includeEsModule: true,
+    includeScriptModule: false,
+    testShims: [{
+      // the `Deno` namespace is never set as a global, so this
+      // shim should be ignored
+      package: {
+        name: "@deno/shim-deno",
+        version: "~0.18.0",
+      },
+      globalNames: ["Deno"],
+    }, {
+      package: {
+        name: "test-shim-package",
+        version: "^1.0.0",
+        subPath: "sub-path",
+      },
+      globalNames: ["Headers", {
+        name: "DOMException",
+        exportName: "default",
+      }, {
+        name: "RequestInit",
+        typeOnly: true,
+      }],
+    }, {
+      module: "node:buffer",
+      globalNames: ["Blob"],
+    }, {
+      // only has type only globals, so it should be ignored
+      module: "node:util",
+      globalNames: [{
+        name: "SomeType",
+        typeOnly: true,
+      }],
+    }],
+  });
+  assertEquals(
+    code,
+    `const pc = require("picocolors");
+const process = require("process");
+
+const filePaths = [
+  "./test.js",
+];
+
+async function main() {
+  await setUpGlobals();
+  for (const [i, filePath] of filePaths.entries()) {
+    if (i > 0) {
+      console.log("");
+    }
+
+    const esmPath = "./esm/" + filePath;
+    console.log("\\nRunning tests in " + pc.underline(esmPath) + "...\\n");
+    process.chdir(__dirname + "/esm");
+    await import(esmPath);
+  }
+}
+
+async function setUpGlobals() {
+  const shim0 = await import("test-shim-package/sub-path");
+  defineGlobal("Headers", shim0.Headers);
+  defineGlobal("DOMException", shim0.default);
+  const shim1 = await import("node:buffer");
+  defineGlobal("Blob", shim1.Blob);
+
+  function defineGlobal(name, value) {
+    // some globals are defined as getters on globalThis (ex. \`crypto\`),
+    // so a plain assignment would not work here
+    Object.defineProperty(globalThis, name, {
+      value,
+      writable: true,
+      enumerable: false,
+      configurable: true,
+    });
+  }
+}
+
+main();
+`,
+  );
+});
+
+Deno.test("does not set the globals of local and remote shims", () => {
+  // these modules are in the graph, so the test runner has no way of
+  // resolving them to an output file
+  const code = getTestRunnerCode({
+    testEntryPoints: ["./test.ts"],
+    denoTestShimPackageName: undefined,
+    includeEsModule: true,
+    includeScriptModule: true,
+    testShims: [{
+      module: "./my_shim.ts",
+      globalNames: ["fetch"],
+    }, {
+      module: "my_shim.ts",
+      globalNames: ["Response"],
+    }, {
+      module: "https://deno.land/x/some_shim/mod.ts",
+      globalNames: ["setTimeout"],
+    }],
+  });
+  assertEquals(code.includes("setUpGlobals"), false);
+});
+
 Deno.test("gets code when cjs is not used", () => {
   const code = getTestRunnerCode({
     testEntryPoints: ["./test.ts"],

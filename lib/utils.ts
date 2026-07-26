@@ -89,6 +89,17 @@ export function standardizePath(fileOrDirPath: string) {
   return path.resolve(fileOrDirPath);
 }
 
+/** Gets if the provided value refers to a module rather than
+ * a bare specifier (ex. an npm package).
+ */
+export function isPathOrUrl(value: string) {
+  value = value.trim();
+  return /^[a-z]+:\/\//i.test(value) || // has scheme
+    value.startsWith("./") ||
+    value.startsWith("../") ||
+    /\.[a-z]+$/i.test(value); // has extension
+}
+
 export function valueToUrl(value: string) {
   const lowerCaseValue = value.toLowerCase();
   if (

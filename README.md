@@ -221,6 +221,29 @@ await build({
 });
 ```
 
+Only the test code is transformed to use these shims. The code being tested is
+left as-is, so the test runner additionally sets the globals of these shims on
+`globalThis` before running the tests.
+
+This is useful when the distributed code should assume a global exists, but it
+needs to be present when testing on Node.js:
+
+```ts
+await build({
+  // ...etc...
+  shims: {
+    // `Headers`, `Response`, etc. are used without being shimmed in the
+    // distributed code, but exist when running the tests
+    undici: "dev",
+  },
+});
+```
+
+Note that the `Deno` namespace is never set on `globalThis` because code
+commonly checks for its existence in order to detect the runtime it's running
+in. Similarly, the globals of [local and remote shims](#local-and-remote-shims)
+are not set because the test runner has no way of resolving those modules.
+
 #### Preventing Shimming
 
 To prevent shimming in specific instances, add a `// dnt-shim-ignore` comment:
