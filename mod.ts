@@ -336,6 +336,7 @@ export async function build(options: BuildOptions): Promise<void> {
   const esmOutDir = path.join(options.outDir, "esm");
   const scriptOutDir = path.join(options.outDir, "script");
   const typesOutDir = path.join(options.outDir, "types");
+  const srcOutDir = path.join(options.outDir, "src");
   const compilerScriptTarget = getCompilerScriptTarget(scriptTarget);
   // TypeScript 6.0 no longer automatically discovers the `@types` packages
   // installed in the output's node_modules, so resolve and include them
@@ -346,6 +347,10 @@ export async function build(options: BuildOptions): Promise<void> {
   const project = createProjectSync({
     compilerOptions: {
       outDir: typesOutDir,
+      // pin the root so that a dependency resolving to a file outside the
+      // sources (ex. a package that ships a .ts file) can't shift the output
+      // down a directory and leave the package.json paths dangling
+      rootDir: srcOutDir,
       allowJs: true,
       alwaysStrict: true,
       stripInternal: options.compilerOptions?.stripInternal,
@@ -582,8 +587,18 @@ export async function build(options: BuildOptions): Promise<void> {
         d.code !== 1343 &&
         // 1470: The_import_meta_meta_property_is_not_allowed_in_files_which_will_build_into_CommonJS_output
         d.code !== 1470 &&
+        !isInNodeModules(d) &&
         (options.filterDiagnostic?.(d) ?? true)
       );
+    }
+
+    /** A dependency shipping a .ts file that resolution lands on is compiled
+     * as a source rather than a declaration file, so `skipLibCheck` doesn't
+     * cover it. Its code is no more the package author's problem than a .d.ts
+     * would be, so ignore it all the same. */
+    function isInNodeModules(diagnostic: ts.Diagnostic) {
+      const fileName = diagnostic.file?.fileName;
+      return fileName != null && fileName.includes("/node_modules/");
     }
 
     function shouldTypeCheck() {

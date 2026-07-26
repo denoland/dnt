@@ -1170,6 +1170,34 @@ Deno.test("should build undici project", async () => {
   });
 });
 
+Deno.test("should build a project with a dependency that resolves to a .ts file", async () => {
+  await runTest("node_modules_ts_project", {
+    entryPoints: ["mod.ts", "nested/other.ts"],
+    outDir: "./npm",
+    scriptModule: false,
+    declaration: "separate",
+    test: false,
+    shims: {},
+    package: {
+      name: "node-modules-ts-project",
+      version: "1.0.0",
+    },
+  }, (output) => {
+    // see issue #460 -- the dependency's own .ts file must not shift the
+    // output down a directory, which would leave the package.json paths
+    // pointing at files that don't exist
+    output.assertExists("esm/mod.js");
+    output.assertExists("esm/nested/other.js");
+    output.assertNotExists("esm/src/mod.js");
+    output.assertNotExists("esm/node_modules");
+    assertEquals(output.packageJson.module, "./esm/mod.js");
+    assertEquals(
+      output.packageJson.exports["."].import.default,
+      "./esm/mod.js",
+    );
+  });
+});
+
 Deno.test("should run the test preload module", async () => {
   await runTest("test_preload_project", {
     entryPoints: ["mod.ts"],
@@ -1443,6 +1471,7 @@ async function runTest(
     | "polyfill_promise_with_resolvers_project"
     | "polyfill_import_meta_project"
     | "module_mappings_project"
+    | "node_modules_ts_project"
     | "node_types_project"
     | "undici_project"
     | "shim_project"
