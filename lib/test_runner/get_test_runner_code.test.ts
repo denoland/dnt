@@ -114,6 +114,99 @@ main();
   );
 });
 
+Deno.test("gets code when a preload module is used", () => {
+  const code = getTestRunnerCode({
+    testEntryPoints: ["./test.ts"],
+    denoTestShimPackageName: undefined,
+    preloadEntryPoint: "scripts/test_preload.ts",
+    includeEsModule: true,
+    includeScriptModule: true,
+  });
+  assertEquals(
+    code,
+    `const pc = require("picocolors");
+const process = require("process");
+
+const filePaths = [
+  "./test.js",
+];
+
+async function main() {
+  process.chdir(__dirname + "/script");
+  try {
+    require("./script/scripts/test_preload.js");
+  } catch(err) {
+    console.error(err);
+    process.exit(1);
+  }
+  process.chdir(__dirname + "/esm");
+  await import("./esm/scripts/test_preload.js");
+
+  for (const [i, filePath] of filePaths.entries()) {
+    if (i > 0) {
+      console.log("");
+    }
+
+    const scriptPath = "./script/" + filePath;
+    console.log("Running tests in " + pc.underline(scriptPath) + "...\\n");
+    process.chdir(__dirname + "/script");
+    try {
+      require(scriptPath);
+    } catch(err) {
+      console.error(err);
+      process.exit(1);
+    }
+
+    const esmPath = "./esm/" + filePath;
+    console.log("\\nRunning tests in " + pc.underline(esmPath) + "...\\n");
+    process.chdir(__dirname + "/esm");
+    await import(esmPath);
+  }
+}
+
+main();
+`,
+  );
+});
+
+Deno.test("gets code when a preload module is used without cjs", () => {
+  const code = getTestRunnerCode({
+    testEntryPoints: ["./test.ts"],
+    denoTestShimPackageName: undefined,
+    preloadEntryPoint: "test_preload.ts",
+    includeEsModule: true,
+    includeScriptModule: false,
+  });
+  assertEquals(
+    code,
+    `const pc = require("picocolors");
+const process = require("process");
+
+const filePaths = [
+  "./test.js",
+];
+
+async function main() {
+  process.chdir(__dirname + "/esm");
+  await import("./esm/test_preload.js");
+
+  for (const [i, filePath] of filePaths.entries()) {
+    if (i > 0) {
+      console.log("");
+    }
+
+    const esmPath = "./esm/" + filePath;
+    console.log("\\nRunning tests in " + pc.underline(esmPath) + "...\\n");
+    process.chdir(__dirname + "/esm");
+    await import(esmPath);
+  }
+}
+
+main();
+`,
+  );
+});
+
 Deno.test("gets code when cjs is not used", () => {
   const code = getTestRunnerCode({
     testEntryPoints: ["./test.ts"],

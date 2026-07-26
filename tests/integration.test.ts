@@ -1088,6 +1088,45 @@ Deno.test("should build undici project", async () => {
   });
 });
 
+Deno.test("should run the test preload module", async () => {
+  await runTest("test_preload_project", {
+    entryPoints: ["mod.ts"],
+    outDir: "./npm",
+    typeCheck: "both",
+    shims: {
+      ...getAllShimOptions(false),
+      deno: { test: "dev" },
+    },
+    testPreloadModule: "./scripts/test_preload.ts",
+    package: {
+      name: "test-preload-project",
+      version: "1.0.0",
+    },
+  }, (output) => {
+    // the preload module should be emitted, but not distributed
+    output.assertExists("esm/scripts/test_preload.js");
+    output.assertExists("script/scripts/test_preload.js");
+    assertStringIncludes(output.npmIgnore, "/esm/scripts/test_preload.js\n");
+    assertStringIncludes(output.npmIgnore, "/script/scripts/test_preload.js\n");
+
+    // it should be loaded once for each output, before any test file
+    const testRunnerText = output.getFileText("test_runner.cjs");
+    assertStringIncludes(
+      testRunnerText,
+      `require("./script/scripts/test_preload.js");`,
+    );
+    assertStringIncludes(
+      testRunnerText,
+      `await import("./esm/scripts/test_preload.js");`,
+    );
+    // it should not be run as a test file
+    assertEquals(
+      testRunnerText.includes(`"./scripts/test_preload.js",`),
+      false,
+    );
+  });
+});
+
 Deno.test("should build and type check node types project", async () => {
   await runTest("node_types_project", {
     scriptModule: false,
@@ -1321,6 +1360,7 @@ async function runTest(
     | "node_types_project"
     | "undici_project"
     | "shim_project"
+    | "test_preload_project"
     | "test_project"
     | "tla_project"
     | "web_socket_project"

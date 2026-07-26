@@ -8,8 +8,10 @@ export function getTestRunnerCode(options: {
   denoTestShimPackageName: string | undefined;
   includeEsModule: boolean | undefined;
   includeScriptModule: boolean | undefined;
+  preloadEntryPoint?: string;
 }) {
   const usesDenoTest = options.denoTestShimPackageName != null;
+  const preloadPath = options.preloadEntryPoint?.replace(/\.ts$/, ".js");
   const writer = createWriter();
   writer.writeLine(`const pc = require("picocolors");`)
     .writeLine(`const process = require("process");`);
@@ -30,6 +32,22 @@ export function getTestRunnerCode(options: {
   writer.writeLine("];").newLine();
 
   writer.write("async function main()").block(() => {
+    if (preloadPath != null) {
+      if (options.includeScriptModule) {
+        writer.writeLine(`process.chdir(__dirname + "/script");`);
+        writer.write("try ").inlineBlock(() => {
+          writer.writeLine(`require("./script/${preloadPath}");`);
+        }).write(" catch(err)").block(() => {
+          writer.writeLine("console.error(err);");
+          writer.writeLine("process.exit(1);");
+        });
+      }
+      if (options.includeEsModule) {
+        writer.writeLine(`process.chdir(__dirname + "/esm");`);
+        writer.writeLine(`await import("./esm/${preloadPath}");`);
+      }
+      writer.blankLine();
+    }
     if (usesDenoTest) {
       writer.write("const testContext = ").inlineBlock(() => {
         writer.writeLine("process,");

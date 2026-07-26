@@ -173,6 +173,33 @@ await build({
 });
 ```
 
+### Test Preload Module
+
+Specify a module to load before running the tests with the `testPreloadModule`
+build option:
+
+```ts
+await build({
+  // ...etc...
+  testPreloadModule: "./scripts/test_preload.ts",
+});
+```
+
+This is useful for setting up the Node.js environment the tests run in without
+affecting the distributed code. For example, when the distributed code assumes a
+global exists that Node.js doesn't have:
+
+```ts
+// scripts/test_preload.ts
+import { Headers, Response } from "npm:undici";
+
+Object.assign(globalThis, { Headers, Response });
+```
+
+The module is transformed and type checked like the test files are and it is not
+included in the npm package. It is loaded once for each of the emitted script
+and ESM output, before any test file.
+
 ### Shims
 
 dnt will shim the globals specified in the build options. For example, if you
