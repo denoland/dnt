@@ -31,6 +31,7 @@ use deno_resolver::file_fetcher::DenoGraphLoader;
 use deno_resolver::file_fetcher::DenoGraphLoaderOptions;
 use deno_resolver::file_fetcher::PermissionedFileFetcher;
 use deno_resolver::file_fetcher::PermissionedFileFetcherOptions;
+use deno_resolver::npm::DenoInNpmPackageChecker;
 use deno_resolver::workspace::SpecifiedImportMap;
 use deno_resolver::NodeResolverOptions;
 use deno_semver::npm::NpmPackageReqReference;
@@ -420,12 +421,17 @@ pub async fn transform(
     },
   );
   let deno_resolver = resolver_factory.deno_resolver().await?;
-  let specifier_mappings = resolve_specifier_mappings(
-    options.specifier_mappings,
-    &deno_resolver,
-    &options.entry_points[0],
-  )?;
   let cjs_tracker = resolver_factory.cjs_tracker()?.clone();
+  let (specifier_mappings, specifier_mapping_keys) =
+    resolve_specifier_mappings(
+      options.specifier_mappings,
+      &deno_resolver,
+      &cjs_tracker,
+      options
+        .entry_points
+        .iter()
+        .chain(options.test_entry_points.iter()),
+    )?;
   let maybe_lockfile = resolver_factory
     .workspace_factory()
     .maybe_lockfile(&NullNpmPackageInfoProvider)
@@ -468,6 +474,7 @@ pub async fn transform(
         )
         .collect(),
       specifier_mappings: &specifier_mappings,
+      specifier_mapping_keys: &specifier_mapping_keys,
       loader,
       resolver: deno_resolver.clone(),
       compiler_options_resolver: resolver_factory
@@ -676,6 +683,71 @@ pub async fn transform(
   })
 }
 
+/// Resolves the specifier mapping keys, which may be bare specifiers that
+/// resolve via the config file's import map (ex. `my-lib`).
+///
+/// Returns the resolved mappings along with the original key of each, which
+/// is used when displaying a mapping in an error message.
+fn resolve_specifier_mappings<'a, TSys: deno_resolver::DenoResolverSys>(
+  mappings: HashMap<String, MappedSpecifier>,
+  resolver: &deno_resolver::graph::DefaultDenoResolverRc<TSys>,
+  cjs_tracker: &deno_resolver::cjs::CjsTracker<DenoInNpmPackageChecker, TSys>,
+  referrers: impl Iterator<Item = &'a ModuleSpecifier> + Clone,
+) -> Result<(
+  HashMap<ModuleSpecifier, MappedSpecifier>,
+  HashMap<ModuleSpecifier, String>,
+)> {
+  let mut resolved = HashMap::with_capacity(mappings.len());
+  let mut keys = HashMap::with_capacity(mappings.len());
+  // resolve in a deterministic order so that any error is deterministic
+  for (key, value) in mappings.into_iter().collect::<BTreeMap<_, _>>() {
+    // urls are used as-is in order to not change how they've always resolved
+    let specifier = match ModuleSpecifier::parse(&key) {
+      Ok(specifier) => specifier,
+      Err(_) => {
+        resolve_mapping_key(&key, resolver, cjs_tracker, referrers.clone())?
+      }
+    };
+    if let Some(previous_key) = keys.insert(specifier.clone(), key.clone()) {
+      bail!(
+        "The mappings \"{}\" and \"{}\" both resolved to {}",
+        previous_key,
+        key,
+        specifier,
+      );
+    }
+    resolved.insert(specifier, value);
+  }
+  Ok((resolved, keys))
+}
+
+fn resolve_mapping_key<'a, TSys: deno_resolver::DenoResolverSys>(
+  key: &str,
+  resolver: &deno_resolver::graph::DefaultDenoResolverRc<TSys>,
+  cjs_tracker: &deno_resolver::cjs::CjsTracker<DenoInNpmPackageChecker, TSys>,
+  referrers: impl Iterator<Item = &'a ModuleSpecifier>,
+) -> Result<ModuleSpecifier> {
+  let mut last_err = None;
+  for referrer in referrers {
+    match resolver.resolve(
+      key,
+      referrer,
+      deno_graph::Position::zeroed(),
+      cjs_tracker.get_referrer_kind(referrer),
+      node_resolver::NodeResolutionKind::Execution,
+    ) {
+      Ok(specifier) => return Ok(specifier),
+      Err(err) => last_err = Some(err),
+    }
+  }
+  match last_err {
+    Some(err) => {
+      Err(err).with_context(|| format!("Failed resolving mapping \"{}\"", key))
+    }
+    None => bail!("Failed resolving mapping \"{}\"", key),
+  }
+}
+
 /// Provides npm package info when reading the lockfile.
 ///
 /// dnt resolves npm specifiers via the specifier mappers rather than through
@@ -875,42 +947,6 @@ fn check_add_shim_file_to_environment(
 
     text
   }
-}
-
-/// Resolves the specifier mapping keys, which may be bare specifiers that
-/// resolve via the config file's import map (ex. `my-lib`).
-fn resolve_specifier_mappings<
-  TInNpmPackageChecker: node_resolver::InNpmPackageChecker,
-  TIsBuiltInNodeModuleChecker: node_resolver::IsBuiltInNodeModuleChecker,
-  TNpmPackageFolderResolver: node_resolver::NpmPackageFolderResolver,
-  TSys: deno_resolver::DenoResolverSys,
->(
-  mappings: HashMap<String, MappedSpecifier>,
-  resolver: &deno_resolver::graph::DenoResolver<
-    TInNpmPackageChecker,
-    TIsBuiltInNodeModuleChecker,
-    TNpmPackageFolderResolver,
-    TSys,
-  >,
-  referrer: &ModuleSpecifier,
-) -> Result<HashMap<ModuleSpecifier, MappedSpecifier>> {
-  let mut result = HashMap::with_capacity(mappings.len());
-  for (key, value) in mappings {
-    let specifier = match ModuleSpecifier::parse(&key) {
-      Ok(specifier) => specifier,
-      Err(_) => resolver
-        .resolve(
-          &key,
-          referrer,
-          deno_graph::Position::zeroed(),
-          node_resolver::ResolutionMode::Import,
-          node_resolver::NodeResolutionKind::Execution,
-        )
-        .with_context(|| format!("Failed resolving mapping \"{}\".", key))?,
-    };
-    result.insert(specifier, value);
-  }
-  Ok(result)
 }
 
 fn get_dependencies(

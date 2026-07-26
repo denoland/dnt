@@ -6,6 +6,8 @@
  * @module
  */
 
+import { existsSync } from "@std/fs";
+import * as path from "@std/path";
 import * as wasm from "./lib/pkg/dnt_wasm.js";
 import type { PolyfillName, ScriptTarget } from "./lib/types.ts";
 import { valueToUrl } from "./lib/utils.ts";
@@ -150,9 +152,22 @@ export function transform(
 }
 
 function mapMappingKey(key: string) {
-  // leave bare specifiers alone so that they can be resolved
+  key = key.trim();
+  if (/^[a-z]+:/i.test(key) || isRelativeOrAbsolutePath(key)) {
+    return valueToUrl(key);
+  }
+  // fall back to a path for a key like `mod.ts` that resolved to
+  // one before bare specifiers were supported
+  if (existsSync(key)) {
+    return valueToUrl(key);
+  }
+  // leave bare specifiers alone so that they're resolved
   // via the config file's import map (ex. `my-lib`)
-  return isPathOrUrl(key) ? valueToUrl(key) : key;
+  return key;
+}
+
+function isRelativeOrAbsolutePath(value: string) {
+  return /^\.\.?[\\/]/.test(value) || path.isAbsolute(value);
 }
 
 type SerializableMappedSpecifier = {
