@@ -71,11 +71,6 @@ export function getPackageJson({
   };
   const testDevDependencies = testEnabled
     ? ({
-      ...(!Object.keys(dependencies).includes("picocolors")
-        ? {
-          "picocolors": "^1.0.0",
-        }
-        : {}),
       // add dependencies from transform
       ...Object.fromEntries(
         // ignore peer dependencies on this

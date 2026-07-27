@@ -17,7 +17,7 @@ export function getTestRunnerCode(options: {
     ? undefined
     : toJsFilePath(options.preloadEntryPoint);
   const writer = createWriter();
-  writer.writeLine(`const pc = require("picocolors");`)
+  writer.writeLine(`const { styleText } = require("util");`)
     .writeLine(`const process = require("process");`);
   if (usesDenoTest) {
     writer.writeLine(`const { pathToFileURL } = require("url");`);
@@ -61,7 +61,7 @@ export function getTestRunnerCode(options: {
     if (usesDenoTest) {
       writer.write("const testContext = ").inlineBlock(() => {
         writer.writeLine("process,");
-        writer.writeLine("pc,");
+        writer.writeLine("styleText,");
       }).write(";").newLine();
     }
     if (isolateTestFiles) {
@@ -131,7 +131,7 @@ export function getTestRunnerCode(options: {
     if (options.includeScriptModule) {
       writer.writeLine(`const scriptPath = "./script/" + filePath;`);
       writer.writeLine(
-        `console.log("Running tests in " + pc.underline(scriptPath) + "...\\n");`,
+        `console.log("Running tests in " + styleText("underline", scriptPath) + "...\\n");`,
       );
       writer.writeLine(`process.chdir(__dirname + "/script");`);
       if (usesDenoTest) {
@@ -159,7 +159,7 @@ export function getTestRunnerCode(options: {
       }
       writer.writeLine(`const esmPath = "./esm/" + filePath;`);
       writer.writeLine(
-        `console.log("\\nRunning tests in " + pc.underline(esmPath) + "...\\n");`,
+        `console.log("\\nRunning tests in " + styleText("underline", esmPath) + "...\\n");`,
       );
       writer.writeLine(`process.chdir(__dirname + "/esm");`);
       if (usesDenoTest) {
