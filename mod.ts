@@ -52,8 +52,12 @@ export interface EntryPoint {
    * @default "export"
    */
   kind?: "bin" | "export";
-  /** Name of the entrypoint in the "binary" or "exports". */
-  name: string;
+  /** Name of the entrypoint in the "binary" or "exports".
+   *
+   * @remarks A single binary entrypoint may leave this undefined, in which
+   * case the package name is used as the name of the command.
+   */
+  name?: string;
   /** Path to the entrypoint. */
   path: string;
 }
@@ -351,6 +355,7 @@ export async function build(options: BuildOptions): Promise<void> {
       };
     }
   });
+  validateEntryPoints(entryPoints);
   const testPreloadModule = options.testPreloadModule == null
     ? undefined
     : standardizePath(options.testPreloadModule);
@@ -359,6 +364,11 @@ export async function build(options: BuildOptions): Promise<void> {
 
   log("Transforming...");
   const transformOutput = await transformEntryPoints();
+  // a binary is only ever run by node, so its modules aren't part of the
+  // script output when nothing else uses them
+  const binOnlyFiles = new Set(
+    options.esModule !== false ? transformOutput.binOnlyFiles : [],
+  );
   if (transformOutput.discoveredConfigFile != null) {
     log(
       `Auto-discovered config file: ${
@@ -492,7 +502,7 @@ export async function build(options: BuildOptions): Promise<void> {
       outputFileText,
     );
 
-    if (options.scriptModule) {
+    if (options.scriptModule && !binOnlyFiles.has(outputFile.filePath)) {
       // cjs does not support TLA so error fast if we find one
       const tlaLocation = getTopLevelAwaitLocation(sourceFile);
       if (tlaLocation) {
@@ -557,6 +567,9 @@ export async function build(options: BuildOptions): Promise<void> {
         : ts.ModuleKind.CommonJS,
       moduleResolution: ts.ModuleResolutionKind.Node10,
     });
+    for (const filePath of binOnlyFiles) {
+      project.removeSourceFile(path.join(options.outDir, "src", filePath));
+    }
     program = getProgramAndMaybeTypeCheck("script");
     emit({
       transformers: {
@@ -743,6 +756,7 @@ export async function build(options: BuildOptions): Promise<void> {
     const { shims, testShims } = shimOptionsToTransformShims(options.shims);
     return transform({
       entryPoints: entryPoints.map((e) => e.path),
+      binEntryPoints: getBinOnlyEntryPointPaths(),
       testEntryPoints: options.test ? await getTestEntryPoints() : [],
       shims,
       testShims,
@@ -754,6 +768,17 @@ export async function build(options: BuildOptions): Promise<void> {
       frozenLockfile: options.frozenLockfile,
       cwd: path.toFileUrl(cwd).toString(),
     });
+  }
+
+  function getBinOnlyEntryPointPaths() {
+    const exportPaths = new Set(
+      entryPoints.filter((e) => (e.kind ?? "export") !== "bin").map((e) =>
+        e.path
+      ),
+    );
+    return entryPoints
+      .filter((e) => e.kind === "bin" && !exportPaths.has(e.path))
+      .map((e) => e.path);
   }
 
   async function getTestEntryPoints() {
@@ -810,6 +835,27 @@ export async function build(options: BuildOptions): Promise<void> {
     function getDependencyByName(name: string) {
       return transformOutput.test.dependencies.find((d) => d.name === name) ??
         transformOutput.main.dependencies.find((d) => d.name === name);
+    }
+  }
+
+  function validateEntryPoints(entryPoints: EntryPoint[]) {
+    const nameless = entryPoints.filter((e) => e.name == null);
+    if (nameless.length === 0) {
+      return;
+    }
+    const exportEntryPoint = nameless.find((e) =>
+      (e.kind ?? "export") !== "bin"
+    );
+    if (exportEntryPoint != null) {
+      throw new Error(
+        `The entrypoint '${exportEntryPoint.path}' requires a name.`,
+      );
+    }
+    if (entryPoints.filter((e) => e.kind === "bin").length > 1) {
+      throw new Error(
+        `The binary entrypoint '${nameless[0].path}' requires a name because ` +
+          `there are multiple binary entrypoints.`,
+      );
     }
   }
 

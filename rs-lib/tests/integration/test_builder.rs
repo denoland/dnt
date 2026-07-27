@@ -22,6 +22,7 @@ pub struct TestBuilder {
   loader: InMemoryLoader,
   entry_point: String,
   additional_entry_points: Vec<String>,
+  bin_entry_points: Vec<String>,
   test_entry_points: Vec<String>,
   specifier_mappings: HashMap<String, MappedSpecifier>,
   shims: Vec<Shim>,
@@ -44,6 +45,7 @@ impl TestBuilder {
         "file:///mod.ts".to_string()
       },
       additional_entry_points: Vec::new(),
+      bin_entry_points: Vec::new(),
       test_entry_points: Vec::new(),
       specifier_mappings: Default::default(),
       shims: Default::default(),
@@ -74,6 +76,13 @@ impl TestBuilder {
     self
       .additional_entry_points
       .push(normalize_urls(value.as_ref()));
+    self
+  }
+
+  pub fn add_bin_entry_point(&mut self, value: impl AsRef<str>) -> &mut Self {
+    let value = normalize_urls(value.as_ref());
+    self.additional_entry_points.push(value.clone());
+    self.bin_entry_points.push(value);
     self
   }
 
@@ -214,6 +223,11 @@ impl TestBuilder {
       self.loader.clone(),
       TransformOptions {
         entry_points,
+        bin_entry_points: self
+          .bin_entry_points
+          .iter()
+          .map(|p| ModuleSpecifier::parse(p).unwrap())
+          .collect(),
         test_entry_points: self
           .test_entry_points
           .iter()

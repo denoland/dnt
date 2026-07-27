@@ -33,6 +33,7 @@ Deno.test("single entrypoint", () => {
       },
       warnings: [],
       typesDependencies: [],
+      binOnlyFiles: [],
     },
     entryPoints: [{
       name: ".",
@@ -254,6 +255,7 @@ Deno.test("exports have default last", () => {
       },
       warnings: [],
       typesDependencies: [],
+      binOnlyFiles: [],
     },
     entryPoints: [
       {
@@ -302,6 +304,7 @@ Deno.test("multiple entrypoints", () => {
       },
       warnings: [],
       typesDependencies: [],
+      binOnlyFiles: [],
     },
     entryPoints: [{
       name: ".",
@@ -379,6 +382,7 @@ Deno.test("binary entrypoints", () => {
       },
       warnings: [],
       typesDependencies: [],
+      binOnlyFiles: [],
     },
     entryPoints: [{
       name: ".",
@@ -462,6 +466,7 @@ Deno.test("peer dependencies", () => {
       },
       warnings: [],
       typesDependencies: [],
+      binOnlyFiles: [],
     },
     entryPoints: [{
       name: ".",
@@ -554,6 +559,7 @@ Deno.test("types dependencies", () => {
         name: "other",
         version: "^1.0.0",
       }],
+      binOnlyFiles: [],
     },
     entryPoints: [{
       name: ".",
@@ -580,3 +586,51 @@ Deno.test("types dependencies", () => {
     "@types/svg-path-parser": "~1.1.6",
   });
 });
+
+Deno.test("binary entrypoint without a name", () => {
+  const props = getBinaryProps({ includeEsModule: true, name: undefined });
+  // the package name is used as the name of the command
+  assertEquals(getPackageJson(props).bin, "./esm/mod.js");
+});
+
+Deno.test("binary entrypoint without an esm output", () => {
+  const props = getBinaryProps({ includeEsModule: false, name: "cmd" });
+  assertEquals(getPackageJson(props).bin, { cmd: "./script/mod.js" });
+});
+
+function getBinaryProps(
+  options: { includeEsModule: boolean; name: string | undefined },
+): GetPackageJsonOptions {
+  return {
+    transformOutput: {
+      main: {
+        files: [],
+        dependencies: [],
+        entryPoints: ["mod.ts"],
+      },
+      test: {
+        entryPoints: [],
+        files: [],
+        dependencies: [],
+      },
+      warnings: [],
+      typesDependencies: [],
+      binOnlyFiles: [],
+    },
+    entryPoints: [{
+      kind: "bin",
+      name: options.name,
+      path: "./mod.ts",
+    }],
+    package: {
+      name: "package",
+      version: "0.1.0",
+    },
+    testEnabled: false,
+    includeEsModule: options.includeEsModule,
+    includeScriptModule: true,
+    includeDeclarations: false,
+    includeTsLib: false,
+    shims: {},
+  };
+}

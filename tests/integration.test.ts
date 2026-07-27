@@ -473,17 +473,134 @@ Deno.test("should build bin project with a shebang", async () => {
       },
       _generatedBy: "dnt@dev",
     });
-    const expectedText =
-      '#!/usr/bin/env node\n"use strict";\nconsole.log("Hello!");\n';
-    assertEquals(
-      output.getFileText("script/main.js"),
-      expectedText,
-    );
     assertEquals(
       output.getFileText("esm/main.js"),
-      expectedText,
+      '#!/usr/bin/env node\n"use strict";\nconsole.log("Hello!");\n',
+    );
+    // a binary is only run by node, so it's not in the script output
+    output.assertNotExists("script/main.js");
+  });
+});
+
+Deno.test("should build bin project without a name", async () => {
+  await runTest("bin_shebang_project", {
+    entryPoints: [{
+      kind: "bin",
+      path: "./main.ts",
+    }],
+    shims: getAllShimOptions(false),
+    outDir: "./npm",
+    package: {
+      name: "hello",
+      version: "1.0.0",
+    },
+    compilerOptions: {
+      lib: ["ESNext", "DOM"],
+    },
+  }, (output) => {
+    // the package name is used as the name of the command
+    assertEquals(output.packageJson.bin, "./esm/main.js");
+  });
+});
+
+Deno.test("should build bin project without an esm output", async () => {
+  await runTest("bin_shebang_project", {
+    entryPoints: [{
+      kind: "bin",
+      name: "hello",
+      path: "./main.ts",
+    }],
+    shims: getAllShimOptions(false),
+    outDir: "./npm",
+    esModule: false,
+    declaration: "separate",
+    package: {
+      name: "hello",
+      version: "1.0.0",
+    },
+    compilerOptions: {
+      lib: ["ESNext", "DOM"],
+    },
+  }, (output) => {
+    assertEquals(output.packageJson.bin, {
+      hello: "./script/main.js",
+    });
+    // the binary is in the script output because there's no esm output
+    assertEquals(
+      output.getFileText("script/main.js"),
+      '#!/usr/bin/env node\n"use strict";\nconsole.log("Hello!");\n',
     );
   });
+});
+
+Deno.test("should build bin project", async () => {
+  await runTest("bin_project", {
+    entryPoints: [{ name: ".", path: "./mod.ts" }, {
+      kind: "bin",
+      name: "hello",
+      path: "./cli.ts",
+    }],
+    outDir: "./npm",
+    shims: {},
+    test: false,
+    compilerOptions: {
+      lib: ["ESNext", "DOM"],
+    },
+    package: {
+      name: "hello",
+      version: "1.0.0",
+    },
+  }, (output) => {
+    assertEquals(output.packageJson.bin, { hello: "./esm/cli.js" });
+    // a binary is only run by node, so it's not in the script output,
+    // but a module something else uses still is
+    output.assertNotExists("script/cli.js");
+    output.assertExists("esm/cli.js");
+    output.assertExists("script/shared.js");
+    output.assertExists("esm/shared.js");
+  });
+});
+
+Deno.test("should build bin project when it's also an export", async () => {
+  await runTest("bin_project", {
+    entryPoints: [{ name: ".", path: "./cli.ts" }, {
+      kind: "bin",
+      name: "hello",
+      path: "./cli.ts",
+    }],
+    outDir: "./npm",
+    shims: {},
+    test: false,
+    // the top level await in cli.ts is an error when it's in the script output
+    scriptModule: false,
+    compilerOptions: {
+      lib: ["ESNext", "DOM"],
+    },
+    package: {
+      name: "hello",
+      version: "1.0.0",
+    },
+  }, (output) => {
+    output.assertExists("esm/cli.js");
+  });
+});
+
+Deno.test("should error when an entrypoint has no name", async () => {
+  await assertRejects(
+    () =>
+      runTest("bin_project", {
+        entryPoints: [{ path: "./mod.ts" }],
+        outDir: "./npm",
+        shims: {},
+        test: false,
+        package: {
+          name: "hello",
+          version: "1.0.0",
+        },
+      }),
+    Error,
+    "requires a name",
+  );
 });
 
 Deno.test("should run tests when using @deno/shim-deno-test shim", async () => {
@@ -1620,6 +1737,7 @@ export interface Output {
 async function runTest(
   project:
     | "bare_mapping_project"
+    | "bin_project"
     | "bin_shebang_project"
     | "config_discovery_project"
     | "declaration_import_project"

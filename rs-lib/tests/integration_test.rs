@@ -340,8 +340,11 @@ async fn transform_shim_custom_shims() {
       }
     ]
   );
+  assert_eq!(result.test.dependencies, vec![]);
+  // the declarations of a shim are needed whether or not the tests
+  // are included in the output
   assert_eq!(
-    result.test.dependencies,
+    result.types_dependencies,
     vec![Dependency {
       name: "@types/domexception".to_string(),
       version: "^2.0.1".to_string(),
@@ -3063,6 +3066,32 @@ async fn node_specifier() {
   assert_files!(
     result.main.files,
     &[("mod.ts", "import * as fs from 'node:fs'; console.log(fs);"),]
+  );
+}
+
+#[tokio::test]
+async fn transform_bin_only_files() {
+  let result = TestBuilder::new()
+    .with_loader(|loader| {
+      loader
+        .add_local_file("/mod.ts", "export * from './shared.ts';")
+        .add_local_file(
+          "/cli.ts",
+          "import './shared.ts';
+import './cli_only.ts';",
+        )
+        .add_local_file("/shared.ts", "export const a = 1;")
+        .add_local_file("/cli_only.ts", "export const b = 2;");
+    })
+    .add_bin_entry_point("file:///cli.ts")
+    .transform()
+    .await
+    .unwrap();
+
+  // only the modules that nothing else uses are binary only
+  assert_eq!(
+    result.bin_only_files,
+    &[PathBuf::from("cli.ts"), PathBuf::from("cli_only.ts")]
   );
 }
 
