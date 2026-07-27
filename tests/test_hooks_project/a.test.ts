@@ -1,6 +1,6 @@
 // Copyright 2018-2024 the Deno authors. MIT license.
 
-import { beforeEach, describe, it } from "@std/testing/bdd";
+import { beforeEach, describe, it } from "jsr:@std/testing@^1.0.19/bdd";
 import { add } from "./mod.ts";
 
 let value = 0;
