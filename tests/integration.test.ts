@@ -1839,7 +1839,7 @@ function assertPreloadModuleOutput(output: Output) {
   assertStringIncludes(output.npmIgnore, "/esm/scripts/test_preload.js\n");
   assertStringIncludes(output.npmIgnore, "/script/scripts/test_preload.js\n");
 
-  // it should be loaded once for each output, before any test file
+  // it should be loaded once for each output, before each test file
   const testRunnerText = output.getFileText("test_runner.cjs");
   assertStringIncludes(
     testRunnerText,

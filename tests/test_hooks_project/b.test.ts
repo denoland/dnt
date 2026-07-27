@@ -5,8 +5,8 @@ import { add } from "./mod.ts";
 
 let value = 0;
 
-// a global hook can only be added once per test file, so this fails
-// when the test files aren't run in their own process
+// a global hook errors when another test file already registered a global
+// test, so this only works when each test file runs in its own process
 beforeEach(() => {
   value = 1;
 });

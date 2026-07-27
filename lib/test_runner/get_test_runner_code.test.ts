@@ -28,24 +28,31 @@ async function main() {
   if (fileIndexArg == null) {
     const { spawnSync } = require("child_process");
     let failed = false;
-    for (const [i, _] of filePaths.entries()) {
+    for (const i of filePaths.keys()) {
       if (i > 0) {
         console.log("");
       }
-      const result = spawnSync(process.execPath, [__filename, String(i)], {
-        stdio: "inherit",
-      });
+      const args = [...process.execArgv, __filename, String(i)];
+      const result = spawnSync(process.execPath, args, { stdio: "inherit" });
+      if (result.error != null) {
+        console.error(result.error);
+      }
       if (result.status !== 0) {
         failed = true;
       }
     }
     if (failed) {
-      process.exit(1);
+      process.exitCode = 1;
     }
     return;
   }
 
   const filePath = filePaths[Number(fileIndexArg)];
+  if (filePath == null) {
+    console.error("Unknown test file index: " + fileIndexArg);
+    process.exitCode = 1;
+    return;
+  }
 
   const scriptPath = "./script/" + filePath;
   console.log("Running tests in " + pc.underline(scriptPath) + "...\\n");
@@ -92,24 +99,31 @@ async function main() {
   if (fileIndexArg == null) {
     const { spawnSync } = require("child_process");
     let failed = false;
-    for (const [i, _] of filePaths.entries()) {
+    for (const i of filePaths.keys()) {
       if (i > 0) {
         console.log("");
       }
-      const result = spawnSync(process.execPath, [__filename, String(i)], {
-        stdio: "inherit",
-      });
+      const args = [...process.execArgv, __filename, String(i)];
+      const result = spawnSync(process.execPath, args, { stdio: "inherit" });
+      if (result.error != null) {
+        console.error(result.error);
+      }
       if (result.status !== 0) {
         failed = true;
       }
     }
     if (failed) {
-      process.exit(1);
+      process.exitCode = 1;
     }
     return;
   }
 
   const filePath = filePaths[Number(fileIndexArg)];
+  if (filePath == null) {
+    console.error("Unknown test file index: " + fileIndexArg);
+    process.exitCode = 1;
+    return;
+  }
 
   const testContext = {
     process,
@@ -322,24 +336,31 @@ async function main() {
   if (fileIndexArg == null) {
     const { spawnSync } = require("child_process");
     let failed = false;
-    for (const [i, _] of filePaths.entries()) {
+    for (const i of filePaths.keys()) {
       if (i > 0) {
         console.log("");
       }
-      const result = spawnSync(process.execPath, [__filename, String(i)], {
-        stdio: "inherit",
-      });
+      const args = [...process.execArgv, __filename, String(i)];
+      const result = spawnSync(process.execPath, args, { stdio: "inherit" });
+      if (result.error != null) {
+        console.error(result.error);
+      }
       if (result.status !== 0) {
         failed = true;
       }
     }
     if (failed) {
-      process.exit(1);
+      process.exitCode = 1;
     }
     return;
   }
 
   const filePath = filePaths[Number(fileIndexArg)];
+  if (filePath == null) {
+    console.error("Unknown test file index: " + fileIndexArg);
+    process.exitCode = 1;
+    return;
+  }
 
   process.chdir(__dirname + "/script");
   try {
@@ -394,24 +415,31 @@ async function main() {
   if (fileIndexArg == null) {
     const { spawnSync } = require("child_process");
     let failed = false;
-    for (const [i, _] of filePaths.entries()) {
+    for (const i of filePaths.keys()) {
       if (i > 0) {
         console.log("");
       }
-      const result = spawnSync(process.execPath, [__filename, String(i)], {
-        stdio: "inherit",
-      });
+      const args = [...process.execArgv, __filename, String(i)];
+      const result = spawnSync(process.execPath, args, { stdio: "inherit" });
+      if (result.error != null) {
+        console.error(result.error);
+      }
       if (result.status !== 0) {
         failed = true;
       }
     }
     if (failed) {
-      process.exit(1);
+      process.exitCode = 1;
     }
     return;
   }
 
   const filePath = filePaths[Number(fileIndexArg)];
+  if (filePath == null) {
+    console.error("Unknown test file index: " + fileIndexArg);
+    process.exitCode = 1;
+    return;
+  }
 
   process.chdir(__dirname + "/esm");
   await import("./esm/test_preload.js");
@@ -449,24 +477,31 @@ async function main() {
   if (fileIndexArg == null) {
     const { spawnSync } = require("child_process");
     let failed = false;
-    for (const [i, _] of filePaths.entries()) {
+    for (const i of filePaths.keys()) {
       if (i > 0) {
         console.log("");
       }
-      const result = spawnSync(process.execPath, [__filename, String(i)], {
-        stdio: "inherit",
-      });
+      const args = [...process.execArgv, __filename, String(i)];
+      const result = spawnSync(process.execPath, args, { stdio: "inherit" });
+      if (result.error != null) {
+        console.error(result.error);
+      }
       if (result.status !== 0) {
         failed = true;
       }
     }
     if (failed) {
-      process.exit(1);
+      process.exitCode = 1;
     }
     return;
   }
 
   const filePath = filePaths[Number(fileIndexArg)];
+  if (filePath == null) {
+    console.error("Unknown test file index: " + fileIndexArg);
+    process.exitCode = 1;
+    return;
+  }
 
   process.chdir(__dirname + "/script");
   try {
@@ -532,24 +567,31 @@ async function main() {
   if (fileIndexArg == null) {
     const { spawnSync } = require("child_process");
     let failed = false;
-    for (const [i, _] of filePaths.entries()) {
+    for (const i of filePaths.keys()) {
       if (i > 0) {
         console.log("");
       }
-      const result = spawnSync(process.execPath, [__filename, String(i)], {
-        stdio: "inherit",
-      });
+      const args = [...process.execArgv, __filename, String(i)];
+      const result = spawnSync(process.execPath, args, { stdio: "inherit" });
+      if (result.error != null) {
+        console.error(result.error);
+      }
       if (result.status !== 0) {
         failed = true;
       }
     }
     if (failed) {
-      process.exit(1);
+      process.exitCode = 1;
     }
     return;
   }
 
   const filePath = filePaths[Number(fileIndexArg)];
+  if (filePath == null) {
+    console.error("Unknown test file index: " + fileIndexArg);
+    process.exitCode = 1;
+    return;
+  }
 
   const esmPath = "./esm/" + filePath;
   console.log("\\nRunning tests in " + pc.underline(esmPath) + "...\\n");
@@ -583,24 +625,31 @@ async function main() {
   if (fileIndexArg == null) {
     const { spawnSync } = require("child_process");
     let failed = false;
-    for (const [i, _] of filePaths.entries()) {
+    for (const i of filePaths.keys()) {
       if (i > 0) {
         console.log("");
       }
-      const result = spawnSync(process.execPath, [__filename, String(i)], {
-        stdio: "inherit",
-      });
+      const args = [...process.execArgv, __filename, String(i)];
+      const result = spawnSync(process.execPath, args, { stdio: "inherit" });
+      if (result.error != null) {
+        console.error(result.error);
+      }
       if (result.status !== 0) {
         failed = true;
       }
     }
     if (failed) {
-      process.exit(1);
+      process.exitCode = 1;
     }
     return;
   }
 
   const filePath = filePaths[Number(fileIndexArg)];
+  if (filePath == null) {
+    console.error("Unknown test file index: " + fileIndexArg);
+    process.exitCode = 1;
+    return;
+  }
 
   const scriptPath = "./script/" + filePath;
   console.log("Running tests in " + pc.underline(scriptPath) + "...\\n");

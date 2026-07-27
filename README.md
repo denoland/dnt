@@ -198,7 +198,7 @@ Object.assign(globalThis, { Headers, Response });
 
 The module is transformed and type checked like the test files are and it is not
 included in the npm package. It is loaded once for each of the emitted script
-and ESM output, before any test file.
+and ESM output, before each test file.
 
 ### Polyfills
 
