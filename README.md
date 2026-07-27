@@ -198,7 +198,28 @@ Object.assign(globalThis, { Headers, Response });
 
 The module is transformed and type checked like the test files are and it is not
 included in the npm package. It is loaded once for each of the emitted script
-and ESM output, before each test file.
+and ESM output, before any test file.
+
+### Test File Isolation
+
+All the test files run in the same process by default, so the module state of a
+test file can affect the next one. For example, the global hooks of
+`@std/testing/bdd` error with "Cannot add global hooks after a global test is
+registered" when a second test file uses them.
+
+Set the `testIsolation` build option to `"process"` to run each test file in its
+own process, which is what `deno test` does by running each file in its own
+isolate:
+
+```ts
+await build({
+  // ...etc...
+  testIsolation: "process",
+});
+```
+
+This is slower because it starts a process per test file, and a preload module
+is loaded before each test file rather than once per output.
 
 ### Polyfills
 

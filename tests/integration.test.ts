@@ -1520,6 +1520,7 @@ Deno.test("should run each test file in its own process", async () => {
   await runTest("test_hooks_project", {
     entryPoints: ["mod.ts"],
     outDir: "./npm",
+    testIsolation: "process",
     typeCheck: false,
     shims: {
       deno: "dev",
@@ -1839,7 +1840,7 @@ function assertPreloadModuleOutput(output: Output) {
   assertStringIncludes(output.npmIgnore, "/esm/scripts/test_preload.js\n");
   assertStringIncludes(output.npmIgnore, "/script/scripts/test_preload.js\n");
 
-  // it should be loaded once for each output, before each test file
+  // it should be loaded once for each output, before any test file
   const testRunnerText = output.getFileText("test_runner.cjs");
   assertStringIncludes(
     testRunnerText,

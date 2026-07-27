@@ -10,6 +10,7 @@ export function getTestRunnerCode(options: {
   includeEsModule: boolean | undefined;
   includeScriptModule: boolean | undefined;
   preloadEntryPoint?: string;
+  testIsolation?: "process" | "none";
 }) {
   const usesDenoTest = options.denoTestShimPackageName != null;
   const preloadPath = options.preloadEntryPoint == null
@@ -34,7 +35,59 @@ export function getTestRunnerCode(options: {
   });
   writer.writeLine("];").newLine();
 
+  const isolateTestFiles = options.testIsolation === "process";
   writer.write("async function main()").block(() => {
+    if (isolateTestFiles) {
+      writeSpawnPerFile();
+    }
+    if (preloadPath != null) {
+      if (options.includeScriptModule) {
+        writer.writeLine(`process.chdir(__dirname + "/script");`);
+        writer.write("try ").inlineBlock(() => {
+          writer.write("require(").quote(`./script/${preloadPath}`).write(");")
+            .newLine();
+        }).write(" catch(err)").block(() => {
+          writer.writeLine("console.error(err);");
+          writer.writeLine("process.exit(1);");
+        });
+      }
+      if (options.includeEsModule) {
+        writer.writeLine(`process.chdir(__dirname + "/esm");`);
+        writer.write("await import(").quote(`./esm/${preloadPath}`).write(");")
+          .newLine();
+      }
+      writer.blankLine();
+    }
+    if (usesDenoTest) {
+      writer.write("const testContext = ").inlineBlock(() => {
+        writer.writeLine("process,");
+        writer.writeLine("pc,");
+      }).write(";").newLine();
+    }
+    if (isolateTestFiles) {
+      writeTestFileRun();
+    } else {
+      writer.write("for (const [i, filePath] of filePaths.entries())")
+        .block(() => {
+          writer.write("if (i > 0)").block(() => {
+            writer.writeLine(`console.log("");`);
+          }).blankLine();
+
+          writeTestFileRun();
+        });
+    }
+  });
+  writer.blankLine();
+
+  if (options.denoTestShimPackageName != null) {
+    writer.writeLine(`${getRunTestDefinitionsCode()}`);
+    writer.blankLine();
+  }
+
+  writer.writeLine("main();");
+  return writer.toString();
+
+  function writeSpawnPerFile() {
     // run each test file in its own process so that the module state of a
     // test file doesn't leak into the next one, which is what `deno test`
     // does by running each file in its own isolate
@@ -72,31 +125,9 @@ export function getTestRunnerCode(options: {
       writer.writeLine("process.exitCode = 1;");
       writer.writeLine("return;");
     }).blankLine();
+  }
 
-    if (preloadPath != null) {
-      if (options.includeScriptModule) {
-        writer.writeLine(`process.chdir(__dirname + "/script");`);
-        writer.write("try ").inlineBlock(() => {
-          writer.write("require(").quote(`./script/${preloadPath}`).write(");")
-            .newLine();
-        }).write(" catch(err)").block(() => {
-          writer.writeLine("console.error(err);");
-          writer.writeLine("process.exit(1);");
-        });
-      }
-      if (options.includeEsModule) {
-        writer.writeLine(`process.chdir(__dirname + "/esm");`);
-        writer.write("await import(").quote(`./esm/${preloadPath}`).write(");")
-          .newLine();
-      }
-      writer.blankLine();
-    }
-    if (usesDenoTest) {
-      writer.write("const testContext = ").inlineBlock(() => {
-        writer.writeLine("process,");
-        writer.writeLine("pc,");
-      }).write(";").newLine();
-    }
+  function writeTestFileRun() {
     if (options.includeScriptModule) {
       writer.writeLine(`const scriptPath = "./script/" + filePath;`);
       writer.writeLine(
@@ -144,16 +175,7 @@ export function getTestRunnerCode(options: {
         );
       }
     }
-  });
-  writer.blankLine();
-
-  if (options.denoTestShimPackageName != null) {
-    writer.writeLine(`${getRunTestDefinitionsCode()}`);
-    writer.blankLine();
   }
-
-  writer.writeLine("main();");
-  return writer.toString();
 }
 
 function getRunTestDefinitionsCode() {

@@ -141,6 +141,17 @@ export interface BuildOptions {
    * Note that `node_modules` directories are never searched.
    */
   testPattern?: string;
+  /** How to isolate the test files from each other.
+   *
+   * * `"process"` - Run each test file in its own process, which is what
+   *   `deno test` does by running each file in its own isolate. Use this when
+   *   the module state of a test file affects the next one (ex. the global
+   *   hooks of `@std/testing/bdd`).
+   * * `"none"` - Run all the test files in the same process, which is faster
+   *   because it doesn't start a process per test file.
+   * @default "none"
+   */
+  testIsolation?: "process" | "none";
   /** Path to a module to load before running the tests. Ex. `./scripts/test_preload.ts`
    *
    * This is useful for setting up the Node.js environment the tests run in
@@ -814,6 +825,7 @@ export async function build(options: BuildOptions): Promise<void> {
       path.join(options.outDir, "test_runner.cjs"),
       transformCodeToTarget(
         getTestRunnerCode({
+          testIsolation: options.testIsolation,
           denoTestShimPackageName: denoTestShimPackage == null
             ? undefined
             : denoTestShimPackage.name === "@deno/shim-deno"
