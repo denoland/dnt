@@ -35,6 +35,36 @@ export function getTestRunnerCode(options: {
   writer.writeLine("];").newLine();
 
   writer.write("async function main()").block(() => {
+    // run each test file in its own process so that the module state of a
+    // test file doesn't leak into the next one, which is what `deno test`
+    // does by running each file in its own isolate
+    writer.writeLine("const fileIndexArg = process.argv[2];");
+    writer.write("if (fileIndexArg == null)").block(() => {
+      writer.writeLine(`const { spawnSync } = require("child_process");`);
+      writer.writeLine("let failed = false;");
+      writer.write("for (const [i, _] of filePaths.entries())").block(() => {
+        writer.write("if (i > 0)").block(() => {
+          writer.writeLine(`console.log("");`);
+        });
+        writer.writeLine(
+          `const result = spawnSync(process.execPath, [__filename, String(i)], {`,
+        );
+        writer.indent(() => {
+          writer.writeLine(`stdio: "inherit",`);
+        });
+        writer.writeLine("});");
+        writer.write("if (result.status !== 0)").block(() => {
+          writer.writeLine("failed = true;");
+        });
+      });
+      writer.write("if (failed)").block(() => {
+        writer.writeLine("process.exit(1);");
+      });
+      writer.writeLine("return;");
+    }).blankLine();
+    writer.writeLine("const filePath = filePaths[Number(fileIndexArg)];")
+      .blankLine();
+
     if (preloadPath != null) {
       if (options.includeScriptModule) {
         writer.writeLine(`process.chdir(__dirname + "/script");`);
@@ -59,12 +89,8 @@ export function getTestRunnerCode(options: {
         writer.writeLine("pc,");
       }).write(";").newLine();
     }
-    writer.write("for (const [i, filePath] of filePaths.entries())")
-      .block(() => {
-        writer.write("if (i > 0)").block(() => {
-          writer.writeLine(`console.log("");`);
-        }).blankLine();
-
+    {
+      {
         if (options.includeScriptModule) {
           writer.writeLine(`const scriptPath = "./script/" + filePath;`);
           writer.writeLine(
@@ -112,7 +138,8 @@ export function getTestRunnerCode(options: {
             );
           }
         }
-      });
+      }
+    }
   });
   writer.blankLine();
 
