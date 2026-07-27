@@ -197,6 +197,8 @@ fn response_headers_to_headermap(headers: JsValue) -> HeaderMap {
 #[serde(rename_all = "camelCase")]
 pub struct TransformOptions {
   pub entry_points: Vec<String>,
+  #[serde(default)]
+  pub bin_entry_points: Vec<String>,
   pub test_entry_points: Vec<String>,
   pub shims: Vec<Shim>,
   pub test_shims: Vec<Shim>,
@@ -235,6 +237,7 @@ async fn transform_inner(options: JsValue) -> Result<JsValue, anyhow::Error> {
     WasmHttpClient { cached_only: false },
     dnt::TransformOptions {
       entry_points: parse_module_specifiers(options.entry_points)?,
+      bin_entry_points: parse_module_specifiers(options.bin_entry_points)?,
       test_entry_points: parse_module_specifiers(options.test_entry_points)?,
       shims: options.shims,
       test_shims: options.test_shims,

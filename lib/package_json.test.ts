@@ -33,6 +33,7 @@ Deno.test("single entrypoint", () => {
       },
       warnings: [],
       typesDependencies: [],
+      binOnlyFiles: [],
     },
     entryPoints: [{
       name: ".",
@@ -254,6 +255,7 @@ Deno.test("exports have default last", () => {
       },
       warnings: [],
       typesDependencies: [],
+      binOnlyFiles: [],
     },
     entryPoints: [
       {
@@ -302,6 +304,7 @@ Deno.test("multiple entrypoints", () => {
       },
       warnings: [],
       typesDependencies: [],
+      binOnlyFiles: [],
     },
     entryPoints: [{
       name: ".",
@@ -379,6 +382,7 @@ Deno.test("binary entrypoints", () => {
       },
       warnings: [],
       typesDependencies: [],
+      binOnlyFiles: [],
     },
     entryPoints: [{
       name: ".",
@@ -462,6 +466,7 @@ Deno.test("peer dependencies", () => {
       },
       warnings: [],
       typesDependencies: [],
+      binOnlyFiles: [],
     },
     entryPoints: [{
       name: ".",
@@ -554,6 +559,7 @@ Deno.test("types dependencies", () => {
         name: "other",
         version: "^1.0.0",
       }],
+      binOnlyFiles: [],
     },
     entryPoints: [{
       name: ".",

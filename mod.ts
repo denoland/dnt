@@ -562,6 +562,13 @@ export async function build(options: BuildOptions): Promise<void> {
         : ts.ModuleKind.CommonJS,
       moduleResolution: ts.ModuleResolutionKind.Node10,
     });
+    if (options.esModule !== false) {
+      // a binary is only ever run by node, so its modules don't need to be
+      // in the script output when nothing else uses them
+      for (const filePath of transformOutput.binOnlyFiles) {
+        project.removeSourceFile(path.join(options.outDir, "src", filePath));
+      }
+    }
     program = getProgramAndMaybeTypeCheck("script");
     emit({
       transformers: {
@@ -748,6 +755,9 @@ export async function build(options: BuildOptions): Promise<void> {
     const { shims, testShims } = shimOptionsToTransformShims(options.shims);
     return transform({
       entryPoints: entryPoints.map((e) => e.path),
+      binEntryPoints: entryPoints.filter((e) => e.kind === "bin").map((e) =>
+        e.path
+      ),
       testEntryPoints: options.test ? await getTestEntryPoints() : [],
       shims,
       testShims,

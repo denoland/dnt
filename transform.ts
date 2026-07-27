@@ -73,6 +73,9 @@ export interface ModuleShim {
 
 export interface TransformOptions {
   entryPoints: string[];
+  /** Entry points that are npm binaries, which is a subset of the
+   * entry points. */
+  binEntryPoints?: string[];
   testEntryPoints?: string[];
   shims?: Shim[];
   testShims?: Shim[];
@@ -128,6 +131,11 @@ export interface TransformOutput {
    * (ex. an `@types/` package specified by an `X-TypeScript-Types` header).
    */
   typesDependencies: Dependency[];
+  /** Output files that are only reachable from a binary entrypoint, which
+   * don't need to be in the script output because a binary is only ever
+   * run by node.
+   */
+  binOnlyFiles: string[];
 }
 
 export interface TransformOutputEnvironment {
@@ -158,6 +166,7 @@ export function transform(
       }),
     ),
     entryPoints: options.entryPoints.map(valueToUrl),
+    binEntryPoints: (options.binEntryPoints ?? []).map(valueToUrl),
     testEntryPoints: (options.testEntryPoints ?? []).map(valueToUrl),
     shims: (options.shims ?? []).map(mapShim),
     testShims: (options.testShims ?? []).map(mapShim),

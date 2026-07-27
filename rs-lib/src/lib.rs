@@ -112,6 +112,10 @@ pub struct TransformOutput {
   /// Packages that provide the type declarations of a mapped dependency
   /// (ex. an `@types/` package specified by an `X-TypeScript-Types` header).
   pub types_dependencies: Vec<Dependency>,
+  /// Output files that are only reachable from a binary entry point, which
+  /// don't need to be in the script output because a binary is only ever
+  /// run by node.
+  pub bin_only_files: Vec<PathBuf>,
 }
 
 #[cfg_attr(feature = "serialization", derive(serde::Serialize))]
@@ -261,6 +265,8 @@ pub enum ScriptTarget {
 
 pub struct TransformOptions {
   pub entry_points: Vec<ModuleSpecifier>,
+  /// Entry points that are npm binaries, which is a subset of the entry points.
+  pub bin_entry_points: Vec<ModuleSpecifier>,
   pub test_entry_points: Vec<ModuleSpecifier>,
   pub shims: Vec<Shim>,
   pub test_shims: Vec<Shim>,
@@ -525,9 +531,24 @@ pub async fn transform(
       .map(|m| (m.0.clone(), m.1.module_specifier_text()))
       .collect();
 
+  let bin_only_files = get_bin_only_files(GetBinOnlyFilesOptions {
+    module_graph: &module_graph,
+    mappings: &mappings,
+    specifiers: &specifiers,
+    entry_points: &options.entry_points,
+    bin_entry_points: &options.bin_entry_points,
+    test_entry_points: &options.test_entry_points,
+    shims: &options.shims,
+    test_shims: &options.test_shims,
+  });
   let mut warnings = get_declaration_warnings(&specifiers);
-  let types_dependencies =
+  let mut types_dependencies =
     get_types_dependencies(&specifiers, &file_fetcher, &mut warnings).await;
+  // the type declarations of a shim are needed to type check the output
+  // whether or not the tests are included
+  types_dependencies.extend(get_shim_types_packages(
+    options.shims.iter().chain(options.test_shims.iter()),
+  ));
   let mut main_env_context = EnvironmentContext {
     environment: TransformOutputEnvironment {
       entry_points: options
@@ -694,11 +715,6 @@ pub async fn transform(
     &mappings,
   );
 
-  add_shim_types_packages_to_test_environment(
-    &mut test_env_context.environment,
-    options.shims.iter().chain(options.test_shims.iter()),
-  );
-
   // Remove any dependencies from the test environment that
   // are found in the main environment. Only check for exact
   // matches in order to cause an npm install error if there
@@ -714,6 +730,7 @@ pub async fn transform(
     warnings,
     discovered_config_file,
     types_dependencies,
+    bin_only_files,
   })
 }
 
@@ -803,17 +820,16 @@ impl deno_lockfile::NpmPackageInfoProvider for NullNpmPackageInfoProvider {
   }
 }
 
-fn add_shim_types_packages_to_test_environment<'a>(
-  test_output_env: &mut TransformOutputEnvironment,
+/// Gets the packages that provide the type declarations of the shims.
+fn get_shim_types_packages<'a>(
   all_shims: impl Iterator<Item = &'a Shim>,
-) {
-  for shim in all_shims {
-    if let Shim::Package(shim) = shim {
-      if let Some(types_package) = &shim.types_package {
-        test_output_env.dependencies.push(types_package.clone())
-      }
-    }
-  }
+) -> Vec<Dependency> {
+  all_shims
+    .filter_map(|shim| match shim {
+      Shim::Package(shim) => shim.types_package.clone(),
+      Shim::Module(_) => None,
+    })
+    .collect()
 }
 
 fn check_add_polyfill_file_to_environment(
@@ -1070,6 +1086,53 @@ async fn get_types_header_specifier<TSys: WorkspaceFactorySys>(
   };
   // resolve relative to the final url so that redirects are handled
   Ok(file.url.join(&types_header).ok())
+}
+
+struct GetBinOnlyFilesOptions<'a> {
+  module_graph: &'a crate::graph::ModuleGraph,
+  mappings: &'a Mappings,
+  specifiers: &'a Specifiers,
+  entry_points: &'a [ModuleSpecifier],
+  bin_entry_points: &'a [ModuleSpecifier],
+  test_entry_points: &'a [ModuleSpecifier],
+  shims: &'a [Shim],
+  test_shims: &'a [Shim],
+}
+
+/// Gets the output files that are only reachable from a binary entry point.
+fn get_bin_only_files(options: GetBinOnlyFilesOptions) -> Vec<PathBuf> {
+  if options.bin_entry_points.is_empty() {
+    return Vec::new();
+  }
+  let other_roots = options
+    .entry_points
+    .iter()
+    .filter(|s| !options.bin_entry_points.contains(s))
+    .cloned()
+    .chain(options.test_entry_points.iter().cloned())
+    .chain(options.shims.iter().filter_map(|s| s.maybe_specifier()))
+    .chain(
+      options
+        .test_shims
+        .iter()
+        .filter_map(|s| s.maybe_specifier()),
+    )
+    .collect::<Vec<_>>();
+  let exclusive = crate::specifiers::get_exclusively_reachable(
+    options.module_graph,
+    options.bin_entry_points,
+    &other_roots,
+  );
+  let mut file_paths = options
+    .specifiers
+    .local
+    .iter()
+    .chain(options.specifiers.remote.iter())
+    .filter(|s| exclusive.contains(s))
+    .map(|s| options.mappings.get_file_path(s).clone())
+    .collect::<Vec<_>>();
+  file_paths.sort();
+  file_paths
 }
 
 fn get_dependencies(
