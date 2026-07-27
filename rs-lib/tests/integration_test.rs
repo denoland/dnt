@@ -79,6 +79,37 @@ async fn transform_shims() {
       ),
     ),
     (
+      // the shorthand property name must be kept
+      "const obj = { Deno, setTimeout };",
+      concat!(
+        r#"import * as dntShim from "./_dnt.shims.js";"#,
+        "\nconst obj = { Deno: dntShim.Deno, setTimeout: dntShim.setTimeout };"
+      ),
+    ),
+    (
+      // only a shorthand property gets the property name
+      "const obj = { Deno: Deno, [Deno]: 1, ...Deno };",
+      concat!(
+        r#"import * as dntShim from "./_dnt.shims.js";"#,
+        "
+const obj = { Deno: dntShim.Deno, [dntShim.Deno]: 1, ...dntShim.Deno };"
+      ),
+    ),
+    (
+      "const obj = { globalThis };",
+      concat!(
+        r#"import * as dntShim from "./_dnt.shims.js";"#,
+        "\nconst obj = { globalThis: dntShim.dntGlobalThis };"
+      ),
+    ),
+    (
+      "const obj = { window };",
+      concat!(
+        r#"import * as dntShim from "./_dnt.shims.js";"#,
+        "\nconst obj = { window: dntShim.dntGlobalThis };"
+      ),
+    ),
+    (
       concat!(
         "const decl01 = Deno;\n",
         "const decl02 = setTimeout;\n",
