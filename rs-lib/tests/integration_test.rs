@@ -87,6 +87,15 @@ async fn transform_shims() {
       ),
     ),
     (
+      // only a shorthand property gets the property name
+      "const obj = { Deno: Deno, [Deno]: 1, ...Deno };",
+      concat!(
+        r#"import * as dntShim from "./_dnt.shims.js";"#,
+        "
+const obj = { Deno: dntShim.Deno, [dntShim.Deno]: 1, ...dntShim.Deno };"
+      ),
+    ),
+    (
       "const obj = { globalThis };",
       concat!(
         r#"import * as dntShim from "./_dnt.shims.js";"#,
