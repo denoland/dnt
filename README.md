@@ -618,6 +618,14 @@ await build({
 This will add a `"bin"` entry to the package.json and add `#!/usr/bin/env node`
 to the top of the specified entry point.
 
+The `name` may be left out when there's a single binary entry point, in which
+case the package name is used as the command name.
+
+Since a binary is only ever run by Node.js, the modules that only it uses are
+not included in the CommonJS/UMD output (they're only in the ESM output). This
+means a binary may use a top level await even when the package has a
+CommonJS/UMD output.
+
 ### Node and Deno Specific Code
 
 You may find yourself in a scenario where you want to run certain code based on

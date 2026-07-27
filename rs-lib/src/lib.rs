@@ -112,9 +112,7 @@ pub struct TransformOutput {
   /// Packages that provide the type declarations of a mapped dependency
   /// (ex. an `@types/` package specified by an `X-TypeScript-Types` header).
   pub types_dependencies: Vec<Dependency>,
-  /// Output files that are only reachable from a binary entry point, which
-  /// don't need to be in the script output because a binary is only ever
-  /// run by node.
+  /// Output files that are only reachable from a binary entry point.
   pub bin_only_files: Vec<PathBuf>,
 }
 
@@ -265,7 +263,8 @@ pub enum ScriptTarget {
 
 pub struct TransformOptions {
   pub entry_points: Vec<ModuleSpecifier>,
-  /// Entry points that are npm binaries, which is a subset of the entry points.
+  /// Entry points that are only used as an npm binary, which is a subset
+  /// of the entry points.
   pub bin_entry_points: Vec<ModuleSpecifier>,
   pub test_entry_points: Vec<ModuleSpecifier>,
   pub shims: Vec<Shim>,
@@ -824,12 +823,18 @@ impl deno_lockfile::NpmPackageInfoProvider for NullNpmPackageInfoProvider {
 fn get_shim_types_packages<'a>(
   all_shims: impl Iterator<Item = &'a Shim>,
 ) -> Vec<Dependency> {
-  all_shims
-    .filter_map(|shim| match shim {
-      Shim::Package(shim) => shim.types_package.clone(),
-      Shim::Module(_) => None,
-    })
-    .collect()
+  let mut packages: Vec<Dependency> = Vec::new();
+  for shim in all_shims {
+    // the same shim may be in both the main and test shims
+    if let Shim::Package(shim) = shim {
+      if let Some(types_package) = &shim.types_package {
+        if !packages.contains(types_package) {
+          packages.push(types_package.clone());
+        }
+      }
+    }
+  }
+  packages
 }
 
 fn check_add_polyfill_file_to_environment(
