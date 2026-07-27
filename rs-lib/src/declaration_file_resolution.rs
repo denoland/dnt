@@ -10,6 +10,8 @@ use deno_graph::Module;
 use deno_graph::Resolution;
 
 use crate::graph::ModuleGraph;
+use crate::loader::get_all_specifier_mappers;
+use crate::loader::get_types_package_for_specifier;
 use crate::PackageMappedSpecifier;
 
 #[derive(Debug)]
@@ -27,11 +29,21 @@ pub struct TypesDependency {
   pub referrer: ModuleSpecifier,
 }
 
+pub struct DeclarationFileResolutions {
+  pub mappings: BTreeMap<ModuleSpecifier, DeclarationFileResolution>,
+  /// Packages that provide the declaration files of a mapped package
+  /// (ex. an `@types/` package served by a cdn).
+  pub types_packages: BTreeMap<String, PackageMappedSpecifier>,
+  /// Declaration files that a types package provides, which don't
+  /// need to be included in the output.
+  pub types_package_files: HashSet<ModuleSpecifier>,
+}
+
 pub fn resolve_declaration_file_mappings(
   module_graph: &ModuleGraph,
   modules: &[&Module],
   mapped_specifiers: &BTreeMap<ModuleSpecifier, PackageMappedSpecifier>,
-) -> Result<BTreeMap<ModuleSpecifier, DeclarationFileResolution>> {
+) -> Result<DeclarationFileResolutions> {
   let mut type_dependencies = BTreeMap::new();
 
   for module in modules.iter().filter_map(|m| m.js()) {
@@ -39,16 +51,27 @@ pub fn resolve_declaration_file_mappings(
   }
 
   // get the resolved type dependencies
+  let mappers = get_all_specifier_mappers();
   let mut mappings = BTreeMap::new();
+  let mut types_packages = BTreeMap::new();
+  let mut types_package_files = HashSet::new();
   for (code_specifier, deps) in type_dependencies.into_iter() {
-    // if this type_dependency is mapped, then pass it.
-    if mapped_specifiers.contains_key(&code_specifier) {
-      continue;
-    }
-
     let deps = deps.into_iter().collect::<Vec<_>>();
     let selected_dep =
       select_best_types_dep(module_graph, &code_specifier, &deps);
+
+    // when the code is mapped to a package, the declaration file it
+    // specifies may be provided by a types package that needs to go in
+    // the package.json instead of being included in the output
+    if mapped_specifiers.contains_key(&code_specifier) {
+      if let Some(types_package) =
+        get_types_package_for_specifier(&mappers, &selected_dep.specifier)
+      {
+        types_packages.insert(types_package.name.clone(), types_package);
+        types_package_files.insert(selected_dep.specifier);
+      }
+      continue;
+    }
 
     // get the declaration file specifiers that weren't used
     let mut ignored = deps
@@ -66,7 +89,11 @@ pub fn resolve_declaration_file_mappings(
     );
   }
 
-  Ok(mappings)
+  Ok(DeclarationFileResolutions {
+    mappings,
+    types_packages,
+    types_package_files,
+  })
 }
 
 /// This resolution process works as follows:

@@ -124,6 +124,10 @@ export interface TransformOutput {
    * explicitly provided, or when auto-discovery is disabled.
    */
   discoveredConfigFile?: string;
+  /** Packages that provide the type declarations of a mapped dependency
+   * (ex. an `@types/` package specified by an `X-TypeScript-Types` header).
+   */
+  typesDependencies: Dependency[];
 }
 
 export interface TransformOutputEnvironment {

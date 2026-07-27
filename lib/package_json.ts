@@ -79,6 +79,16 @@ export function getPackageJson({
     })
     : {};
   const devDependencies = {
+    // packages that provide the type declarations of a dependency
+    // (ex. an `@types/` package specified by an `X-TypeScript-Types` header)
+    ...Object.fromEntries(
+      transformOutput.typesDependencies
+        .filter((d) =>
+          !Object.keys(dependencies).includes(d.name) &&
+          !Object.keys(peerDependencies).includes(d.name)
+        )
+        .map((d) => [d.name, d.version]),
+    ),
     ...(shouldIncludeTypesNode()
       ? {
         "@types/node": "^20.9.0",
