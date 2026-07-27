@@ -88,7 +88,9 @@ export interface BuildOptions {
    *   the esm and script folders. This is the recommended option when publishing
    *   a dual ESM and script package to npm.
    * * `"separate"` - Emits declaration files to the `types` folder where both
-   *   the ESM and script code share the same type declarations.
+   *   the ESM and script code share the same type declarations. Deprecated,
+   *   because the shared declarations describe the ESM output, so they're not
+   *   correct for a CommonJS consumer. Use `"inline"` instead.
    * * `false` - Do not emit declaration files.
    * @default "inline"
    */
@@ -332,6 +334,17 @@ export async function build(options: BuildOptions): Promise<void> {
       ? "inline"
       : options.declaration ?? "inline",
   };
+  if (
+    options.declaration === "separate" && options.scriptModule !== false &&
+    options.esModule !== false
+  ) {
+    warn(
+      `The 'separate' declaration build option outputs the same type ` +
+        `declarations for the ESM and CommonJS/UMD output, but they describe ` +
+        `the ESM output. Use the default 'inline' option instead, which ` +
+        `outputs the declarations beside the code they describe.`,
+    );
+  }
   const cwd = Deno.cwd();
   // the declaration maps point at the `src` directory, so they're only useful
   // when it's written out and published alongside them

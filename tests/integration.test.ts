@@ -239,6 +239,83 @@ pnpm-lock.yaml
   });
 });
 
+Deno.test("should warn when using separate declarations with a script output", async () => {
+  const warnings = await captureWarnings(() =>
+    runTest("test_project", {
+      entryPoints: ["mod.ts"],
+      outDir: "./npm",
+      declaration: "separate",
+      shims: {
+        deno: "dev",
+      },
+      test: false,
+      typeCheck: false,
+      skipNpmInstall: true,
+      package: {
+        name: "add",
+        version: "1.0.0",
+      },
+    })
+  );
+
+  assertStringIncludes(
+    warnings.join("\n"),
+    "The 'separate' declaration build option",
+  );
+});
+
+Deno.test("should not warn about separate declarations with a single output", async () => {
+  const warnings = await captureWarnings(() =>
+    runTest("test_project", {
+      entryPoints: ["mod.ts"],
+      outDir: "./npm",
+      declaration: "separate",
+      scriptModule: false,
+      shims: {
+        deno: "dev",
+      },
+      test: false,
+      typeCheck: false,
+      skipNpmInstall: true,
+      package: {
+        name: "add",
+        version: "1.0.0",
+      },
+    })
+  );
+
+  assertEquals(
+    warnings.some((w) => w.includes("The 'separate' declaration build option")),
+    false,
+  );
+});
+
+Deno.test("should not warn about separate declarations without an esm output", async () => {
+  const warnings = await captureWarnings(() =>
+    runTest("test_project", {
+      entryPoints: ["mod.ts"],
+      outDir: "./npm",
+      declaration: "separate",
+      esModule: false,
+      shims: {
+        deno: "dev",
+      },
+      test: false,
+      typeCheck: false,
+      skipNpmInstall: true,
+      package: {
+        name: "add",
+        version: "1.0.0",
+      },
+    })
+  );
+
+  assertEquals(
+    warnings.some((w) => w.includes("The 'separate' declaration build option")),
+    false,
+  );
+});
+
 Deno.test("should build umd module", async () => {
   await runTest("test_project", {
     entryPoints: ["mod.ts"],
@@ -1855,6 +1932,20 @@ function assertPreloadModuleOutput(output: Output) {
   const filePaths = /const filePaths = \[([^\]]*)\]/.exec(testRunnerText)![1];
   assertStringIncludes(filePaths, "mod.test.js");
   assertEquals(filePaths.includes("test_preload"), false);
+}
+
+async function captureWarnings(action: () => Promise<void>) {
+  const warnings: string[] = [];
+  const originalWarn = console.warn;
+  console.warn = (...args: unknown[]) => {
+    warnings.push(args.join(" "));
+  };
+  try {
+    await action();
+  } finally {
+    console.warn = originalWarn;
+  }
+  return warnings;
 }
 
 async function captureLogs(action: () => Promise<void>) {
