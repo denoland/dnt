@@ -525,7 +525,11 @@ Deno.test("should build bin project without an esm output", async () => {
     assertEquals(output.packageJson.bin, {
       hello: "./script/main.js",
     });
-    output.assertExists("script/main.js");
+    // the binary is in the script output because there's no esm output
+    assertEquals(
+      output.getFileText("script/main.js"),
+      '#!/usr/bin/env node\n"use strict";\nconsole.log("Hello!");\n',
+    );
   });
 });
 
