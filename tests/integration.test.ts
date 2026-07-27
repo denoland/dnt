@@ -264,7 +264,7 @@ Deno.test("should warn when using separate declarations with a script output", a
   );
 });
 
-Deno.test("should not warn about separate declarations without a script output", async () => {
+Deno.test("should not warn about separate declarations with a single output", async () => {
   const warnings = await captureWarnings(() =>
     runTest("test_project", {
       entryPoints: ["mod.ts"],
@@ -285,7 +285,33 @@ Deno.test("should not warn about separate declarations without a script output",
   );
 
   assertEquals(
-    warnings.some((w) => w.includes("declaration build option")),
+    warnings.some((w) => w.includes("The 'separate' declaration build option")),
+    false,
+  );
+});
+
+Deno.test("should not warn about separate declarations without an esm output", async () => {
+  const warnings = await captureWarnings(() =>
+    runTest("test_project", {
+      entryPoints: ["mod.ts"],
+      outDir: "./npm",
+      declaration: "separate",
+      esModule: false,
+      shims: {
+        deno: "dev",
+      },
+      test: false,
+      typeCheck: false,
+      skipNpmInstall: true,
+      package: {
+        name: "add",
+        version: "1.0.0",
+      },
+    })
+  );
+
+  assertEquals(
+    warnings.some((w) => w.includes("The 'separate' declaration build option")),
     false,
   );
 });
