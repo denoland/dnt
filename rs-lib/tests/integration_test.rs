@@ -462,6 +462,28 @@ async fn transform_global_this_shim() {
 }
 
 #[tokio::test]
+async fn no_transform_global_this_when_no_shims() {
+  // there's nothing to merge into `globalThis`, so it should be left
+  // alone and no shim file should be created
+  let text = concat!(
+    "globalThis.Deno.readTextFile();",
+    "true ? globalThis : globalThis;",
+    "typeof globalThis;",
+    "globalThis == null;",
+    "type Test = typeof globalThis;",
+  );
+  let result = TestBuilder::new()
+    .with_loader(|loader| {
+      loader.add_local_file("/mod.ts", text);
+    })
+    .transform()
+    .await
+    .unwrap();
+
+  assert_files!(result.main.files, &[("mod.ts", text)]);
+}
+
+#[tokio::test]
 async fn no_transform_window() {
   // `window` is not a global in Node.js nor Deno, so leave it alone
   // (ex. `typeof window === "object"` should stay a browser check)

@@ -87,13 +87,16 @@ fn visit_children(node: Node, import_name: &str, context: &mut Context) {
     let ident_text = ident.text_fast(context.program);
 
     if is_unresolved_context {
-      // check to replace globalThis
+      // check to replace globalThis, which is only necessary when there
+      // are globals to merge into it
       if ident_text == "globalThis" {
-        if let Some(text_change) =
-          get_global_this_text_change(ident, import_name, context)
-        {
-          context.text_changes.push(text_change);
-          context.import_shim = true;
+        if !context.shim_global_names.is_empty() {
+          if let Some(text_change) =
+            get_global_this_text_change(ident, import_name, context)
+          {
+            context.text_changes.push(text_change);
+            context.import_shim = true;
+          }
         }
         return;
       }
