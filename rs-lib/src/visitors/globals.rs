@@ -100,7 +100,7 @@ fn visit_children(node: Node, import_name: &str, context: &mut Context) {
           } else {
             context.text_changes.push(TextChange {
               range: create_range(ident.start(), ident.end(), context),
-              new_text: "globalThis".to_string(),
+              new_text: get_replacement_text(ident, "globalThis", context),
             });
           }
         }
@@ -126,7 +126,11 @@ fn visit_children(node: Node, import_name: &str, context: &mut Context) {
         {
           context.text_changes.push(TextChange {
             range: create_range(ident.start(), ident.end(), context),
-            new_text: format!("{}.{}", import_name, ident_text),
+            new_text: get_replacement_text(
+              ident,
+              &format!("{}.{}", import_name, ident_text),
+              context,
+            ),
           });
           context.import_shim = true;
           return;
@@ -171,8 +175,27 @@ fn get_global_this_text_change(
   } else {
     Some(TextChange {
       range: create_range(ident.start(), ident.end(), context),
-      new_text: format!("{}.dntGlobalThis", import_name),
+      new_text: get_replacement_text(
+        ident,
+        &format!("{}.dntGlobalThis", import_name),
+        context,
+      ),
     })
+  }
+}
+
+/// Gets the text to replace an identifier with, expanding an object literal's
+/// shorthand property so that the property name is kept
+/// (ex. `{ prompt }` -> `{ prompt: dntShim.prompt }`).
+fn get_replacement_text(
+  ident: &Ident,
+  new_text: &str,
+  context: &Context,
+) -> String {
+  if matches!(ident.parent(), Node::ObjectLit(_)) {
+    format!("{}: {}", ident.text_fast(context.program), new_text)
+  } else {
+    new_text.to_string()
   }
 }
 
