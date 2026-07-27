@@ -221,6 +221,55 @@ fn get_imported_specifiers(
   specifiers
 }
 
+/// Gets the local and remote modules that are only reachable from the
+/// provided roots, which is used to keep a binary entrypoint's modules out
+/// of the script output.
+pub fn get_exclusively_reachable(
+  module_graph: &ModuleGraph,
+  roots: &[ModuleSpecifier],
+  other_roots: &[ModuleSpecifier],
+) -> HashSet<ModuleSpecifier> {
+  let mut reachable = get_reachable(module_graph, roots);
+  for specifier in get_reachable(module_graph, other_roots) {
+    reachable.remove(&specifier);
+  }
+  reachable
+}
+
+fn get_reachable(
+  module_graph: &ModuleGraph,
+  roots: &[ModuleSpecifier],
+) -> HashSet<ModuleSpecifier> {
+  let mut found = HashSet::new();
+  let mut pending = roots.iter().cloned().collect::<Vec<_>>();
+  while let Some(specifier) = pending.pop() {
+    let specifier = module_graph.resolve(&specifier).clone();
+    if !found.insert(specifier.clone()) {
+      continue;
+    }
+    let Some(module) = module_graph.try_get(&specifier).and_then(|m| m.js())
+    else {
+      continue;
+    };
+    for dep in module.dependencies.values() {
+      if let Some(specifier) = dep.get_code() {
+        pending.push(specifier.clone());
+      }
+      if let Some(specifier) = dep.get_type() {
+        pending.push(specifier.clone());
+      }
+    }
+    if let Some(deno_graph::TypesDependency {
+      dependency: Resolution::Ok(resolved),
+      ..
+    }) = &module.maybe_types_dependency
+    {
+      pending.push(resolved.specifier.clone());
+    }
+  }
+  found
+}
+
 fn ensure_package_mapped_specifiers_valid(
   mapped_specifiers: &BTreeMap<ModuleSpecifier, PackageMappedSpecifier>,
   test_mapped_specifiers: &BTreeMap<ModuleSpecifier, PackageMappedSpecifier>,

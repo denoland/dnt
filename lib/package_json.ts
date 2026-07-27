@@ -35,7 +35,13 @@ export function getPackageJson({
       path: toJsFilePath(e),
       types: toDtsFilePath(e),
     }));
-  const exports = finalEntryPoints.filter((e) => e.kind === "export");
+  const exports = finalEntryPoints.filter((e) => e.kind === "export").map((
+    e,
+  ) => ({
+    ...e,
+    // only a binary entrypoint may go without a name
+    name: e.name!,
+  }));
   const binaries = finalEntryPoints.filter((e) => e.kind === "bin");
   const dependencies = {
     // typescript helpers library (https://www.npmjs.com/package/tslib)
@@ -112,11 +118,7 @@ export function getPackageJson({
       types: includeDeclarations ? `./types/${exports[0].types}` : undefined,
     }
     : {};
-  const binaryExport = binaries.length > 0
-    ? {
-      bin: Object.fromEntries(binaries.map((b) => [b.name, `./esm/${b.path}`])),
-    }
-    : {};
+  const binaryExport = binaries.length > 0 ? { bin: getBin() } : {};
 
   const final: Record<string, unknown> = {
     ...mainExport,
@@ -165,6 +167,18 @@ export function getPackageJson({
     _generatedBy: `dnt@${getDntVersion()}`,
   };
   return sortObject(final);
+
+  function getBin() {
+    // a single binary without a name uses the package name as the command
+    if (binaries.length === 1 && binaries[0].name == null) {
+      return getBinPath(binaries[0]);
+    }
+    return Object.fromEntries(binaries.map((b) => [b.name, getBinPath(b)]));
+  }
+
+  function getBinPath(binary: { path: string }) {
+    return includeEsModule ? `./esm/${binary.path}` : `./script/${binary.path}`;
+  }
 
   function shouldIncludeTypesNode() {
     if (Object.keys(dependencies).includes("@types/node")) {
