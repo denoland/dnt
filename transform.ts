@@ -23,7 +23,12 @@ export interface SpecifierMappings {
 }
 
 export interface PackageMappedSpecifier {
-  /** Name of the npm package specifier to map to. */
+  /** Name of the npm package specifier to map to.
+   *
+   * @remarks An `@types/` package is imported by the name of the package it
+   * provides the declarations for, since TypeScript errors when a
+   * declaration file package is imported directly.
+   */
   name: string;
   /** Version to use in the package.json file.
    *

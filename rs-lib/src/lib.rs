@@ -165,22 +165,6 @@ impl PackageMappedSpecifier {
   }
 }
 
-/// Gets the name a package is imported by, which for a declaration file
-/// package is the package it provides the declarations for.
-///
-/// TypeScript resolves the declarations from the `@types/` package and
-/// errors when it's imported directly (TS6137).
-fn to_module_name(name: &str) -> String {
-  let Some(name) = name.strip_prefix("@types/") else {
-    return name.to_string();
-  };
-  // a scope is stored with a double underscore (ex. `@types/babel__core`)
-  match name.split_once("__") {
-    Some((scope, name)) => format!("@{}/{}", scope, name),
-    None => name.to_string(),
-  }
-}
-
 #[cfg_attr(feature = "serialization", derive(serde::Deserialize))]
 #[cfg_attr(feature = "serialization", serde(rename_all = "camelCase"))]
 #[derive(Clone, Debug)]
@@ -991,6 +975,22 @@ fn check_add_shim_file_to_environment(
   }
 }
 
+/// Gets the name a package is imported by, which for a declaration file
+/// package is the package it provides the declarations for.
+///
+/// TypeScript resolves the declarations from the `@types/` package and
+/// errors when it's imported directly (TS6137).
+fn to_module_name(name: &str) -> String {
+  let Some(name) = name.strip_prefix("@types/") else {
+    return name.to_string();
+  };
+  // a scope is stored with a double underscore (ex. `@types/babel__core`)
+  match name.split_once("__") {
+    Some((scope, name)) => format!("@{}/{}", scope, name),
+    None => name.to_string(),
+  }
+}
+
 fn get_dependencies(
   mappings: BTreeMap<ModuleSpecifier, PackageMappedSpecifier>,
 ) -> Vec<Dependency> {
@@ -1052,6 +1052,18 @@ fn get_declaration_warnings(specifiers: &Specifiers) -> Vec<String> {
 
 #[cfg(test)]
 mod test {
+
+  #[test]
+  fn test_to_module_name() {
+    assert_eq!(to_module_name("unist"), "unist");
+    assert_eq!(to_module_name("@scope/name"), "@scope/name");
+    assert_eq!(to_module_name("@types/unist"), "unist");
+    assert_eq!(to_module_name("@types/babel__core"), "@babel/core");
+    // only the first double underscore is a scope separator
+    assert_eq!(to_module_name("@types/a__b__c"), "@a/b__c");
+    // there's no package named `node`, but there's nothing better to use
+    assert_eq!(to_module_name("@types/node"), "node");
+  }
   use super::*;
 
   #[test]

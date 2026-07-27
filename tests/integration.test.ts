@@ -779,6 +779,27 @@ Deno.test("should build with peer dependencies in mappings", async () => {
   });
 });
 
+Deno.test("should build with a types only package", async () => {
+  await runTest("types_package_project", {
+    entryPoints: ["mod.ts"],
+    outDir: "./npm",
+    // the type check is the point of this test
+    typeCheck: "both",
+    test: false,
+    shims: {},
+    package: {
+      name: "types-package",
+      version: "1.0.0",
+    },
+  }, (output) => {
+    assertEquals(output.packageJson.dependencies, {
+      "@types/unist": "3.0.3",
+    });
+    // it can't be imported by its `@types/` name
+    assertStringIncludes(output.getFileText("src/mod.ts"), `from "unist"`);
+  });
+});
+
 Deno.test("should build with a bare specifier in the mappings", async () => {
   await runTest("bare_mapping_project", {
     entryPoints: ["mod.ts"],
@@ -1621,6 +1642,7 @@ async function runTest(
     | "test_preload_project"
     | "test_project"
     | "tla_project"
+    | "types_package_project"
     | "web_socket_project"
     | "using_decl_project"
     | "workspace_project",
