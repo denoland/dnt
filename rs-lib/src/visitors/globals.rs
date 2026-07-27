@@ -87,26 +87,6 @@ fn visit_children(node: Node, import_name: &str, context: &mut Context) {
     let ident_text = ident.text_fast(context.program);
 
     if is_unresolved_context {
-      // change `window` -> `globalThis`
-      if ident_text == "window" {
-        if !context.top_level_decls.contains("window")
-          && !has_ignore_comment(ident.into(), context)
-        {
-          if let Some(text_change) =
-            get_global_this_text_change(ident, import_name, context)
-          {
-            context.text_changes.push(text_change);
-            context.import_shim = true;
-          } else {
-            context.text_changes.push(TextChange {
-              range: create_range(ident.start(), ident.end(), context),
-              new_text: get_replacement_text(ident, "globalThis", context),
-            });
-          }
-        }
-        return;
-      }
-
       // check to replace globalThis
       if ident_text == "globalThis" {
         if let Some(text_change) =

@@ -103,13 +103,6 @@ const obj = { Deno: dntShim.Deno, [dntShim.Deno]: 1, ...dntShim.Deno };"
       ),
     ),
     (
-      "const obj = { window };",
-      concat!(
-        r#"import * as dntShim from "./_dnt.shims.js";"#,
-        "\nconst obj = { window: dntShim.dntGlobalThis };"
-      ),
-    ),
-    (
       concat!(
         "const decl01 = Deno;\n",
         "const decl02 = setTimeout;\n",
@@ -445,7 +438,6 @@ async fn transform_global_this_shim() {
       "type Test1 = typeof globalThis;",
       "type Test2 = typeof globalThis.Window;",
       "type Test3 = typeof globalThis.Deno;",
-      "type Test4 = window.Something;",
     ),
     concat!(
       r#"import * as dntShim from "./_dnt.shims.js";"#,
@@ -464,28 +456,22 @@ async fn transform_global_this_shim() {
       "type Test1 = typeof dntShim.dntGlobalThis;",
       "type Test2 = typeof globalThis.Window;",
       "type Test3 = typeof dntShim.Deno;",
-      "type Test4 = globalThis.Something;",
     ),
   )])
   .await;
 }
 
 #[tokio::test]
-async fn transform_window() {
-  assert_transforms(vec![
-    (
-      concat!("window.test = 5;", "window.Deno.test();",),
-      concat!(
-        r#"import * as dntShim from "./_dnt.shims.js";"#,
-        "\nglobalThis.test = 5;",
-        "dntShim.dntGlobalThis.Deno.test();",
-      ),
-    ),
-    (
-      // should be as-is because there's a declaration
-      "const window = {}; window.test;",
-      "const window = {}; window.test;",
-    ),
+async fn no_transform_window() {
+  // `window` is not a global in Node.js nor Deno, so leave it alone
+  // (ex. `typeof window === "object"` should stay a browser check)
+  assert_identity_transforms(vec![
+    "window.test = 5;",
+    "window.Deno.test();",
+    "const obj = { window };",
+    r#"typeof window === "object";"#,
+    "type Test = window.Something;",
+    "const window = {}; window.test;",
   ])
   .await;
 }
