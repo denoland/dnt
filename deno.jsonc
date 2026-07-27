@@ -58,6 +58,7 @@
     "tests/polyfill_disabled_project/npm",
     "tests/polyfill_project/npm",
     "tests/shim_project/npm",
+    "tests/test_hooks_project/npm",
     "tests/test_project/npm",
     "tests/tla_project/npm",
     "tests/types_package_project/npm",

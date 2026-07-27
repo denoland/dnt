@@ -114,6 +114,45 @@ main();
   );
 });
 
+Deno.test("gets code when isolating the test files", () => {
+  const code = getTestRunnerCode({
+    testEntryPoints: ["./test.ts"],
+    denoTestShimPackageName: undefined,
+    includeEsModule: true,
+    includeScriptModule: true,
+    testIsolation: "process",
+  });
+  assertStringIncludes(
+    code,
+    `  const fileIndexArg = process.argv[2];
+  if (fileIndexArg == null) {
+    const { spawnSync } = require("child_process");
+    let failed = false;
+    for (const i of filePaths.keys()) {
+      if (i > 0) {
+        console.log("");
+      }
+      const args = [...process.execArgv, __filename, String(i)];
+      const result = spawnSync(process.execPath, args, { stdio: "inherit" });
+      if (result.error != null) {
+        console.error(result.error);
+      }
+      if (result.status !== 0) {
+        failed = true;
+      }
+    }
+    if (failed) {
+      process.exitCode = 1;
+    }
+    return;
+  }
+
+  const filePath = filePaths[Number(fileIndexArg)];`,
+  );
+  // there's no loop over the files because each one runs in its own process
+  assertEquals(code.includes("for (const [i, filePath]"), false);
+});
+
 Deno.test("gets code when a preload module is used", () => {
   const code = getTestRunnerCode({
     testEntryPoints: ["./test.ts"],

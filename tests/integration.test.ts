@@ -1516,6 +1516,22 @@ Deno.test("using declaration project", async () => {
   });
 });
 
+Deno.test("should run each test file in its own process", async () => {
+  await runTest("test_hooks_project", {
+    entryPoints: ["mod.ts"],
+    outDir: "./npm",
+    testIsolation: "process",
+    typeCheck: false,
+    shims: {
+      deno: "dev",
+    },
+    package: {
+      name: "hooks",
+      version: "0.0.0",
+    },
+  });
+});
+
 Deno.test("should build jsr project", async () => {
   await runTest("jsr_project", {
     entryPoints: ["mod.ts"],
@@ -1758,6 +1774,7 @@ async function runTest(
     | "undici_project"
     | "shim_project"
     | "test_preload_project"
+    | "test_hooks_project"
     | "test_project"
     | "tla_project"
     | "types_package_project"
