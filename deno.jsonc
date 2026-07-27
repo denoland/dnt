@@ -59,6 +59,7 @@
     "tests/shim_project/npm",
     "tests/test_project/npm",
     "tests/tla_project/npm",
+    "tests/types_package_project/npm",
     "tests/undici_project/npm",
     "tests/web_socket_project/npm"
   ],
