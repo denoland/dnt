@@ -14,7 +14,6 @@ const versions = {
   promptsShim: "~0.1.0",
   weakRefSham: "~0.1.0",
   undici: "^6.0.0",
-  picocolors: "^1.0.0",
   nodeTypes: "^20.9.0",
   newNodeTypes: "^22.16.3",
   tsLib: "^2.6.2",
@@ -79,7 +78,6 @@ Deno.test("should build test project - basic", async () => {
       },
       devDependencies: {
         "@types/node": versions.nodeTypes,
-        picocolors: versions.picocolors,
         "@deno/shim-deno": versions.denoShim,
         "@deno/sham-weakref": versions.weakRefSham,
       },
@@ -158,7 +156,6 @@ Deno.test("should build test project without esm", async () => {
       },
       devDependencies: {
         "@types/node": versions.nodeTypes,
-        picocolors: versions.picocolors,
         "@deno/shim-deno": versions.denoShim,
         "@deno/sham-weakref": versions.weakRefSham,
       },
@@ -381,7 +378,6 @@ Deno.test("should build test project with declarations inline by default", async
         },
         devDependencies: {
           "@types/node": versions.nodeTypes,
-          picocolors: versions.picocolors,
           "@deno/shim-deno": versions.denoShim,
         },
         _generatedBy: "dnt@dev",
@@ -502,7 +498,6 @@ Deno.test("should build bin project", async () => {
       },
       devDependencies: {
         "@types/node": versions.nodeTypes,
-        picocolors: versions.picocolors,
         "@deno/shim-deno": versions.denoShim,
       },
       _generatedBy: "dnt@dev",
@@ -544,9 +539,6 @@ Deno.test("should build bin project with a shebang", async () => {
       },
       scripts: {
         test: "node test_runner.cjs",
-      },
-      devDependencies: {
-        picocolors: versions.picocolors,
       },
       _generatedBy: "dnt@dev",
     });
@@ -704,7 +696,6 @@ Deno.test("should run tests when using @deno/shim-deno-test shim", async () => {
     output.assertNotExists("esm/mod.js.map");
     assertEquals(output.packageJson.devDependencies, {
       "@types/node": versions.nodeTypes,
-      picocolors: versions.picocolors,
       "@deno/shim-deno-test": versions.denoTestShim,
       "@deno/sham-weakref": versions.weakRefSham,
     });
@@ -762,7 +753,6 @@ Deno.test("not error for TLA when not using CommonJS", async () => {
       types: "./types/mod.d.ts",
       devDependencies: {
         "@types/node": versions.nodeTypes,
-        picocolors: versions.picocolors,
         "@deno/shim-deno": versions.denoShim,
       },
       _generatedBy: "dnt@dev",
@@ -894,7 +884,6 @@ Deno.test("should build with package mappings", async () => {
       },
       devDependencies: {
         "@types/node": versions.nodeTypes,
-        picocolors: versions.picocolors,
         "@deno/shim-deno": versions.denoShim,
       },
       _generatedBy: "dnt@dev",
@@ -965,7 +954,6 @@ Deno.test("should build with peer dependencies in mappings", async () => {
       },
       devDependencies: {
         "@types/node": versions.nodeTypes,
-        picocolors: versions.picocolors,
         "@deno/shim-deno": versions.denoShim,
       },
       _generatedBy: "dnt@dev",
@@ -1050,7 +1038,6 @@ Deno.test("should build shim project with everything enabled", async () => {
     assertEquals(output.packageJson.devDependencies, {
       "@types/domexception": versions.domExceptionShimTypes,
       "@types/node": versions.nodeTypes,
-      "picocolors": versions.picocolors,
     });
   });
 });
@@ -1649,7 +1636,6 @@ Deno.test("should build jsr project", async () => {
       },
       devDependencies: {
         "@types/node": versions.nodeTypes,
-        picocolors: versions.picocolors,
         "@deno/shim-deno": versions.denoShim,
       },
       _generatedBy: "dnt@dev",
@@ -1765,9 +1751,6 @@ Deno.test("should build workspace project", async () => {
         },
         dependencies: {
           tslib: versions.tsLib,
-        },
-        devDependencies: {
-          picocolors: versions.picocolors,
         },
         _generatedBy: "dnt@dev",
       });

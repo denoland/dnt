@@ -1,11 +1,5 @@
 // Copyright 2018-2024 the Deno authors. MIT license.
 
-export interface Picocolors {
-  green(text: string): string;
-  red(text: string): string;
-  gray(text: string): string;
-}
-
 export interface NodeProcess {
   stdout: {
     write(text: string): void;
@@ -14,7 +8,8 @@ export interface NodeProcess {
 }
 
 export interface RunTestDefinitionsOptions {
-  pc: Picocolors;
+  /** `util.styleText` from Node.js. */
+  styleText(format: string, text: string): string;
   process: NodeProcess;
   /** The file the tests are running in. */
   origin: string;
@@ -54,7 +49,9 @@ export async function runTestDefinitions(
   for (const definition of testDefinitions) {
     options.process.stdout.write("test " + definition.name + " ...");
     if (definition.ignore) {
-      options.process.stdout.write(` ${options.pc.gray("ignored")}\n`);
+      options.process.stdout.write(
+        ` ${options.styleText("gray", "ignored")}\n`,
+      );
       continue;
     }
     const context = getTestContext(definition, undefined);
@@ -193,12 +190,12 @@ export async function runTestDefinitions(
   function getStatusText(status: TestContext["status"]) {
     switch (status) {
       case "ok":
-        return options.pc.green(status);
+        return options.styleText("green", status);
       case "fail":
       case "pending":
-        return options.pc.red(status);
+        return options.styleText("red", status);
       case "ignored":
-        return options.pc.gray(status);
+        return options.styleText("gray", status);
       default: {
         const _assertNever: never = status;
         return status;

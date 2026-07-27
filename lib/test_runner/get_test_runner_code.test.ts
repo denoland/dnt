@@ -16,7 +16,7 @@ Deno.test("gets code when no shim used", () => {
   });
   assertEquals(
     code,
-    `const pc = require("picocolors");
+    `const { styleText } = require("util");
 const process = require("process");
 
 const filePaths = [
@@ -30,7 +30,7 @@ async function main() {
     }
 
     const scriptPath = "./script/" + filePath;
-    console.log("Running tests in " + pc.underline(scriptPath) + "...\\n");
+    console.log("Running tests in " + styleText("underline", scriptPath) + "...\\n");
     process.chdir(__dirname + "/script");
     try {
       require(scriptPath);
@@ -40,7 +40,7 @@ async function main() {
     }
 
     const esmPath = "./esm/" + filePath;
-    console.log("\\nRunning tests in " + pc.underline(esmPath) + "...\\n");
+    console.log("\\nRunning tests in " + styleText("underline", esmPath) + "...\\n");
     process.chdir(__dirname + "/esm");
     await import(esmPath);
   }
@@ -60,7 +60,7 @@ Deno.test("gets code when shim used", () => {
   });
   assertEquals(
     code,
-    `const pc = require("picocolors");
+    `const { styleText } = require("util");
 const process = require("process");
 const { pathToFileURL } = require("url");
 const { testDefinitions } = require("test-shim-package/test-internals");
@@ -73,7 +73,7 @@ const filePaths = [
 async function main() {
   const testContext = {
     process,
-    pc,
+    styleText,
   };
   for (const [i, filePath] of filePaths.entries()) {
     if (i > 0) {
@@ -81,7 +81,7 @@ async function main() {
     }
 
     const scriptPath = "./script/" + filePath;
-    console.log("Running tests in " + pc.underline(scriptPath) + "...\\n");
+    console.log("Running tests in " + styleText("underline", scriptPath) + "...\\n");
     process.chdir(__dirname + "/script");
     const scriptTestContext = {
       origin: pathToFileURL(filePath).toString(),
@@ -96,7 +96,7 @@ async function main() {
     await runTestDefinitions(testDefinitions.splice(0, testDefinitions.length), scriptTestContext);
 
     const esmPath = "./esm/" + filePath;
-    console.log("\\nRunning tests in " + pc.underline(esmPath) + "...\\n");
+    console.log("\\nRunning tests in " + styleText("underline", esmPath) + "...\\n");
     process.chdir(__dirname + "/esm");
     const esmTestContext = {
       origin: pathToFileURL(filePath).toString(),
@@ -163,7 +163,7 @@ Deno.test("gets code when a preload module is used", () => {
   });
   assertEquals(
     code,
-    `const pc = require("picocolors");
+    `const { styleText } = require("util");
 const process = require("process");
 
 const filePaths = [
@@ -187,7 +187,7 @@ async function main() {
     }
 
     const scriptPath = "./script/" + filePath;
-    console.log("Running tests in " + pc.underline(scriptPath) + "...\\n");
+    console.log("Running tests in " + styleText("underline", scriptPath) + "...\\n");
     process.chdir(__dirname + "/script");
     try {
       require(scriptPath);
@@ -197,7 +197,7 @@ async function main() {
     }
 
     const esmPath = "./esm/" + filePath;
-    console.log("\\nRunning tests in " + pc.underline(esmPath) + "...\\n");
+    console.log("\\nRunning tests in " + styleText("underline", esmPath) + "...\\n");
     process.chdir(__dirname + "/esm");
     await import(esmPath);
   }
@@ -218,7 +218,7 @@ Deno.test("gets code when a preload module is used without cjs", () => {
   });
   assertEquals(
     code,
-    `const pc = require("picocolors");
+    `const { styleText } = require("util");
 const process = require("process");
 
 const filePaths = [
@@ -235,7 +235,7 @@ async function main() {
     }
 
     const esmPath = "./esm/" + filePath;
-    console.log("\\nRunning tests in " + pc.underline(esmPath) + "...\\n");
+    console.log("\\nRunning tests in " + styleText("underline", esmPath) + "...\\n");
     process.chdir(__dirname + "/esm");
     await import(esmPath);
   }
@@ -256,7 +256,7 @@ Deno.test("gets code when a preload module is used without esm", () => {
   });
   assertEquals(
     code,
-    `const pc = require("picocolors");
+    `const { styleText } = require("util");
 const process = require("process");
 
 const filePaths = [
@@ -278,7 +278,7 @@ async function main() {
     }
 
     const scriptPath = "./script/" + filePath;
-    console.log("Running tests in " + pc.underline(scriptPath) + "...\\n");
+    console.log("Running tests in " + styleText("underline", scriptPath) + "...\\n");
     process.chdir(__dirname + "/script");
     try {
       require(scriptPath);
@@ -322,7 +322,7 @@ Deno.test("gets code when cjs is not used", () => {
   });
   assertEquals(
     code,
-    `const pc = require("picocolors");
+    `const { styleText } = require("util");
 const process = require("process");
 
 const filePaths = [
@@ -336,7 +336,7 @@ async function main() {
     }
 
     const esmPath = "./esm/" + filePath;
-    console.log("\\nRunning tests in " + pc.underline(esmPath) + "...\\n");
+    console.log("\\nRunning tests in " + styleText("underline", esmPath) + "...\\n");
     process.chdir(__dirname + "/esm");
     await import(esmPath);
   }
@@ -356,7 +356,7 @@ Deno.test("gets code when esm is not used", () => {
   });
   assertEquals(
     code,
-    `const pc = require("picocolors");
+    `const { styleText } = require("util");
 const process = require("process");
 
 const filePaths = [
@@ -370,7 +370,7 @@ async function main() {
     }
 
     const scriptPath = "./script/" + filePath;
-    console.log("Running tests in " + pc.underline(scriptPath) + "...\\n");
+    console.log("Running tests in " + styleText("underline", scriptPath) + "...\\n");
     process.chdir(__dirname + "/script");
     try {
       require(scriptPath);

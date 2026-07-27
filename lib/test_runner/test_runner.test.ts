@@ -131,16 +131,17 @@ function getContext() {
       return output;
     },
     origin: "file:///file.ts",
-    pc: {
-      red(text: string) {
-        return `R${text}R`;
-      },
-      green(text: string) {
-        return `G${text}G`;
-      },
-      gray(text: string) {
-        return `Y${text}Y`;
-      },
+    styleText(format: string, text: string) {
+      switch (format) {
+        case "red":
+          return `R${text}R`;
+        case "green":
+          return `G${text}G`;
+        case "gray":
+          return `Y${text}Y`;
+        default:
+          return text;
+      }
     },
     process: {
       stdout: {
