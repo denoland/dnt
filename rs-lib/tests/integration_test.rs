@@ -2891,6 +2891,69 @@ async fn npm_specifier() {
 }
 
 #[tokio::test]
+async fn npm_types_specifier() {
+  let result = TestBuilder::new()
+    .with_loader(|loader| {
+      loader
+        .add_local_file(
+          "/mod.ts",
+          concat!(
+            "import type { Node } from 'unist';
+",
+            "import type { Core } from 'babel-core';
+",
+            "export type { Core, Node };
+",
+          ),
+        )
+        .add_local_file(
+          "/deno.json",
+          r#"{
+  "imports": {
+    "unist": "npm:@types/unist@3.0.3",
+    "babel-core": "npm:@types/babel__core@7.20.5"
+  }
+}"#,
+        );
+    })
+    .transform()
+    .await
+    .unwrap();
+
+  // a declaration file package is imported by the name of the package
+  // it provides the declarations for
+  assert_files!(
+    result.main.files,
+    &[(
+      "mod.ts",
+      concat!(
+        "import type { Node } from 'unist';
+",
+        "import type { Core } from '@babel/core';
+",
+        "export type { Core, Node };
+",
+      )
+    )]
+  );
+  assert_eq!(
+    result.main.dependencies,
+    &[
+      Dependency {
+        name: "@types/babel__core".to_string(),
+        version: "7.20.5".to_string(),
+        peer_dependency: false,
+      },
+      Dependency {
+        name: "@types/unist".to_string(),
+        version: "3.0.3".to_string(),
+        peer_dependency: false,
+      }
+    ]
+  );
+}
+
+#[tokio::test]
 async fn transform_uses_lockfile_remote_checksum() {
   // a deno.lock with a non-matching remote checksum should cause an
   // integrity error, proving the lockfile is being used

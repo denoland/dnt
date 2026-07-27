@@ -156,11 +156,28 @@ impl PackageMappedSpecifier {
   }
 
   pub(crate) fn module_specifier_text(&self) -> String {
+    let name = to_module_name(&self.name);
     if let Some(path) = &self.sub_path {
-      format!("{}/{}", self.name, path)
+      format!("{}/{}", name, path)
     } else {
-      self.name.clone()
+      name
     }
+  }
+}
+
+/// Gets the name a package is imported by, which for a declaration file
+/// package is the package it provides the declarations for.
+///
+/// TypeScript resolves the declarations from the `@types/` package and
+/// errors when it's imported directly (TS6137).
+fn to_module_name(name: &str) -> String {
+  let Some(name) = name.strip_prefix("@types/") else {
+    return name.to_string();
+  };
+  // a scope is stored with a double underscore (ex. `@types/babel__core`)
+  match name.split_once("__") {
+    Some((scope, name)) => format!("@{}/{}", scope, name),
+    None => name.to_string(),
   }
 }
 
