@@ -10,7 +10,7 @@ import { existsSync } from "@std/fs";
 import * as path from "@std/path";
 import * as wasm from "./lib/pkg/dnt_wasm.js";
 import type { PolyfillName, ScriptTarget } from "./lib/types.ts";
-import { valueToUrl } from "./lib/utils.ts";
+import { standardizePath, valueToUrl } from "./lib/utils.ts";
 
 /** Specifier to specifier mappings. */
 export interface SpecifierMappings {
@@ -108,6 +108,9 @@ export interface TransformOptions {
    * Leave this undefined to use the `lock.frozen` setting in the deno.json file.
    */
   frozenLockfile?: boolean;
+  /** Path or file url to the directory that the relative paths in these
+   * options resolve from and that a config file, `deno.lock`, and
+   * `node_modules` directory are discovered relative to. */
   cwd: string;
 }
 
@@ -160,40 +163,47 @@ export function transform(
   if (options.entryPoints.length === 0) {
     throw new Error("Specify one or more entry points.");
   }
+  // all the relative paths in the options resolve from here
+  const cwd = standardizePath(options.cwd);
   const newOptions = {
     ...options,
     mappings: Object.fromEntries(
       Object.entries(options.mappings ?? {}).map(([key, value]) => {
-        return [mapMappingKey(key), mapMappedSpecifier(value)];
+        return [mapMappingKey(key, cwd), mapMappedSpecifier(value, cwd)];
       }),
     ),
-    entryPoints: options.entryPoints.map(valueToUrl),
-    binEntryPoints: (options.binEntryPoints ?? []).map(valueToUrl),
-    testEntryPoints: (options.testEntryPoints ?? []).map(valueToUrl),
-    shims: (options.shims ?? []).map(mapShim),
-    testShims: (options.testShims ?? []).map(mapShim),
+    entryPoints: options.entryPoints.map((e) => valueToUrl(e, cwd)),
+    binEntryPoints: (options.binEntryPoints ?? []).map((e) =>
+      valueToUrl(e, cwd)
+    ),
+    testEntryPoints: (options.testEntryPoints ?? []).map((e) =>
+      valueToUrl(e, cwd)
+    ),
+    shims: (options.shims ?? []).map((s) => mapShim(s, cwd)),
+    testShims: (options.testShims ?? []).map((s) => mapShim(s, cwd)),
     target: options.target,
     polyfills: options.polyfills ?? {},
     importMap: options.importMap == null
       ? undefined
-      : valueToUrl(options.importMap),
+      : valueToUrl(options.importMap, cwd),
     configFile: typeof options.configFile === "string"
-      ? valueToUrl(options.configFile)
+      ? valueToUrl(options.configFile, cwd)
       : undefined,
     noConfig: options.configFile === false,
+    cwd: path.toFileUrl(cwd).toString(),
   };
   return wasm.transform(newOptions);
 }
 
-function mapMappingKey(key: string) {
+function mapMappingKey(key: string, cwd: string) {
   key = key.trim();
   if (/^[a-z]+:/i.test(key) || isRelativeOrAbsolutePath(key)) {
-    return valueToUrl(key);
+    return valueToUrl(key, cwd);
   }
   // fall back to a path for a key like `mod.ts` that resolved to
   // one before bare specifiers were supported
-  if (existsSync(key)) {
-    return valueToUrl(key);
+  if (existsSync(path.resolve(cwd, key))) {
+    return valueToUrl(key, cwd);
   }
   // leave bare specifiers alone so that they're resolved
   // via the config file's import map (ex. `my-lib`)
@@ -214,12 +224,13 @@ type SerializableMappedSpecifier = {
 
 function mapMappedSpecifier(
   value: string | PackageMappedSpecifier,
+  cwd: string,
 ): SerializableMappedSpecifier {
   if (typeof value === "string") {
     if (isPathOrUrl(value)) {
       return {
         kind: "module",
-        value: valueToUrl(value),
+        value: valueToUrl(value, cwd),
       };
     } else {
       return {
@@ -242,7 +253,7 @@ type SerializableShim = { kind: "package"; value: PackageShim } | {
   value: ModuleShim;
 };
 
-function mapShim(value: Shim): SerializableShim {
+function mapShim(value: Shim, cwd: string): SerializableShim {
   const newValue: Shim = {
     ...value,
     globalNames: value.globalNames.map(mapToGlobalName),
@@ -254,7 +265,7 @@ function mapShim(value: Shim): SerializableShim {
       kind: "module",
       value: {
         ...newValue,
-        module: resolveBareSpecifierOrPath(newValue.module),
+        module: resolveBareSpecifierOrPath(newValue.module, cwd),
       },
     };
   }
@@ -276,10 +287,10 @@ function mapToGlobalName(value: string | GlobalName): GlobalName {
   }
 }
 
-function resolveBareSpecifierOrPath(value: string) {
+function resolveBareSpecifierOrPath(value: string, cwd: string) {
   value = value.trim();
   if (isPathOrUrl(value)) {
-    return valueToUrl(value);
+    return valueToUrl(value, cwd);
   } else {
     return value;
   }

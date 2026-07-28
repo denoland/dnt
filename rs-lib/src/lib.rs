@@ -293,6 +293,8 @@ pub struct TransformOptions {
   ///
   /// Leave this `None` to use the `lock.frozen` setting in the deno.json file.
   pub frozen_lockfile: Option<bool>,
+  /// Directory that a config file, `deno.lock`, and `node_modules` directory
+  /// are discovered relative to.
   pub cwd: PathBuf,
 }
 

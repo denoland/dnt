@@ -69,6 +69,15 @@ export interface BuildOptions {
   outDir: string;
   /** Shims to use. */
   shims: ShimOptions;
+  /** Directory that dnt operates on.
+   *
+   * The relative paths in these options resolve from here, test files are
+   * searched for here, and a deno.json, package.json, and deno.lock are
+   * discovered relative to it when the entry points are all remote.
+   *
+   * @default `Deno.cwd()`
+   */
+  cwd?: string;
   /** Type check the output.
    * * `"both"` - Type checks both the ESM and script modules separately. This
    *   is the recommended option when publishing a dual ESM and script package,
@@ -135,7 +144,7 @@ export interface BuildOptions {
    * @default false
    */
   skipSourceOutput?: boolean;
-  /** Root directory to find test files in. Defaults to the cwd. */
+  /** Root directory to find test files in. Defaults to the `cwd` option. */
   rootTestDir?: string;
   /**
    * Glob pattern to use to find tests files. Defaults to `deno test`'s pattern.
@@ -321,10 +330,12 @@ export async function build(options: BuildOptions): Promise<void> {
   if (options.scriptModule === false && options.esModule === false) {
     throw new Error("`scriptModule` and `esModule` cannot both be `false`");
   }
+  // the directory that all the relative paths in the options resolve from
+  const cwd = standardizePath(options.cwd ?? ".");
   // set defaults
   options = {
     ...options,
-    outDir: standardizePath(options.outDir),
+    outDir: standardizePath(options.outDir, cwd),
     entryPoints: options.entryPoints,
     scriptModule: options.scriptModule ?? "cjs",
     esModule: options.esModule ?? true,
@@ -345,7 +356,6 @@ export async function build(options: BuildOptions): Promise<void> {
         `outputs the declarations beside the code they describe.`,
     );
   }
-  const cwd = Deno.cwd();
   // the declaration maps point at the `src` directory, so they're only useful
   // when it's written out and published alongside them
   const declarationMap = (options.declarationMap ?? false) &&
@@ -370,19 +380,19 @@ export async function build(options: BuildOptions): Promise<void> {
     if (typeof e === "string") {
       return {
         name: i === 0 ? "." : e.replace(/\.tsx?$/i, ".js"),
-        path: standardizePath(e),
+        path: standardizePath(e, cwd),
       };
     } else {
       return {
         ...e,
-        path: standardizePath(e.path),
+        path: standardizePath(e.path, cwd),
       };
     }
   });
   validateEntryPoints(entryPoints);
   const testPreloadModule = options.testPreloadModule == null
     ? undefined
-    : standardizePath(options.testPreloadModule);
+    : standardizePath(options.testPreloadModule, cwd);
 
   await Deno.permissions.request({ name: "write", path: options.outDir });
 
@@ -790,7 +800,7 @@ export async function build(options: BuildOptions): Promise<void> {
       importMap: options.importMap,
       configFile: options.configFile,
       frozenLockfile: options.frozenLockfile,
-      cwd: path.toFileUrl(cwd).toString(),
+      cwd,
     });
   }
 
@@ -808,7 +818,9 @@ export async function build(options: BuildOptions): Promise<void> {
   async function getTestEntryPoints() {
     const filePaths = await glob({
       pattern: getTestPattern(),
-      rootDir: options.rootTestDir ?? Deno.cwd(),
+      rootDir: options.rootTestDir == null
+        ? cwd
+        : standardizePath(options.rootTestDir, cwd),
       excludeDirs: [options.outDir],
     });
     if (testPreloadModule == null) {

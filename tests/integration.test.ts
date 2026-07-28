@@ -1688,6 +1688,44 @@ Deno.test("should auto-discover the deno.json", async () => {
   );
 });
 
+Deno.test("should build a project in another directory with the cwd option", async () => {
+  // note: this test intentionally does not change the cwd of the process
+  const projectDir = path.join(Deno.cwd(), "tests", "cwd_project");
+  const outDir = path.join(projectDir, "npm");
+  tryRemoveDir(outDir);
+  try {
+    await build({
+      cwd: "./tests/cwd_project",
+      entryPoints: ["add.ts"],
+      outDir: "./npm",
+      shims: {
+        ...getAllShimOptions(false),
+        deno: "dev",
+      },
+      package: {
+        name: "add",
+        version: "1.0.0",
+      },
+    });
+
+    // the deno.json beside the entry point was auto-discovered
+    assertStringIncludes(
+      Deno.readTextFileSync(path.join(outDir, "esm", "add.js")),
+      `from "./marker.js"`,
+    );
+    // the test files were searched for from the cwd option and not
+    // from this repo's directory
+    const testRunnerText = Deno.readTextFileSync(
+      path.join(outDir, "test_runner.cjs"),
+    );
+    const filePaths = /const filePaths = \[([^\]]*)\]/.exec(testRunnerText)![1];
+    assertStringIncludes(filePaths, "add.test.js");
+    assertEquals(filePaths.includes("integration.test"), false);
+  } finally {
+    tryRemoveDir(outDir);
+  }
+});
+
 Deno.test("should not auto-discover the deno.json when configFile is false", async () => {
   const err = await assertRejects(() =>
     runTest("config_discovery_project", {
@@ -1883,12 +1921,16 @@ async function runTest(
   }
 
   function tryRemoveOutDir() {
-    try {
-      Deno.removeSync(outDirPath, { recursive: true });
-    } catch (err) {
-      if (!(err instanceof Deno.errors.NotFound)) {
-        console.error(`Error removing dir: ${err}`);
-      }
+    tryRemoveDir(outDirPath);
+  }
+}
+
+function tryRemoveDir(dirPath: string) {
+  try {
+    Deno.removeSync(dirPath, { recursive: true });
+  } catch (err) {
+    if (!(err instanceof Deno.errors.NotFound)) {
+      console.error(`Error removing dir: ${err}`);
     }
   }
 }
