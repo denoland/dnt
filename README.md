@@ -108,27 +108,6 @@ test escapeChar ... ok
 
 ## Docs
 
-### Building a Directory Other Than the Current Working Directory
-
-By default, dnt operates on the current working directory. Provide a `cwd`
-option to point it at another directory, which is useful when the build script
-is run from somewhere else (ex. the root of a monorepo):
-
-```ts
-await build({
-  cwd: "./packages/add",
-  // resolved as ./packages/add/mod.ts
-  entryPoints: ["./mod.ts"],
-  // written to ./packages/add/npm
-  outDir: "./npm",
-  // ...etc...
-});
-```
-
-All the relative paths in the build options resolve from this directory, test
-files are searched for here, and it's where a deno.json, package.json, and
-deno.lock are discovered from when the entry points are all remote.
-
 ### Disabling Type Checking, Testing, Declaration Emit, or CommonJS/UMD Output
 
 Use the following options to disable any one of these, which are enabled by
@@ -769,7 +748,7 @@ await build({
   // ...etc...
   testPattern: "**/*.test.{ts,tsx,js,mjs,jsx}",
   // and/or provide a directory to start searching for test
-  // files from, which defaults to the `cwd` option
+  // files from, which defaults to the current working directory
   rootTestDir: "./tests",
 });
 ```
