@@ -102,14 +102,17 @@ export async function runCommand(opts: {
   }
 }
 
-export function standardizePath(fileOrDirPath: string) {
+/** Resolves the provided path or file url to an absolute path,
+ * resolving a relative path from `cwd`. */
+export function standardizePath(fileOrDirPath: string, cwd: string) {
   if (fileOrDirPath.startsWith("file:")) {
     return path.fromFileUrl(fileOrDirPath);
   }
-  return path.resolve(fileOrDirPath);
+  return path.resolve(cwd, fileOrDirPath);
 }
 
-export function valueToUrl(value: string) {
+/** Resolves the provided value to a url, resolving a relative path from `cwd`. */
+export function valueToUrl(value: string, cwd: string) {
   const lowerCaseValue = value.toLowerCase();
   if (
     lowerCaseValue.startsWith("http:") ||
@@ -121,7 +124,7 @@ export function valueToUrl(value: string) {
   ) {
     return value;
   } else {
-    return path.toFileUrl(path.resolve(value)).toString();
+    return path.toFileUrl(path.resolve(cwd, value)).toString();
   }
 }
 

@@ -46,6 +46,9 @@
     "tests/bare_mapping_project/npm",
     "tests/bin_project/npm",
     "tests/config_discovery_project/npm",
+    // this project is only ever built by dnt and resolves its bare specifiers
+    // via its own deno.json, so keep deno from type checking it from the root
+    "tests/cwd_project",
     "tests/declaration_import_project/npm",
     "tests/frozen_lockfile_project/npm",
     "tests/import_map_project/npm",
