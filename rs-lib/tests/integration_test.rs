@@ -3126,6 +3126,40 @@ async fn npm_specifier() {
 }
 
 #[tokio::test]
+async fn npm_specifier_peer_dependency_with_sub_path() {
+  let result = TestBuilder::new()
+    .with_loader(|loader| {
+      loader.add_local_file(
+        "/mod.ts",
+        concat!(
+          "import * as pkg from 'npm:using-statement@^0.4';\n",
+          "import * as sub from 'npm:using-statement@^0.4/sub';\n",
+          "console.log(pkg, sub);\n",
+        ),
+      );
+    })
+    .add_peer_package_specifier_mapping(
+      "npm:using-statement@^0.4",
+      "using-statement",
+      Some("^0.4"),
+    )
+    .transform()
+    .await
+    .unwrap();
+
+  // the sub path resolves to the same package, so it must not also
+  // show up as a non-peer dependency
+  assert_eq!(
+    result.main.dependencies,
+    &[Dependency {
+      name: "using-statement".to_string(),
+      version: "^0.4".to_string(),
+      peer_dependency: true,
+    }]
+  );
+}
+
+#[tokio::test]
 async fn npm_types_specifier() {
   let result = TestBuilder::new()
     .with_loader(|loader| {

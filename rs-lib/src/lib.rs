@@ -1176,6 +1176,18 @@ fn get_dependencies(
       }
     })
     .collect::<Vec<_>>();
+  // a package.json lists a package as a peer dependency or a dependency, but
+  // never both, so a package mapped as a peer dependency stays one even when
+  // another specifier resolves to it (ex. a sub path of the same package,
+  // whose `npm:` specifier the user has no reason to map on its own)
+  let peer_names = dependencies
+    .iter()
+    .filter(|d| d.peer_dependency)
+    .map(|d| d.name.clone())
+    .collect::<HashSet<_>>();
+  for dependency in dependencies.iter_mut() {
+    dependency.peer_dependency |= peer_names.contains(&dependency.name);
+  }
   dependencies.sort_by(|a, b| a.name.cmp(&b.name));
   dependencies.dedup(); // only works after sorting
   dependencies

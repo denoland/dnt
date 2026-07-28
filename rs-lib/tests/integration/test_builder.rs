@@ -180,6 +180,24 @@ impl TestBuilder {
     self
   }
 
+  pub fn add_peer_package_specifier_mapping(
+    &mut self,
+    specifier: impl AsRef<str>,
+    bare_specifier: impl AsRef<str>,
+    version: Option<&str>,
+  ) -> &mut Self {
+    self.specifier_mappings.insert(
+      normalize_urls(specifier.as_ref()),
+      MappedSpecifier::Package(PackageMappedSpecifier {
+        name: bare_specifier.as_ref().to_string(),
+        version: version.map(|v| v.to_string()),
+        sub_path: None,
+        peer_dependency: true,
+      }),
+    );
+    self
+  }
+
   pub fn add_module_specifier_mapping(
     &mut self,
     from: impl AsRef<str>,
