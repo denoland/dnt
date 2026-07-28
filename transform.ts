@@ -164,7 +164,7 @@ export function transform(
     throw new Error("Specify one or more entry points.");
   }
   // all the relative paths in the options resolve from here
-  const cwd = standardizePath(options.cwd);
+  const cwd = standardizePath(options.cwd, Deno.cwd());
   const newOptions = {
     ...options,
     mappings: Object.fromEntries(

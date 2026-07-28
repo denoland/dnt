@@ -51,16 +51,22 @@ Deno.test({
 });
 
 Deno.test("valueToUrl", () => {
-  assertEquals(valueToUrl("npm:test"), "npm:test");
-  assertEquals(valueToUrl("node:path"), "node:path");
-  assertEquals(valueToUrl("jsr:@scope/package"), "jsr:@scope/package");
-  assertEquals(valueToUrl("https://deno.land"), "https://deno.land");
-  assertEquals(valueToUrl("http://deno.land"), "http://deno.land");
+  const cwd = Deno.cwd();
+  assertEquals(valueToUrl("npm:test", cwd), "npm:test");
+  assertEquals(valueToUrl("node:path", cwd), "node:path");
+  assertEquals(valueToUrl("jsr:@scope/package", cwd), "jsr:@scope/package");
+  assertEquals(valueToUrl("https://deno.land", cwd), "https://deno.land");
+  assertEquals(valueToUrl("http://deno.land", cwd), "http://deno.land");
   assertEquals(
-    valueToUrl("test"),
+    valueToUrl("test", cwd),
     path.toFileUrl(path.resolve("test")).toString(),
   );
-  assertEquals(valueToUrl("file:///test"), "file:///test");
+  assertEquals(valueToUrl("file:///test", cwd), "file:///test");
+  // a relative value resolves from the provided cwd
+  assertEquals(
+    valueToUrl("test", path.resolve("other")),
+    path.toFileUrl(path.resolve("other", "test")).toString(),
+  );
 });
 
 Deno.test("getDntVersion", () => {

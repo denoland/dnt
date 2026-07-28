@@ -331,7 +331,7 @@ export async function build(options: BuildOptions): Promise<void> {
     throw new Error("`scriptModule` and `esModule` cannot both be `false`");
   }
   // the directory that all the relative paths in the options resolve from
-  const cwd = standardizePath(options.cwd ?? ".");
+  const cwd = standardizePath(options.cwd ?? ".", Deno.cwd());
   // set defaults
   options = {
     ...options,
@@ -406,7 +406,7 @@ export async function build(options: BuildOptions): Promise<void> {
   if (transformOutput.discoveredConfigFile != null) {
     log(
       `Auto-discovered config file: ${
-        standardizePath(transformOutput.discoveredConfigFile)
+        standardizePath(transformOutput.discoveredConfigFile, cwd)
       }`,
     );
   }

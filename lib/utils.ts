@@ -103,17 +103,16 @@ export async function runCommand(opts: {
 }
 
 /** Resolves the provided path or file url to an absolute path,
- * resolving a relative path from `cwd` (defaults to `Deno.cwd()`). */
-export function standardizePath(fileOrDirPath: string, cwd?: string) {
+ * resolving a relative path from `cwd`. */
+export function standardizePath(fileOrDirPath: string, cwd: string) {
   if (fileOrDirPath.startsWith("file:")) {
     return path.fromFileUrl(fileOrDirPath);
   }
-  return resolvePath(fileOrDirPath, cwd);
+  return path.resolve(cwd, fileOrDirPath);
 }
 
-/** Resolves the provided value to a url, resolving a relative path
- * from `cwd` (defaults to `Deno.cwd()`). */
-export function valueToUrl(value: string, cwd?: string) {
+/** Resolves the provided value to a url, resolving a relative path from `cwd`. */
+export function valueToUrl(value: string, cwd: string) {
   const lowerCaseValue = value.toLowerCase();
   if (
     lowerCaseValue.startsWith("http:") ||
@@ -125,17 +124,11 @@ export function valueToUrl(value: string, cwd?: string) {
   ) {
     return value;
   } else {
-    return path.toFileUrl(resolvePath(value, cwd)).toString();
+    return path.toFileUrl(path.resolve(cwd, value)).toString();
   }
 }
 
 export function getDntVersion(url = import.meta.url) {
   return /\/(?:dnt@|@deno\/dnt\/)([0-9]+\.[0-9]+\.[0-9]+)\//.exec(url)?.[1] ??
     "dev";
-}
-
-function resolvePath(fileOrDirPath: string, cwd: string | undefined) {
-  return cwd == null
-    ? path.resolve(fileOrDirPath)
-    : path.resolve(cwd, fileOrDirPath);
 }
