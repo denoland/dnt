@@ -11,6 +11,7 @@ use crate::parser::ScopeAnalysisParser;
 use crate::specifiers::get_specifiers;
 use crate::specifiers::Specifiers;
 use crate::MappedSpecifier;
+use crate::PackageMappedSpecifier;
 
 use anyhow::bail;
 use anyhow::Result;
@@ -35,6 +36,9 @@ use deno_resolver::factory::WorkspaceFactorySys;
 use deno_resolver::graph::DefaultDenoResolverRc;
 use deno_resolver::npm::DenoInNpmPackageChecker;
 use deno_semver::jsr::JsrPackageReqReference;
+use deno_semver::RangeBound;
+use deno_semver::Version;
+use deno_semver::VersionReq;
 use sys_traits::impls::RealSys;
 
 pub struct ModuleGraphOptions<'a, TSys: WorkspaceFactorySys> {
@@ -431,7 +435,8 @@ impl JsrSpecifierMappings {
     };
     let mut package = package.clone();
     if package.version.is_none() {
-      package.version = jsr_version_req(&specifier);
+      package.version =
+        jsr_version_req(&specifier).map(|req| req.version_text().to_string());
     }
     Some(MappedSpecifier::Package(package))
   }
@@ -454,6 +459,79 @@ impl JsrSpecifierMappings {
   }
 }
 
+/// Uses a single version requirement for the packages that mapped `jsr:`
+/// specifiers with overlapping version requirements resolve to.
+///
+/// A mapped `jsr:` specifier gets its version requirement from the specifier
+/// instead of the mapping, so a dependency requiring another range of the same
+/// package (ex. `jsr:@scope/name@0.3` when this package requires
+/// `jsr:@scope/name@^0.3.3`) would otherwise look like two versions of the
+/// same package. Deno resolves both to one version, so use the most
+/// restrictive requirement for all of them.
+pub fn unify_mapped_jsr_versions<'a>(
+  mapped_specifiers: impl Iterator<
+    Item = (&'a ModuleSpecifier, &'a mut PackageMappedSpecifier),
+  >,
+) {
+  let mut by_name: HashMap<
+    String,
+    Vec<(VersionReq, &mut PackageMappedSpecifier)>,
+  > = HashMap::new();
+  for (specifier, mapped) in mapped_specifiers {
+    let Some(version_req) = from_graph_specifier(specifier)
+      .as_ref()
+      .and_then(jsr_version_req)
+    else {
+      continue;
+    };
+    // a version requirement the mapping specified wins over the specifier's,
+    // so leave it alone
+    if mapped.version.as_deref() != Some(version_req.version_text()) {
+      continue;
+    }
+    by_name
+      .entry(mapped.name.clone())
+      .or_default()
+      .push((version_req, mapped));
+  }
+
+  for mut entries in by_name.into_values() {
+    if entries.len() < 2 {
+      continue;
+    }
+    // requirements that don't overlap are different versions of the package,
+    // which the mapping needs to disambiguate with a version of its own
+    let all_overlap = entries.iter().enumerate().all(|(i, (req, _))| {
+      entries[i + 1..]
+        .iter()
+        .all(|(other, _)| req.intersects(other))
+    });
+    if !all_overlap {
+      continue;
+    }
+    let Some(version) = entries
+      .iter()
+      .max_by(|(a, _), (b, _)| {
+        lowest_matching_version(a).cmp(&lowest_matching_version(b))
+      })
+      .map(|(req, _)| req.version_text().to_string())
+    else {
+      continue;
+    };
+    for (_, mapped) in entries.iter_mut() {
+      mapped.version = Some(version.clone());
+    }
+  }
+}
+
+/// Specifier to show the user, which hides the scheme mapped `jsr:` specifiers
+/// have within the module graph.
+pub fn display_specifier(specifier: &ModuleSpecifier) -> String {
+  from_graph_specifier(specifier)
+    .unwrap_or_else(|| specifier.clone())
+    .to_string()
+}
+
 /// Scheme mapped `jsr:` specifiers have within the module graph.
 const MAPPED_JSR_SCHEME: &str = "dnt-jsr";
 
@@ -472,14 +550,29 @@ fn jsr_mapping_key(specifier: &ModuleSpecifier) -> Option<JsrMappingKey> {
   ))
 }
 
-fn jsr_version_req(specifier: &ModuleSpecifier) -> Option<String> {
+fn jsr_version_req(specifier: &ModuleSpecifier) -> Option<VersionReq> {
   let req_ref = JsrPackageReqReference::from_specifier(specifier).ok()?;
-  let version_text = req_ref.req().version_req.version_text();
+  let version_req = &req_ref.req().version_req;
   // no version requirement, so leave it up to the mapping
-  if version_text == "*" {
+  if version_req.version_text() == "*" {
     return None;
   }
-  Some(version_text.to_string())
+  Some(version_req.clone())
+}
+
+/// Lowest version a requirement matches, which is [`None`] when it has no
+/// lower bound.
+fn lowest_matching_version(version_req: &VersionReq) -> Option<&Version> {
+  let mut lowest: Option<&Version> = None;
+  for range in version_req.range()?.0.iter() {
+    let RangeBound::Version(bound) = &range.start else {
+      return None;
+    };
+    if lowest.is_none_or(|lowest| bound.version < *lowest) {
+      lowest = Some(&bound.version);
+    }
+  }
+  lowest
 }
 
 fn from_graph_specifier(
@@ -510,7 +603,6 @@ fn format_specifiers_for_message(
 #[cfg(test)]
 mod test {
   use super::*;
-  use crate::PackageMappedSpecifier;
 
   #[test]
   fn test_jsr_mappings_graph_specifier() {
@@ -583,6 +675,74 @@ mod test {
       &parse("https://localhost/mod.ts"),
       [parse("https://localhost/other.ts")].iter()
     ));
+  }
+
+  #[test]
+  fn test_unify_mapped_jsr_versions() {
+    // the most restrictive of the overlapping requirements is used, including
+    // for a sub path of the same package
+    run_test(
+      &[
+        ("dnt-jsr:@scope/name@0.3", "package", Some("0.3")),
+        ("dnt-jsr:@scope/name@^0.3.3", "package", Some("^0.3.3")),
+        ("dnt-jsr:@scope/name@~0.3.1/sub", "package", Some("~0.3.1")),
+      ],
+      &[Some("^0.3.3"), Some("^0.3.3"), Some("^0.3.3")],
+    );
+    // requirements that don't overlap are different versions of the package,
+    // so they're left for the user to disambiguate
+    run_test(
+      &[
+        ("dnt-jsr:@scope/name@0.2", "package", Some("0.2")),
+        ("dnt-jsr:@scope/name@0.3", "package", Some("0.3")),
+      ],
+      &[Some("0.2"), Some("0.3")],
+    );
+    // a version the mapping specified is not changed
+    run_test(
+      &[
+        ("dnt-jsr:@scope/name@0.3", "package", Some("~0.3.5")),
+        ("dnt-jsr:@scope/name@^0.3.3", "package", Some("^0.3.3")),
+      ],
+      &[Some("~0.3.5"), Some("^0.3.3")],
+    );
+    // requirements of other packages and other schemes are not touched
+    run_test(
+      &[
+        ("dnt-jsr:@scope/name@^1.0.0", "package", Some("^1.0.0")),
+        ("dnt-jsr:@scope/other@^1.2.0", "other", Some("^1.2.0")),
+        ("https://localhost/name@^1.4.0", "package", Some("^1.4.0")),
+      ],
+      &[Some("^1.0.0"), Some("^1.2.0"), Some("^1.4.0")],
+    );
+
+    fn run_test(
+      packages: &[(&str, &str, Option<&str>)],
+      expected: &[Option<&str>],
+    ) {
+      let mut mapped = packages
+        .iter()
+        .map(|(specifier, name, version)| {
+          (
+            parse(specifier),
+            PackageMappedSpecifier {
+              name: name.to_string(),
+              version: version.map(ToOwned::to_owned),
+              sub_path: None,
+              peer_dependency: false,
+            },
+          )
+        })
+        .collect::<BTreeMap<_, _>>();
+      unify_mapped_jsr_versions(mapped.iter_mut());
+      assert_eq!(
+        packages
+          .iter()
+          .map(|(specifier, ..)| mapped[&parse(specifier)].version.as_deref())
+          .collect::<Vec<_>>(),
+        expected,
+      );
+    }
   }
 
   fn mappings() -> JsrSpecifierMappings {
