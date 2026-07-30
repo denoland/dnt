@@ -12,6 +12,8 @@ use deno_semver::npm::NpmPackageReqReference;
 
 use crate::declaration_file_resolution::resolve_declaration_file_mappings;
 use crate::declaration_file_resolution::DeclarationFileResolution;
+use crate::graph::display_specifier;
+use crate::graph::JsrSpecifierMappings;
 use crate::graph::ModuleGraph;
 use crate::loader::LoaderSpecifiers;
 use crate::PackageMappedSpecifier;
@@ -44,6 +46,7 @@ pub struct EnvironmentSpecifiers {
 pub fn get_specifiers<'a>(
   entry_points: &[ModuleSpecifier],
   mut specifiers: LoaderSpecifiers,
+  jsr_specifier_mappings: &JsrSpecifierMappings,
   module_graph: &ModuleGraph,
   modules: impl Iterator<Item = &'a Module>,
 ) -> Result<Specifiers> {
@@ -175,6 +178,11 @@ pub fn get_specifiers<'a>(
     }
   }
 
+  jsr_specifier_mappings.unify_versions(
+    found_mapped_specifiers
+      .iter_mut()
+      .chain(specifiers.mapped_packages.iter_mut()),
+  );
   ensure_package_mapped_specifiers_valid(
     &found_mapped_specifiers,
     &specifiers.mapped_packages,
@@ -285,9 +293,9 @@ fn ensure_package_mapped_specifiers_valid(
     if let Some(specifier) = specifier_for_name.get(&mapped_specifier.name) {
       if specifier.1.version != mapped_specifier.version {
         anyhow::bail!("Specifier {} with version {} did not match specifier {} with version {}.",
-          specifier.0,
+          display_specifier(&specifier.0),
           specifier.1.version.as_deref().unwrap_or("<unknown>"),
-          from_specifier,
+          display_specifier(from_specifier),
           mapped_specifier.version.as_deref().unwrap_or("<unknown>"),
         );
       }

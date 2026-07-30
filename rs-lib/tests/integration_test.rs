@@ -1454,6 +1454,103 @@ async fn transform_jsr_specifier_mappings() {
 }
 
 #[tokio::test]
+async fn transform_jsr_specifier_mapping_different_version_reqs() {
+  let result = TestBuilder::new()
+    .with_loader(|loader| {
+      loader.add_local_file(
+        "/mod.ts",
+        concat!(
+          "import * as pkg from 'jsr:@scope/name@0.3';\n",
+          "import * as sub from 'jsr:@scope/name@^0.3.3/sub';\n",
+        ),
+      );
+    })
+    // no version on the mappings, so the specifiers' are used
+    .add_package_specifier_mapping("jsr:@scope/name", "scope-name", None, None)
+    .add_package_specifier_mapping(
+      "jsr:@scope/name/sub",
+      "scope-name",
+      None,
+      Some("sub"),
+    )
+    .transform()
+    .await
+    .unwrap();
+
+  assert_files!(
+    result.main.files,
+    &[(
+      "mod.ts",
+      concat!(
+        "import * as pkg from 'scope-name';\n",
+        "import * as sub from 'scope-name/sub';\n",
+      )
+    )]
+  );
+  // the version requirements overlap, so the most restrictive one is used
+  assert_eq!(
+    result.main.dependencies,
+    &[Dependency {
+      name: "scope-name".to_string(),
+      version: "^0.3.3".to_string(),
+      peer_dependency: false,
+    }]
+  );
+}
+
+#[tokio::test]
+async fn transform_jsr_specifier_mapping_different_version_reqs_in_test() {
+  let result = TestBuilder::new()
+    .with_loader(|loader| {
+      loader
+        .add_local_file("/mod.ts", "import 'jsr:@scope/name@0.3';\n")
+        .add_local_file("/mod.test.ts", "import 'jsr:@scope/name@^0.3.3';\n");
+    })
+    .add_test_entry_point("file:///mod.test.ts")
+    .add_package_specifier_mapping("jsr:@scope/name", "scope-name", None, None)
+    .transform()
+    .await
+    .unwrap();
+
+  // a requirement in the tests counts towards the main dependency as well
+  assert_eq!(
+    result.main.dependencies,
+    &[Dependency {
+      name: "scope-name".to_string(),
+      version: "^0.3.3".to_string(),
+      peer_dependency: false,
+    }]
+  );
+  // ...so the tests don't need a dev dependency of their own
+  assert_eq!(result.test.dependencies, &[]);
+}
+
+#[tokio::test]
+async fn transform_jsr_specifier_mapping_incompatible_version_reqs() {
+  let error_message = TestBuilder::new()
+    .with_loader(|loader| {
+      loader.add_local_file(
+        "/mod.ts",
+        concat!(
+          "import * as pkg from 'jsr:@scope/name@0.2';\n",
+          "import * as other from 'jsr:@scope/name@0.3';\n",
+        ),
+      );
+    })
+    .add_package_specifier_mapping("jsr:@scope/name", "scope-name", None, None)
+    .transform()
+    .await
+    .err()
+    .unwrap();
+
+  // the version requirements don't overlap, so the mapping needs a version
+  assert_eq!(
+    error_message.to_string(),
+    "Specifier jsr:@scope/name@0.2 with version 0.2 did not match specifier jsr:@scope/name@0.3 with version 0.3."
+  );
+}
+
+#[tokio::test]
 async fn transform_jsr_specifier_mapping_via_config_file() {
   let result = TestBuilder::new()
     .with_loader(|loader| {
