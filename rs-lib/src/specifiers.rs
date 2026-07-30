@@ -13,7 +13,7 @@ use deno_semver::npm::NpmPackageReqReference;
 use crate::declaration_file_resolution::resolve_declaration_file_mappings;
 use crate::declaration_file_resolution::DeclarationFileResolution;
 use crate::graph::display_specifier;
-use crate::graph::unify_mapped_jsr_versions;
+use crate::graph::JsrSpecifierMappings;
 use crate::graph::ModuleGraph;
 use crate::loader::LoaderSpecifiers;
 use crate::PackageMappedSpecifier;
@@ -46,6 +46,7 @@ pub struct EnvironmentSpecifiers {
 pub fn get_specifiers<'a>(
   entry_points: &[ModuleSpecifier],
   mut specifiers: LoaderSpecifiers,
+  jsr_specifier_mappings: &JsrSpecifierMappings,
   module_graph: &ModuleGraph,
   modules: impl Iterator<Item = &'a Module>,
 ) -> Result<Specifiers> {
@@ -177,7 +178,7 @@ pub fn get_specifiers<'a>(
     }
   }
 
-  unify_mapped_jsr_versions(
+  jsr_specifier_mappings.unify_versions(
     found_mapped_specifiers
       .iter_mut()
       .chain(specifiers.mapped_packages.iter_mut()),

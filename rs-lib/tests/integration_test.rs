@@ -1499,6 +1499,33 @@ async fn transform_jsr_specifier_mapping_different_version_reqs() {
 }
 
 #[tokio::test]
+async fn transform_jsr_specifier_mapping_different_version_reqs_in_test() {
+  let result = TestBuilder::new()
+    .with_loader(|loader| {
+      loader
+        .add_local_file("/mod.ts", "import 'jsr:@scope/name@0.3';\n")
+        .add_local_file("/mod.test.ts", "import 'jsr:@scope/name@^0.3.3';\n");
+    })
+    .add_test_entry_point("file:///mod.test.ts")
+    .add_package_specifier_mapping("jsr:@scope/name", "scope-name", None, None)
+    .transform()
+    .await
+    .unwrap();
+
+  // a requirement in the tests counts towards the main dependency as well
+  assert_eq!(
+    result.main.dependencies,
+    &[Dependency {
+      name: "scope-name".to_string(),
+      version: "^0.3.3".to_string(),
+      peer_dependency: false,
+    }]
+  );
+  // ...so the tests don't need a dev dependency of their own
+  assert_eq!(result.test.dependencies, &[]);
+}
+
+#[tokio::test]
 async fn transform_jsr_specifier_mapping_incompatible_version_reqs() {
   let error_message = TestBuilder::new()
     .with_loader(|loader| {
