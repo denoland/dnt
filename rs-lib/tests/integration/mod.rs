@@ -27,6 +27,7 @@ macro_rules! assert_files {
       .map(|(file_path, file_text)| deno_node_transform::OutputFile {
         file_path: std::path::PathBuf::from(file_path),
         file_text: file_text.to_string(),
+        bytes: None,
       })
       .collect::<Vec<_>>();
     expected.sort_by(|a, b| a.file_path.cmp(&b.file_path));
@@ -57,7 +58,7 @@ pub async fn assert_transforms(files: Vec<(&str, &str)>) {
   test_builder
     .with_loader(|loader| {
       for (file_name, file) in files.iter() {
-        loader.add_local_file(&format!("/{}", file_name), file.0);
+        loader.add_local_file(format!("/{}", file_name), file.0);
       }
       loader.add_local_file("/example.js", "");
     })
