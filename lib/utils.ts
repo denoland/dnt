@@ -19,6 +19,12 @@ export function toDtsFilePath(filePath: string): string {
 // emits as `.js` files (the transform already outputs `.mts` and `.mjs` as `.js`)
 const COMPILED_EXT_RE = /\.(?:ts|tsx|jsx)$/i;
 
+/** Whether the provided output file path is a declaration file, which the
+ * TypeScript compiler copies as-is instead of compiling to a `.js` file. */
+export function isDeclarationFilePath(filePath: string): boolean {
+  return /\.d\.[cm]?ts$/i.test(filePath);
+}
+
 /**
  * Gets the files found in the provided root dir path based on the glob.
  *
