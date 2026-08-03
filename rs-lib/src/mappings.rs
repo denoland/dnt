@@ -494,10 +494,12 @@ fn get_mapped_file_path(
   let filepath_no_ext =
     get_unique_path(without_ext(path.as_ref()), mapped_filepaths_no_ext);
   let extension = match media_type {
+    MediaType::Wasm => "wasm",
     MediaType::Json => "js",
     MediaType::Mjs | MediaType::Mts => "js",
     _ => &media_type.as_ts_extension()[1..],
   };
+
   with_extension(
     &filepath_no_ext,
     &if let Some(sub_ext) = filepath_no_ext.extension() {

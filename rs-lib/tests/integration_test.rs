@@ -1288,7 +1288,7 @@ async fn transform_deno_types_and_type_ref_for_different_remote_file() {
       .main
       .files
       .iter()
-      .find(|f| f.file_path == PathBuf::from("deps/localhost/file.d.ts"))
+      .find(|f| f.file_path == std::path::Path::new("deps/localhost/file.d.ts"))
       .unwrap()
       .file_text,
     "declare function test2(): number;"
@@ -2653,7 +2653,7 @@ async fn polyfills_all() {
 
   assert_files!(
     result.test.files,
-    &[("mod.test.ts", concat!("import * as mod from './mod.js';",),)]
+    &[("mod.test.ts", "import * as mod from './mod.js';")]
   );
   assert_eq!(result.test.entry_points, &[PathBuf::from("mod.test.ts")]);
 }
@@ -3561,4 +3561,43 @@ fn add_config_discovery_files(loader: &mut InMemoryLoader) {
 }"#,
     )
     .add_local_file("/other.ts", "export function test() {}");
+}
+
+#[tokio::test]
+async fn transform_wasm_imports() {
+  let wasm_bytes = &[0, 97, 115, 109, 1, 0, 0, 0];
+  let result = TestBuilder::new()
+    .with_loader(|loader| {
+      loader.add_local_file("/mod.ts", r#"import wasm from "./math.wasm";"#);
+      loader.add_local_bytes("/math.wasm", wasm_bytes);
+    })
+    .transform()
+    .await
+    .unwrap();
+
+  let mod_file = result
+    .main
+    .files
+    .iter()
+    .find(|f| f.file_path.to_string_lossy() == "mod.ts")
+    .unwrap();
+  assert_eq!(mod_file.file_text, r#"import wasm from "./math.wasm.js";"#);
+
+  let wasm_file = result
+    .main
+    .files
+    .iter()
+    .find(|f| f.file_path.to_string_lossy() == "math.wasm")
+    .unwrap();
+  assert_eq!(wasm_file.bytes.as_deref(), Some(wasm_bytes.as_slice()));
+
+  let wrapper_file = result
+    .main
+    .files
+    .iter()
+    .find(|f| f.file_path.to_string_lossy() == "math.wasm.js")
+    .unwrap();
+  assert!(wrapper_file
+    .file_text
+    .contains("const wasmModule = new WebAssembly.Module(wasmBytes);"));
 }

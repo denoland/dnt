@@ -1360,6 +1360,39 @@ Deno.test("should handle json modules", async () => {
   });
 });
 
+Deno.test("should handle wasm modules", async () => {
+  await runTest("wasm_module_project", {
+    entryPoints: ["mod.ts"],
+    outDir: "./npm",
+    shims: {
+      ...getAllShimOptions(false),
+      deno: "dev",
+    },
+    package: {
+      name: "wasm-module-package",
+      version: "1.0.0",
+    },
+    typeCheck: false,
+    declaration: false,
+    test: false,
+  }, (output) => {
+    output.assertExists("esm/math.wasm");
+    output.assertExists("script/math.wasm");
+    output.assertExists("esm/math.wasm.js");
+    output.assertExists("script/math.wasm.js");
+    const esmWrapperText = output.getFileText("esm/math.wasm.js");
+
+    assertStringIncludes(
+      esmWrapperText,
+      "export const add = wasmInstance.exports.add;",
+    );
+    assertStringIncludes(
+      esmWrapperText,
+      "export default wasmInstance.exports;",
+    );
+  });
+});
+
 Deno.test("should build project with another package manager", async () => {
   await runTest("test_project", {
     entryPoints: ["mod.ts"],
@@ -1878,6 +1911,7 @@ async function runTest(
     | "types_package_project"
     | "web_socket_project"
     | "using_decl_project"
+    | "wasm_module_project"
     | "workspace_project",
   options: BuildOptions,
   checkOutput?: (output: Output) => Promise<void> | void,
