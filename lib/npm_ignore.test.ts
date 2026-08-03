@@ -170,6 +170,58 @@ Deno.test("should keep the src directory when the declaration maps need it", () 
   });
 });
 
+Deno.test("should ignore a dependency's declaration file", () => {
+  // a dependency that ships a declaration file (ex. a prebuilt package
+  // published to JSR) is copied as-is rather than compiled to `.js` + `.d.ts`
+  const depDts = "deps/jsr.io/@scope/dep/1.0.0/dep.d.ts";
+
+  function run(options: {
+    declaration: "separate" | "inline" | false;
+    declarationMap?: boolean;
+    includeEsModule?: boolean;
+    includeScriptModule?: boolean;
+  }) {
+    return getNpmIgnoreText({
+      sourceMap: undefined,
+      inlineSources: undefined,
+      testFiles: [{ filePath: depDts, fileText: "" }],
+      includeEsModule: options.includeEsModule ?? true,
+      includeScriptModule: options.includeScriptModule ?? true,
+      declaration: options.declaration,
+      declarationMap: options.declarationMap,
+    });
+  }
+
+  // inline declarations are copied beside the emitted code
+  assertEquals(
+    run({ declaration: "inline" }),
+    `/src/\n/esm/${depDts}\n/script/${depDts}\n` +
+      "/test_runner.cjs\nyarn.lock\npnpm-lock.yaml\n",
+  );
+  // inline declarations with declaration maps (the maps reference `/src/`, so
+  // the individual source files are ignored instead of the whole directory)
+  assertEquals(
+    run({ declaration: "inline", declarationMap: true }),
+    `/src/${depDts}\n/esm/${depDts}\n/esm/${depDts}.map\n/script/${depDts}\n` +
+      `/script/${depDts}.map\n/test_runner.cjs\nyarn.lock\npnpm-lock.yaml\n`,
+  );
+  // separate declarations only end up in the types directory
+  assertEquals(
+    run({ declaration: "separate" }),
+    `/src/\n/types/${depDts}\n/test_runner.cjs\nyarn.lock\npnpm-lock.yaml\n`,
+  );
+  // no declarations means the file is never emitted
+  assertEquals(
+    run({ declaration: false }),
+    `/src/\n/test_runner.cjs\nyarn.lock\npnpm-lock.yaml\n`,
+  );
+  // only the esm output is emitted
+  assertEquals(
+    run({ declaration: "inline", includeScriptModule: false }),
+    `/src/\n/esm/${depDts}\n/test_runner.cjs\nyarn.lock\npnpm-lock.yaml\n`,
+  );
+});
+
 function runTest(options: {
   sourceMaps: SourceMapOptions | undefined;
   inlineSources: boolean | undefined;

@@ -2,7 +2,7 @@
 
 import type { OutputFile } from "../transform.ts";
 import type { SourceMapOptions } from "./compiler.ts";
-import { toDtsFilePath, toJsFilePath } from "./utils.ts";
+import { isDeclarationFilePath, toDtsFilePath, toJsFilePath } from "./utils.ts";
 
 export function getNpmIgnoreText(options: {
   sourceMap?: SourceMapOptions;
@@ -27,14 +27,22 @@ export function getNpmIgnoreText(options: {
 
   function* getTestFileNames() {
     for (const file of options.testFiles) {
-      const filePath = toJsFilePath(file.filePath);
-      const dtsFilePath = toDtsFilePath(file.filePath);
       // the whole directory is excluded above when it's not published
       if (isReferencingSrcDir()) {
         yield `/src/${file.filePath}`;
       }
+      // A dependency can ship a declaration file directly (ex. a prebuilt
+      // package published to JSR). The compiler copies it as-is beside the
+      // emitted code rather than turning it into a `.js` + `.d.ts` pair, so it
+      // has different output paths than a regular source file.
+      if (isDeclarationFilePath(file.filePath)) {
+        yield* getDeclarationTestFileNames(file.filePath);
+        continue;
+      }
+      const jsFilePath = toJsFilePath(file.filePath);
+      const dtsFilePath = toDtsFilePath(file.filePath);
       if (options.includeEsModule) {
-        const esmFilePath = `/esm/${filePath}`;
+        const esmFilePath = `/esm/${jsFilePath}`;
         yield esmFilePath;
         if (options.sourceMap === true) {
           yield `${esmFilePath}.map`;
@@ -47,7 +55,7 @@ export function getNpmIgnoreText(options: {
         }
       }
       if (options.includeScriptModule) {
-        const scriptFilePath = `/script/${filePath}`;
+        const scriptFilePath = `/script/${jsFilePath}`;
         yield scriptFilePath;
         if (options.sourceMap === true) {
           yield `${scriptFilePath}.map`;
@@ -67,6 +75,31 @@ export function getNpmIgnoreText(options: {
       }
     }
     yield "/test_runner.cjs";
+  }
+
+  /** A declaration file emits no `.js`, so the compiler only copies it where
+   * declarations are output: beside the code when they're inlined, or the
+   * `types` directory when they're kept separate. */
+  function* getDeclarationTestFileNames(dtsFilePath: string) {
+    if (options.declaration === "inline") {
+      if (options.includeEsModule) {
+        yield `/esm/${dtsFilePath}`;
+        if (options.declarationMap) {
+          yield `/esm/${dtsFilePath}.map`;
+        }
+      }
+      if (options.includeScriptModule) {
+        yield `/script/${dtsFilePath}`;
+        if (options.declarationMap) {
+          yield `/script/${dtsFilePath}.map`;
+        }
+      }
+    } else if (options.declaration === "separate") {
+      yield `/types/${dtsFilePath}`;
+      if (options.declarationMap) {
+        yield `/types/${dtsFilePath}.map`;
+      }
+    }
   }
 
   /** Whether any emitted map points back at the files in `/src/`, in which
