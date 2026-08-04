@@ -516,11 +516,18 @@ Deno.test("should build bin project", async () => {
 
 Deno.test("should build bin project with a shebang", async () => {
   await runTest("bin_shebang_project", {
-    entryPoints: [{
-      kind: "bin",
-      name: "hello",
-      path: "./main.ts",
-    }],
+    entryPoints: [
+      {
+        kind: "bin",
+        name: "hello",
+        path: "./main.ts",
+      },
+      {
+        kind: "bin",
+        name: "hellodir",
+        path: "./dir/main.ts",
+      },
+    ],
     shims: getAllShimOptions(false),
     outDir: "./npm",
     package: {
@@ -536,12 +543,21 @@ Deno.test("should build bin project with a shebang", async () => {
       version: "1.0.0",
       bin: {
         hello: "./esm/main.js",
+        hellodir: "./esm/dir/main.js",
       },
       scripts: {
         test: "node test_runner.cjs",
       },
       _generatedBy: "dnt@dev",
     });
+    assertEquals(
+      output.getFileText("script/dir/main.js"),
+      expectedText,
+    );
+    assertEquals(
+      output.getFileText("esm/dir/main.js"),
+      expectedText,
+    );
     assertEquals(
       output.getFileText("esm/main.js"),
       '#!/usr/bin/env node\n"use strict";\nconsole.log("Hello!");\n',
