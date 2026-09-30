@@ -109,7 +109,13 @@ export function getPackageJson({
   const mainExport = exports.length > 0
     ? {
       module: includeEsModule ? `./esm/${exports[0].path}` : undefined,
-      main: includeScriptModule ? `./script/${exports[0].path}` : undefined,
+      // an ES module only package uses it as the main entrypoint so tools that
+      // don't support "exports" can still resolve it (and its declarations)
+      main: includeScriptModule
+        ? `./script/${exports[0].path}`
+        : includeEsModule
+        ? `./esm/${exports[0].path}`
+        : undefined,
       types: includeDeclarations ? `./types/${exports[0].types}` : undefined,
     }
     : {};
@@ -132,6 +138,11 @@ export function getPackageJson({
                 require: includeScriptModule
                   ? getPathOrTypesObject(`./script/${e.path}`)
                   : undefined,
+                // without a script module, fall back to the ES module so that
+                // it can be required in Node.js versions that support require(esm)
+                ...(includeEsModule && !includeScriptModule
+                  ? { default: getPathOrTypesObject(`./esm/${e.path}`) }
+                  : {}),
                 ...(packageJsonObj.exports?.[e.name] ?? {}),
               }];
 

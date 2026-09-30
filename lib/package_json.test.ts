@@ -128,7 +128,7 @@ Deno.test("single entrypoint", () => {
     {
       name: "package",
       version: "0.1.0",
-      main: undefined,
+      main: "./esm/mod.js",
       module: "./esm/mod.js",
       types: "./types/mod.d.ts",
       dependencies: {
@@ -145,6 +145,10 @@ Deno.test("single entrypoint", () => {
             default: "./esm/mod.js",
           },
           require: undefined,
+          default: {
+            types: "./types/mod.d.ts",
+            default: "./esm/mod.js",
+          },
         },
       },
       _generatedBy: "dnt@dev",
@@ -184,7 +188,7 @@ Deno.test("single entrypoint", () => {
     {
       name: "package",
       version: "0.1.0",
-      main: undefined,
+      main: "./esm/mod.js",
       module: "./esm/mod.js",
       types: undefined,
       dependencies: {
@@ -198,6 +202,7 @@ Deno.test("single entrypoint", () => {
         ".": {
           import: "./esm/mod.js",
           require: undefined,
+          default: "./esm/mod.js",
         },
       },
       _generatedBy: "dnt@dev",
@@ -216,7 +221,7 @@ Deno.test("single entrypoint", () => {
     {
       name: "package",
       version: "0.1.0",
-      main: undefined,
+      main: "./esm/mod.js",
       module: "./esm/mod.js",
       types: undefined,
       dependencies: {
@@ -231,6 +236,7 @@ Deno.test("single entrypoint", () => {
         ".": {
           import: "./esm/mod.js",
           require: undefined,
+          default: "./esm/mod.js",
         },
       },
       _generatedBy: "dnt@dev",
