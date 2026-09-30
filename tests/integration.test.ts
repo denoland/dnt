@@ -208,7 +208,6 @@ Deno.test("should build with all options off", async () => {
     assertEquals(output.packageJson, {
       name: "add",
       version: "1.0.0",
-      main: "./esm/mod.js",
       module: "./esm/mod.js",
       exports: {
         ".": {
@@ -740,7 +739,6 @@ Deno.test("not error for TLA when not using CommonJS", async () => {
     assertEquals(output.packageJson, {
       name: "add",
       version: "1.0.0",
-      main: "./esm/mod.js",
       module: "./esm/mod.js",
       exports: {
         ".": {
