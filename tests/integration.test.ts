@@ -212,6 +212,7 @@ Deno.test("should build with all options off", async () => {
       exports: {
         ".": {
           import: "./esm/mod.js",
+          default: "./esm/mod.js",
         },
       },
       devDependencies: {
@@ -742,6 +743,10 @@ Deno.test("not error for TLA when not using CommonJS", async () => {
       exports: {
         ".": {
           import: {
+            types: "./types/mod.d.ts",
+            default: "./esm/mod.js",
+          },
+          default: {
             types: "./types/mod.d.ts",
             default: "./esm/mod.js",
           },

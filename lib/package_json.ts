@@ -132,6 +132,11 @@ export function getPackageJson({
                 require: includeScriptModule
                   ? getPathOrTypesObject(`./script/${e.path}`)
                   : undefined,
+                // without a script module, fall back to the ES module so that
+                // it can be required in Node.js versions that support require(esm)
+                ...(includeEsModule && !includeScriptModule
+                  ? { default: getPathOrTypesObject(`./esm/${e.path}`) }
+                  : {}),
                 ...(packageJsonObj.exports?.[e.name] ?? {}),
               }];
 

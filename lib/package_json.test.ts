@@ -145,6 +145,10 @@ Deno.test("single entrypoint", () => {
             default: "./esm/mod.js",
           },
           require: undefined,
+          default: {
+            types: "./types/mod.d.ts",
+            default: "./esm/mod.js",
+          },
         },
       },
       _generatedBy: "dnt@dev",
@@ -198,6 +202,7 @@ Deno.test("single entrypoint", () => {
         ".": {
           import: "./esm/mod.js",
           require: undefined,
+          default: "./esm/mod.js",
         },
       },
       _generatedBy: "dnt@dev",
@@ -231,6 +236,7 @@ Deno.test("single entrypoint", () => {
         ".": {
           import: "./esm/mod.js",
           require: undefined,
+          default: "./esm/mod.js",
         },
       },
       _generatedBy: "dnt@dev",
