@@ -60,6 +60,23 @@ impl InMemoryLoader {
     self
   }
 
+  pub fn add_local_bytes(
+    &mut self,
+    path: impl AsRef<str>,
+    bytes: &[u8],
+  ) -> &mut Self {
+    let path = path.as_ref();
+    let path = if cfg!(windows) && path.starts_with("/") {
+      PathBuf::from(format!("C:{}", path))
+    } else {
+      PathBuf::from(path)
+    };
+    let parent_dir = path.parent().unwrap();
+    self.sys.fs_create_dir_all(parent_dir).unwrap();
+    self.sys.fs_write(path, bytes).unwrap();
+    self
+  }
+
   pub fn add_remote_file(
     &mut self,
     specifier: impl AsRef<str>,
@@ -138,16 +155,14 @@ impl deno_cache_dir::file_fetcher::HttpClient for InMemoryLoader {
         location.clone(),
       )]))));
     }
-    let result = self
-      .remote_files
-      .get(&specifier)
-      .map(|result| match result {
-        Ok(result) => Ok(SendResponse::Success(
-          to_headers(result.1.clone().unwrap_or_default()),
-          result.0.clone().into_bytes().into(),
-        )),
-        Err(err) => Err(SendError::Failed(err.clone().into())),
-      });
+    let result = self.remote_files.get(specifier).map(|result| match result {
+      Ok(result) => Ok(SendResponse::Success(
+        to_headers(result.1.clone().unwrap_or_default()),
+        result.0.clone().into_bytes(),
+      )),
+      Err(err) => Err(SendError::Failed(err.clone().into())),
+    });
+
     match result {
       Some(result) => result,
       None => Err(SendError::NotFound),

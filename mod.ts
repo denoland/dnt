@@ -515,17 +515,50 @@ export async function build(options: BuildOptions): Promise<void> {
     })).filter((p) => p.kind === "bin").map((p) => p.path),
   );
 
+  const writeBinaryFile = (filePath: string, bytes: Uint8Array) => {
+    const dir = path.dirname(filePath);
+    if (!createdDirectories.has(dir)) {
+      Deno.mkdirSync(dir, { recursive: true });
+      createdDirectories.add(dir);
+    }
+    Deno.writeFileSync(
+      filePath,
+      bytes instanceof Uint8Array ? bytes : new Uint8Array(bytes),
+    );
+  };
+
   for (
     const outputFile of [
       ...transformOutput.main.files,
       ...transformOutput.test.files,
     ]
   ) {
+    if (outputFile.bytes) {
+      const srcPath = path.join(options.outDir, "src", outputFile.filePath);
+      const esmPath = path.join(options.outDir, "esm", outputFile.filePath);
+      const scriptPath = path.join(
+        options.outDir,
+        "script",
+        outputFile.filePath,
+      );
+      if (!options.skipSourceOutput) {
+        writeBinaryFile(srcPath, outputFile.bytes);
+      }
+      if (options.esModule) {
+        writeBinaryFile(esmPath, outputFile.bytes);
+      }
+      if (options.scriptModule) {
+        writeBinaryFile(scriptPath, outputFile.bytes);
+      }
+      continue;
+    }
+
     const outputFilePath = path.join(
       options.outDir,
       "src",
       outputFile.filePath,
     );
+
     const outputFileText = binaryEntryPointPaths.has(outputFile.filePath)
       ? `#!/usr/bin/env node\n${
         outputFile.fileText.replace(/^#![^\n\r]*\r?\n?/, "")

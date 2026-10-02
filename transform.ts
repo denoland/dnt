@@ -152,6 +152,7 @@ export interface TransformOutputEnvironment {
 export interface OutputFile {
   filePath: string;
   fileText: string;
+  bytes?: Uint8Array;
 }
 
 /** Analyzes the provided entry point to get all the dependended on modules and

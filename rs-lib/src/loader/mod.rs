@@ -58,7 +58,7 @@ impl<'a> SourceLoader<'a> {
   fn mapping(
     &self,
     specifier: &ModuleSpecifier,
-  ) -> Option<Cow<MappedSpecifier>> {
+  ) -> Option<Cow<'_, MappedSpecifier>> {
     match self.specifier_mappings.get(specifier) {
       Some(mapping) => Some(Cow::Borrowed(mapping)),
       None => self.jsr_specifier_mappings.get(specifier).map(Cow::Owned),

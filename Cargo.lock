@@ -577,6 +577,7 @@ dependencies = [
  "sys_traits",
  "tokio",
  "url",
+ "wasm_dep_analyzer",
 ]
 
 [[package]]

@@ -23,19 +23,15 @@ pub fn get_relative_specifier(
   from: impl AsRef<Path>,
   to: impl AsRef<Path>,
 ) -> String {
-  let to = with_extension(
-    to.as_ref(),
-    if to
-      .as_ref()
-      .to_string_lossy()
-      .to_lowercase()
-      .ends_with(".d.ts")
-    {
-      ""
-    } else {
-      "js"
-    },
-  );
+  let to_str = to.as_ref().to_string_lossy().to_lowercase();
+  let to = if to_str.ends_with(".wasm") {
+    with_extension(to.as_ref(), "wasm.js")
+  } else if to_str.ends_with(".d.ts") {
+    with_extension(to.as_ref(), "")
+  } else {
+    with_extension(to.as_ref(), "js")
+  };
+
   let relative_path = get_relative_path(from, to);
   let relative_path_str = relative_path
     .to_string_lossy()

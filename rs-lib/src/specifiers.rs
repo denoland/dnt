@@ -123,7 +123,7 @@ pub fn get_specifiers<'a>(
 
   for module in all_modules.iter() {
     match module {
-      Module::Js(_) | Module::Json(_) => {
+      Module::Js(_) | Module::Json(_) | Module::Wasm(_) => {
         match module.specifier().scheme().to_lowercase().as_str() {
           "file" => local_specifiers.push(module.specifier().clone()),
           "http" | "https" => {
@@ -137,12 +137,7 @@ pub fn get_specifiers<'a>(
       Module::Npm(_) | Module::Node(_) => {
         // ignore
       }
-      Module::Wasm(_) => {
-        anyhow::bail!(
-          "Not implemented support for Wasm modules: {}",
-          module.specifier()
-        );
-      }
+
       Module::External(module) => {
         let specifier = &module.specifier;
         if let Ok(npm_specifier) =
@@ -191,11 +186,11 @@ pub fn get_specifiers<'a>(
   Ok(Specifiers {
     local: local_specifiers
       .into_iter()
-      .filter(|l| !declaration_specifiers.contains(&l))
+      .filter(|l| !declaration_specifiers.contains(l))
       .collect(),
     remote: remote_specifiers
       .into_iter()
-      .filter(|l| !declaration_specifiers.contains(&l))
+      .filter(|l| !declaration_specifiers.contains(l))
       .collect(),
     types,
     types_packages: declaration_files.types_packages,
@@ -249,7 +244,8 @@ fn get_reachable(
   roots: &[ModuleSpecifier],
 ) -> HashSet<ModuleSpecifier> {
   let mut found = HashSet::new();
-  let mut pending = roots.iter().cloned().collect::<Vec<_>>();
+  let mut pending = roots.to_vec();
+
   while let Some(specifier) = pending.pop() {
     let specifier = module_graph.resolve(&specifier).clone();
     if !found.insert(specifier.clone()) {
