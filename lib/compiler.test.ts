@@ -88,6 +88,23 @@ Deno.test("get has top level await", () => {
     line: 0,
     character: 18,
   });
+  runTest("using res = getResource();", undefined);
+  runTest(
+    "async function test() { await using res = getResource(); }",
+    undefined,
+  );
+  runTest("await using res = getResource();", {
+    line: 0,
+    character: 0,
+  });
+  runTest("{ await using res = getResource(); }", {
+    line: 0,
+    character: 2,
+  });
+  runTest("for (await using res of getResources()) {}", {
+    line: 0,
+    character: 5,
+  });
 
   function runTest(code: string, expected: ts.LineAndCharacter | undefined) {
     const sourceFile = ts.createSourceFile(
