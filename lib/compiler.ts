@@ -234,6 +234,13 @@ function getTopLevelAwait(node: ts.Node): ts.Node | undefined {
   if (ts.isForOfStatement(node) && node.awaitModifier !== undefined) {
     return node;
   }
+  // `await using` disposes the resource with an await at the end of the scope
+  if (
+    ts.isVariableDeclarationList(node) &&
+    (node.flags & ts.NodeFlags.BlockScoped) === ts.NodeFlags.AwaitUsing
+  ) {
+    return node;
+  }
   return ts.forEachChild(node, (child) => {
     if (
       !ts.isFunctionDeclaration(child) && !ts.isFunctionExpression(child) &&
