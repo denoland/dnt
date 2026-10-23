@@ -2,3 +2,4 @@ target
 .vscode
 tests/*/npm
 lib/pkg
+.direnv
